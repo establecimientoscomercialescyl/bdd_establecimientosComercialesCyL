@@ -13,6 +13,7 @@
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
 <script>
   // Carga robusta de librerías externas: prueba varias CDN por si alguna está bloqueada en la red.
   function loadScriptWithFallback(urls, checkGlobal){
@@ -49,7 +50,12 @@
       'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
       'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
       'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js'
-    ], 'XLSX')
+    ], 'XLSX'),
+    loadScriptWithFallback([
+      'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js',
+      'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',
+      'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+    ], 'L')
   ]);
 </script>
 <style>
@@ -232,6 +238,38 @@
     font-weight:600; font-size:12.5px; cursor:pointer; padding:4px 0;
   }
 
+  /* ---------- Multi-select de filtros ---------- */
+  .msel{ position:relative; }
+  .msel-btn{
+    font-family:'Inter',sans-serif; font-size:13.5px; padding:8px 10px;
+    border:1px solid var(--border); border-radius:8px; background:var(--card-2); color:var(--text);
+    width:100%; display:flex; align-items:center; justify-content:space-between; gap:6px;
+    cursor:pointer; text-align:left;
+  }
+  .msel-btn:hover{ border-color:var(--blue); }
+  .msel.msel-open .msel-btn{ outline:2px solid var(--blue); outline-offset:1px; }
+  .msel.msel-active .msel-btn{ border-color:var(--blue); color:var(--blue); }
+  .msel-btn-label{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .msel-caret{ width:14px; height:14px; flex:none; opacity:.7; transition:transform .15s; }
+  .msel.msel-open .msel-caret{ transform:rotate(180deg); }
+  .msel-panel{
+    position:absolute; top:calc(100% + 6px); left:0; min-width:100%; width:max-content; max-width:320px;
+    background:var(--card-2); border:1px solid var(--border); border-radius:10px; box-shadow:var(--shadow);
+    z-index:40; padding:8px; flex-direction:column; gap:6px; display:none;
+  }
+  .msel.msel-open .msel-panel{ display:flex; }
+  .msel-search input{ font-size:13px; padding:6px 9px; }
+  .msel-actions{ display:flex; gap:12px; padding:0 2px; }
+  .msel-actions .link-btn{ font-size:11.5px; padding:2px 0; }
+  .msel-options{ max-height:220px; overflow-y:auto; display:flex; flex-direction:column; }
+  .msel-option{
+    display:flex; align-items:center; gap:8px; padding:6px 6px; border-radius:6px;
+    font-size:13px; cursor:pointer; white-space:nowrap;
+  }
+  .msel-option:hover{ background:var(--border-soft); }
+  .msel-option input{ width:auto; flex:none; accent-color:var(--blue); }
+  .msel-empty{ font-size:12.5px; color:var(--text-mute); padding:8px 6px; }
+
   /* ---------- KPIs ---------- */
   .kpis{
     display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px;
@@ -290,6 +328,12 @@
   tbody tr{ cursor:pointer; }
   tbody tr:hover{ background:rgba(255,255,255,.045); }
   tbody tr:hover td:first-child{ color:#8FB8FF; }
+  thead th.sortable{ cursor:pointer; user-select:none; }
+  thead th.sortable:hover{ color:var(--text); }
+  thead th.sortable .sort-arrow{ display:inline-block; width:12px; opacity:.6; }
+  #dist-table-body tr{ cursor:default; }
+  #dist-table-body tr:hover{ background:transparent; }
+  #dist-table-body tr:hover td:first-child{ color:inherit; }
   .table-scroll{ overflow:auto; max-height:480px; }
   .badge{ font-family:'IBM Plex Mono',monospace; font-size:11px; padding:2px 8px; border-radius:100px; }
   .badge.on{ background:var(--green-soft); color:var(--badge-on-text); }
@@ -413,17 +457,44 @@
 
     <div class="field">
       <label for="f-provincia">Provincia</label>
-      <select id="f-provincia"><option value="all">Todas</option></select>
+      <div class="msel" id="f-provincia">
+        <button type="button" class="msel-btn"><span class="msel-btn-label">Todas</span>
+          <svg class="msel-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="msel-panel" hidden>
+          <div class="msel-search"><input type="text" placeholder="Buscar…"></div>
+          <div class="msel-actions"><button type="button" class="link-btn msel-all">Seleccionar todo</button><button type="button" class="link-btn msel-clear">Limpiar</button></div>
+          <div class="msel-options"></div>
+        </div>
+      </div>
     </div>
 
     <div class="field">
       <label for="f-municipio">Municipio</label>
-      <select id="f-municipio"><option value="all">Todos</option></select>
+      <div class="msel" id="f-municipio">
+        <button type="button" class="msel-btn"><span class="msel-btn-label">Todos</span>
+          <svg class="msel-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="msel-panel" hidden>
+          <div class="msel-search"><input type="text" placeholder="Buscar…"></div>
+          <div class="msel-actions"><button type="button" class="link-btn msel-all">Seleccionar todo</button><button type="button" class="link-btn msel-clear">Limpiar</button></div>
+          <div class="msel-options"></div>
+        </div>
+      </div>
     </div>
 
     <div class="field">
       <label for="f-sector">Sector comercial</label>
-      <select id="f-sector"><option value="all">Todos</option></select>
+      <div class="msel" id="f-sector">
+        <button type="button" class="msel-btn"><span class="msel-btn-label">Todos</span>
+          <svg class="msel-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="msel-panel" hidden>
+          <div class="msel-search"><input type="text" placeholder="Buscar…"></div>
+          <div class="msel-actions"><button type="button" class="link-btn msel-all">Seleccionar todo</button><button type="button" class="link-btn msel-clear">Limpiar</button></div>
+          <div class="msel-options"></div>
+        </div>
+      </div>
     </div>
 
     <div class="field">
@@ -437,17 +508,30 @@
 
     <div class="field">
       <label for="f-sexo">Titularidad</label>
-      <select id="f-sexo"><option value="all">Todas</option></select>
-    </div>
-
-    <div class="field">
-      <label for="f-gal">Grupo de acción local</label>
-      <select id="f-gal"><option value="all">Todos</option></select>
+      <div class="msel" id="f-sexo">
+        <button type="button" class="msel-btn"><span class="msel-btn-label">Todas</span>
+          <svg class="msel-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="msel-panel" hidden>
+          <div class="msel-search"><input type="text" placeholder="Buscar…"></div>
+          <div class="msel-actions"><button type="button" class="link-btn msel-all">Seleccionar todo</button><button type="button" class="link-btn msel-clear">Limpiar</button></div>
+          <div class="msel-options"></div>
+        </div>
+      </div>
     </div>
 
     <div class="field">
       <label for="f-categoria">Categoría</label>
-      <select id="f-categoria"><option value="all">Todas</option></select>
+      <div class="msel" id="f-categoria">
+        <button type="button" class="msel-btn"><span class="msel-btn-label">Todas</span>
+          <svg class="msel-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="msel-panel" hidden>
+          <div class="msel-search"><input type="text" placeholder="Buscar…"></div>
+          <div class="msel-actions"><button type="button" class="link-btn msel-all">Seleccionar todo</button><button type="button" class="link-btn msel-clear">Limpiar</button></div>
+          <div class="msel-options"></div>
+        </div>
+      </div>
     </div>
 
     <div class="field hab-block">
@@ -473,6 +557,7 @@
   <div class="tab-nav" role="tablist">
     <button class="tab-btn active" id="tab-btn-resumen" data-tab="resumen" role="tab">Resumen general</button>
     <button class="tab-btn" id="tab-btn-territorial" data-tab="territorial" role="tab">Análisis territorial</button>
+    <button class="tab-btn" id="tab-btn-distancias" data-tab="distancias" role="tab">Distancias</button>
     <button class="tab-btn" id="tab-btn-contacto" data-tab="contacto" role="tab">Contacto</button>
   </div>
 
@@ -590,6 +675,64 @@
         </table>
       </div>
     </div>
+  </div>
+
+  </div>
+
+  <div class="tab-panel" id="tab-distancias" hidden>
+
+  <div class="section-label">Distancias entre municipios</div>
+
+  <div class="card" style="margin-bottom:16px;">
+    <div class="filter-row" style="display:flex; align-items:flex-end; gap:16px; flex-wrap:wrap;">
+      <div>
+        <label for="dist-gal-filter">Grupo de acción local</label>
+        <select id="dist-gal-filter"><option value="all">Todos</option></select>
+      </div>
+      <div class="foot" style="color:var(--text-mute); font-size:12.5px; max-width:420px;">
+        Esta pestaña también respeta los filtros de Provincia y Municipio de la parte superior, ya que comparten esa información con la hoja de establecimientos.
+      </div>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-head">
+      <h3>Municipio cabecera y municipio más cercano</h3>
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg>
+        <input type="text" id="dist-search" placeholder="Buscar municipio o provincia…">
+      </div>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th class="sortable" data-sort="mun">Municipio</th>
+            <th class="sortable" data-sort="prov">Provincia</th>
+            <th class="sortable" data-sort="hab">Habitantes</th>
+            <th class="sortable" data-sort="com">Comercios</th>
+            <th class="sortable" data-sort="cab">Municipio cabecera</th>
+            <th class="sortable" data-sort="distCabe">Km a cabecera</th>
+            <th class="sortable" data-sort="mejor">Mejor municipio</th>
+            <th class="sortable" data-sort="distMejor">Km al mejor</th>
+          </tr>
+        </thead>
+        <tbody id="dist-table-body"></tbody>
+      </table>
+    </div>
+    <div class="pager">
+      <span class="count" id="dist-pager-count"></span>
+      <div class="pager-btns">
+        <button id="dist-pager-prev">‹ Anterior</button>
+        <span class="count" id="dist-pager-page"></span>
+        <button id="dist-pager-next">Siguiente ›</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <h3 style="margin:0 0 12px;">Mapa de localización · municipios del conjunto filtrado</h3>
+    <div id="dist-map" style="height:440px; border-radius:14px; overflow:hidden;"></div>
   </div>
 
   </div>
@@ -732,6 +875,13 @@ let TABLE_PAGE = 0;
 const PAGE_SIZE = 40;
 const charts = {};
 
+/* ============ Distancias entre municipios (hoja EST.GAL) ============ */
+let DIST_DATA = [];         // array de objetos {mun,prov,gal,hab,com,cab,distCabe,mejor,distMejor}
+let DIST_FILTERED = [];     // índices sobre DIST_DATA que pasan la búsqueda
+let DIST_PAGE = 0;
+const DIST_PAGE_SIZE = 50;
+let DIST_SORT = { key:'mun', dir:1 };
+
 /* ============ Carga inicial ============ */
 function loadEmbedded(){
   const raw = document.getElementById('app-data').textContent;
@@ -755,13 +905,119 @@ function fillSelect(sel, options){
   if([...sel.options].some(o=>o.value===current)) sel.value = current;
 }
 
+/* ============ Multi-select de filtros (provincia, municipio, sector, titularidad, GAL, categoría) ============ */
+const MULTI_STATE = {};   // key -> Set de valores (string) seleccionados; vacío = "todos"
+const MULTI_LABELS = {};  // key -> Map(valor -> etiqueta)
+const MULTI_ALL_LABEL = { provincia:'Todas', municipio:'Todos', sector:'Todos', sexo:'Todas', categoria:'Todas' };
+
+function closeAllMultiSelects(except){
+  $$('.msel').forEach(root=>{
+    if(root===except) return;
+    root.classList.remove('msel-open');
+    const p = root.querySelector('.msel-panel');
+    if(p) p.hidden = true;
+  });
+}
+document.addEventListener('click', ()=> closeAllMultiSelects());
+
+function initMultiSelect(key, onChange){
+  const root = document.getElementById('f-'+key);
+  MULTI_STATE[key] = new Set();
+  MULTI_LABELS[key] = new Map();
+  const btn = root.querySelector('.msel-btn');
+  const labelEl = root.querySelector('.msel-btn-label');
+  const panel = root.querySelector('.msel-panel');
+  const optionsWrap = root.querySelector('.msel-options');
+  const searchInput = root.querySelector('.msel-search input');
+
+  function updateButtonLabel(){
+    const sel = MULTI_STATE[key];
+    if(sel.size===0) labelEl.textContent = MULTI_ALL_LABEL[key];
+    else if(sel.size===1) labelEl.textContent = MULTI_LABELS[key].get([...sel][0]) || '1 seleccionado';
+    else labelEl.textContent = `${sel.size} seleccionados`;
+    root.classList.toggle('msel-active', sel.size>0);
+  }
+
+  function renderOptions(filterText){
+    const q = (filterText||'').trim().toLowerCase();
+    optionsWrap.innerHTML = '';
+    for(const [val,label] of MULTI_LABELS[key]){
+      if(q && !label.toLowerCase().includes(q)) continue;
+      const row = document.createElement('label');
+      row.className = 'msel-option';
+      const checked = MULTI_STATE[key].has(val);
+      row.innerHTML = `<input type="checkbox" ${checked?'checked':''}><span></span>`;
+      row.querySelector('span').textContent = label;
+      row.querySelector('input').addEventListener('change', (e)=>{
+        if(e.target.checked) MULTI_STATE[key].add(val); else MULTI_STATE[key].delete(val);
+        updateButtonLabel();
+        onChange();
+      });
+      optionsWrap.appendChild(row);
+    }
+    if(!optionsWrap.children.length){
+      optionsWrap.innerHTML = '<div class="msel-empty">Sin resultados</div>';
+    }
+  }
+
+  btn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    const wasOpen = root.classList.contains('msel-open');
+    closeAllMultiSelects(root);
+    if(wasOpen){
+      root.classList.remove('msel-open'); panel.hidden = true;
+    } else {
+      root.classList.add('msel-open'); panel.hidden = false;
+      searchInput.value = ''; renderOptions('');
+      searchInput.focus();
+    }
+  });
+  panel.addEventListener('click', (e)=> e.stopPropagation());
+  searchInput.addEventListener('input', ()=> renderOptions(searchInput.value));
+  root.querySelector('.msel-all').addEventListener('click', ()=>{
+    const q = (searchInput.value||'').trim().toLowerCase();
+    for(const [val,label] of MULTI_LABELS[key]){
+      if(!q || label.toLowerCase().includes(q)) MULTI_STATE[key].add(val);
+    }
+    renderOptions(searchInput.value); updateButtonLabel(); onChange();
+  });
+  root.querySelector('.msel-clear').addEventListener('click', ()=>{
+    MULTI_STATE[key].clear();
+    renderOptions(searchInput.value); updateButtonLabel(); onChange();
+  });
+
+  root._msel = { updateButtonLabel, renderOptions, panel };
+}
+
+function initMultiSelects(){
+  initMultiSelect('provincia', ()=>{ updateMunicipioOptions(); applyFilters(); });
+  initMultiSelect('municipio', applyFilters);
+  initMultiSelect('sector', applyFilters);
+  initMultiSelect('sexo', applyFilters);
+  initMultiSelect('categoria', applyFilters);
+}
+
+/* options: array de [valor, etiqueta]. Conserva la selección previa si el valor sigue existiendo. */
+function setMultiOptions(key, options){
+  MULTI_LABELS[key] = new Map(options.map(([v,l])=>[String(v), l]));
+  MULTI_STATE[key] = new Set([...MULTI_STATE[key]].filter(v=>MULTI_LABELS[key].has(v)));
+  const root = document.getElementById('f-'+key);
+  root._msel.updateButtonLabel();
+  if(!root._msel.panel.hidden) root._msel.renderOptions(root.querySelector('.msel-search input').value);
+}
+function getMultiSelected(key){ return Array.from(MULTI_STATE[key]); } // [] = todos
+function resetMultiSelect(key){
+  MULTI_STATE[key].clear();
+  const root = document.getElementById('f-'+key);
+  root._msel.updateButtonLabel();
+  if(!root._msel.panel.hidden) root._msel.renderOptions('');
+}
+
 function buildFilterOptions(){
-  fillSelect($('#f-provincia'), DATA.provs.map((p,i)=>[i,p]).sort((a,b)=>a[1].localeCompare(b[1],'es')));
-  fillSelect($('#f-sector'), DATA.sectors.map((s,i)=>[i,titleCase(s)]).sort((a,b)=>a[1].localeCompare(b[1],'es')));
-  fillSelect($('#f-sexo'), DATA.sexos.map((s,i)=>[i,titleCase(s)]));
-  fillSelect($('#f-categoria'), DATA.cats.map((c,i)=>[i,c]));
-  const galOptions = DATA.gals.map((g,i)=>[i,titleCase(g)]).sort((a,b)=>a[1].localeCompare(b[1],'es'));
-  fillSelect($('#f-gal'), galOptions);
+  setMultiOptions('provincia', DATA.provs.map((p,i)=>[i,p]).sort((a,b)=>a[1].localeCompare(b[1],'es')));
+  setMultiOptions('sector', DATA.sectors.map((s,i)=>[i,titleCase(s)]).sort((a,b)=>a[1].localeCompare(b[1],'es')));
+  setMultiOptions('sexo', DATA.sexos.map((s,i)=>[i,titleCase(s)]));
+  setMultiOptions('categoria', DATA.cats.map((c,i)=>[i,c]));
   updateMunicipioOptions();
 }
 
@@ -777,15 +1033,15 @@ function countBy(arr){
 }
 
 function updateMunicipioOptions(){
-  const provVal = $('#f-provincia').value;
+  const provSel = getMultiSelected('provincia').map(Number);
   let munIndices = DATA.municipios.map((m,i)=>i);
-  if(provVal!=='all'){
-    munIndices = munIndices.filter(i=>DATA.municipios[i].p===Number(provVal));
+  if(provSel.length){
+    munIndices = munIndices.filter(i=>provSel.includes(DATA.municipios[i].p));
   }
   const opts = munIndices
     .map(i=>[i, DATA.municipios[i].n])
     .sort((a,b)=>a[1].localeCompare(b[1],'es'));
-  fillSelect($('#f-municipio'), opts);
+  setMultiOptions('municipio', opts);
 }
 
 /* ============ Chips de habitantes ============ */
@@ -821,13 +1077,12 @@ function buildHabChips(){
 /* ============ Filtrado ============ */
 function getFilters(){
   return {
-    prov: $('#f-provincia').value,
-    mun: $('#f-municipio').value,
-    sector: $('#f-sector').value,
+    prov: getMultiSelected('provincia').map(Number),
+    mun: getMultiSelected('municipio').map(Number),
+    sector: getMultiSelected('sector').map(Number),
     estado: $('#f-estado').value,
-    sexo: $('#f-sexo').value,
-    gal: $('#f-gal').value,
-    cat: $('#f-categoria').value,
+    sexo: getMultiSelected('sexo').map(Number),
+    cat: getMultiSelected('categoria').map(Number),
     habMin: $('#f-hab-min').value===''? null: Number($('#f-hab-min').value),
     habMax: $('#f-hab-max').value===''? null: Number($('#f-hab-max').value),
     q: $('#table-search').value.trim().toLowerCase(),
@@ -851,13 +1106,12 @@ function applyFilters(){
   }
 
   for(let i=0;i<n;i++){
-    if(f.prov!=='all' && r.prov[i]!==Number(f.prov)) continue;
-    if(f.mun!=='all' && r.mun[i]!==Number(f.mun)) continue;
-    if(f.sector!=='all' && r.sector[i]!==Number(f.sector)) continue;
+    if(f.prov.length && !f.prov.includes(r.prov[i])) continue;
+    if(f.mun.length && !f.mun.includes(r.mun[i])) continue;
+    if(f.sector.length && !f.sector.includes(r.sector[i])) continue;
     if(f.estado!=='all' && r.estado[i]!==Number(f.estado)) continue;
-    if(f.sexo!=='all' && r.sexo[i]!==Number(f.sexo)) continue;
-    if(f.gal!=='all' && r.gal[i]!==Number(f.gal)) continue;
-    if(f.cat!=='all' && r.cat[i]!==Number(f.cat)) continue;
+    if(f.sexo.length && !f.sexo.includes(r.sexo[i])) continue;
+    if(f.cat.length && !f.cat.includes(r.cat[i])) continue;
     if(munOk && !munOk[r.mun[i]]) continue;
     if(f.q){
       const nombre = String(r.nombre[i]==null? '': r.nombre[i]).toLowerCase();
@@ -869,6 +1123,7 @@ function applyFilters(){
   FILTERED = out;
   TABLE_PAGE = 0;
   render();
+  if(CURRENT_TAB==='distancias') renderDistancias();
 }
 
 /* ============ KPIs ============ */
@@ -1179,9 +1434,139 @@ function switchTab(tab){
   $$('.tab-btn').forEach(b=> b.classList.toggle('active', b.dataset.tab===tab));
   $('#tab-resumen').hidden = tab!=='resumen';
   $('#tab-territorial').hidden = tab!=='territorial';
+  $('#tab-distancias').hidden = tab!=='distancias';
   $('#tab-contacto').hidden = tab!=='contacto';
   if(tab==='territorial') renderTerritorial();
+  if(tab==='distancias') renderDistancias();
   if(tab==='contacto') renderContacto();
+}
+
+/* ============ Pestaña distancias: municipio cabecera y municipio más cercano ============ */
+let DIST_MAP = null, DIST_MAP_LAYER = null;
+
+function buildDistFilterOptions(){
+  const gals = Array.from(new Set(DIST_DATA.map(r=>r.gal))).sort((a,b)=>a.localeCompare(b,'es'));
+  fillSelect($('#dist-gal-filter'), gals.map((g,i)=>[g, titleCase(g)]));
+}
+function distSortValue(row, key){
+  const v = row[key];
+  if(v===null || v===undefined) return null;
+  return typeof v==='string' ? v.toLowerCase() : v;
+}
+function applyDistFilters(){
+  const gf = getFilters(); // provincia y municipio se comparten con los filtros generales de arriba
+  const galSel = $('#dist-gal-filter') ? $('#dist-gal-filter').value : 'all';
+  const q = ($('#dist-search').value||'').trim().toLowerCase();
+
+  const selProvNames = gf.prov.length ? gf.prov.map(i=>normalizeHeader(DATA.provs[i])) : null;
+  const selMunCodes = gf.mun.length ? new Set(gf.mun.map(i=>String((DATA.municipios[i]||{}).c||'').trim())) : null;
+
+  DIST_FILTERED = DIST_DATA.map((_,i)=>i).filter(i=>{
+    const row = DIST_DATA[i];
+    if(selProvNames && !selProvNames.includes(normalizeHeader(row.prov))) return false;
+    if(selMunCodes && !selMunCodes.has(String(row.codmun||'').trim())) return false;
+    if(galSel!=='all' && row.gal!==galSel) return false;
+    if(q && !(row.mun.toLowerCase().includes(q) || row.prov.toLowerCase().includes(q))) return false;
+    return true;
+  });
+  const {key, dir} = DIST_SORT;
+  DIST_FILTERED.sort((ia,ib)=>{
+    const a = distSortValue(DIST_DATA[ia], key), b = distSortValue(DIST_DATA[ib], key);
+    if(a===null && b===null) return 0;
+    if(a===null) return 1;   // los vacíos siempre al final, sea cual sea el sentido
+    if(b===null) return -1;
+    if(a<b) return -1*dir;
+    if(a>b) return 1*dir;
+    return 0;
+  });
+}
+function renderDistancias(){
+  $$('#tab-distancias thead th.sortable').forEach(th=>{
+    th.querySelector('.sort-arrow')?.remove();
+    if(th.dataset.sort===DIST_SORT.key){
+      const arrow = document.createElement('span');
+      arrow.className = 'sort-arrow';
+      arrow.textContent = DIST_SORT.dir===1 ? '▲' : '▼';
+      th.appendChild(arrow);
+    }
+  });
+
+  const body = $('#dist-table-body');
+  if(DIST_DATA.length===0){
+    body.innerHTML = `<tr><td colspan="8"><div class="empty-state">No hay datos de distancias cargados todavía. Conecta con Google Sheets desde «Fuente de datos» para verlos (esta pestaña no está disponible al cargar desde Excel).</div></td></tr>`;
+    $('#dist-pager-count').textContent = 'Sin resultados';
+    $('#dist-pager-page').textContent = '';
+    $('#dist-pager-prev').disabled = true;
+    $('#dist-pager-next').disabled = true;
+    renderDistMap();
+    return;
+  }
+
+  applyDistFilters();
+  const start = DIST_PAGE*DIST_PAGE_SIZE;
+  const pageIdx = DIST_FILTERED.slice(start, start+DIST_PAGE_SIZE);
+
+  if(pageIdx.length===0){
+    body.innerHTML = `<tr><td colspan="8"><div class="empty-state">No hay municipios que coincidan con los filtros o la búsqueda.</div></td></tr>`;
+  } else {
+    const km = (v)=> v===null ? '—' : v.toLocaleString('es-ES',{maximumFractionDigits:1})+' km';
+    body.innerHTML = pageIdx.map(i=>{
+      const row = DIST_DATA[i];
+      return `<tr>
+        <td>${escapeHtml(row.mun)}</td>
+        <td>${titleCase(row.prov)}</td>
+        <td>${row.hab===null?'—':fmt(row.hab)}</td>
+        <td>${row.com===null?'—':fmt(row.com)}</td>
+        <td>${escapeHtml(row.cab)||'—'}</td>
+        <td>${km(row.distCabe)}</td>
+        <td>${escapeHtml(row.mejor)||'—'}</td>
+        <td>${km(row.distMejor)}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  const totalPages = Math.max(1, Math.ceil(DIST_FILTERED.length/DIST_PAGE_SIZE));
+  $('#dist-pager-count').textContent = DIST_FILTERED.length? `Mostrando ${start+1}–${Math.min(start+DIST_PAGE_SIZE,DIST_FILTERED.length)} de ${fmt(DIST_FILTERED.length)}` : 'Sin resultados';
+  $('#dist-pager-page').textContent = `Página ${DIST_PAGE+1} / ${totalPages}`;
+  $('#dist-pager-prev').disabled = DIST_PAGE<=0;
+  $('#dist-pager-next').disabled = DIST_PAGE>=totalPages-1;
+
+  renderDistMap();
+}
+
+function renderDistMap(){
+  const el = $('#dist-map');
+  if(!el) return;
+  if(typeof L === 'undefined'){
+    el.innerHTML = '<div class="empty-state">No se pudo cargar la librería de mapas (Leaflet) desde la red. La tabla sigue funcionando con normalidad.</div>';
+    return;
+  }
+  if(!DIST_MAP){
+    el.innerHTML = '';
+    DIST_MAP = L.map(el, { scrollWheelZoom:false }).setView([41.65, -4.7], 7);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18, attribution: '© OpenStreetMap'
+    }).addTo(DIST_MAP);
+    DIST_MAP_LAYER = L.layerGroup().addTo(DIST_MAP);
+  }
+  DIST_MAP_LAYER.clearLayers();
+
+  const pts = [];
+  DIST_FILTERED.forEach(i=>{
+    const row = DIST_DATA[i];
+    if(row.lat===null || row.lng===null) return;
+    const marker = L.circleMarker([row.lat, row.lng], {
+      radius: 5, weight: 1, color:'#3B82F6', fillColor:'#3B82F6', fillOpacity:.75
+    });
+    marker.bindPopup(`<b>${escapeHtml(row.mun)}</b><br>${titleCase(row.prov)}<br>${row.com===null?'—':fmt(row.com)} comercios · ${row.hab===null?'—':fmt(row.hab)} hab.<br>A cabecera (${escapeHtml(row.cab)||'—'}): ${row.distCabe===null?'—':row.distCabe.toLocaleString('es-ES',{maximumFractionDigits:1})+' km'}`);
+    marker.addTo(DIST_MAP_LAYER);
+    pts.push([row.lat, row.lng]);
+  });
+
+  setTimeout(()=>{ DIST_MAP.invalidateSize(); }, 50);
+  if(pts.length){
+    DIST_MAP.fitBounds(pts, { padding:[24,24], maxZoom:11 });
+  }
 }
 
 /* ============ Pestaña territorial: mapa de calor, pastel y peor abastecidos ============ */
@@ -1473,7 +1858,7 @@ function buildDatasetFromRows(headerRow, dataRowsRaw){
   const munCodes = Array.from(munMap.keys());
   const municipios = munCodes.map(cm=>{
     const m = munMap.get(cm);
-    return { n:m.n, p: provs.indexOf(m.p), h: m.h };
+    return { n:m.n, p: provs.indexOf(m.p), h: m.h, c: cm };
   });
   const munIndexOf = new Map(munCodes.map((cm,i)=>[cm,i]));
 
@@ -1529,7 +1914,47 @@ function parseApiPayload(json){
   if(!json || !Array.isArray(json.columnas) || !Array.isArray(json.filas)){
     throw new Error('Respuesta de la API con formato inesperado.');
   }
-  return buildDatasetFromRows(json.columnas, json.filas);
+  const dataset = buildDatasetFromRows(json.columnas, json.filas);
+  dataset.distancias = (json.distancias && Array.isArray(json.distancias.columnas) && Array.isArray(json.distancias.filas))
+    ? parseDistanciasPayload(json.distancias)
+    : [];
+  return dataset;
+}
+
+/* Cabeceras de la hoja EST.GAL -> claves internas de cada fila de distancias. */
+const COLMAP_DIST = {
+  'PROVINCIA':'prov', 'MUNICIPIO':'mun', 'COMERCIOS TOT':'com',
+  'GRUPO DE ACCION LOCAL':'gal', 'HABITANTES':'hab',
+  'MUNICIPIO CABECERA':'cab', 'DIST-CABE':'distCabe',
+  'MEJOR MUNICI':'mejor', 'DIST-MEJ':'distMejor',
+  'ID_MUNICIPIO':'codmun', 'LAM':'lat', 'LOM':'lng'
+};
+function toNumOrNull(v){
+  if(v===null || v===undefined || v==='') return null;
+  const n = typeof v==='number' ? v : parseFloat(String(v).replace(',','.'));
+  return isNaN(n) ? null : n;
+}
+function parseDistanciasPayload(json){
+  const colIndex = {};
+  json.columnas.forEach((h,idx)=>{
+    const norm = normalizeHeader(h===null||h===undefined? '': h);
+    if(COLMAP_DIST[norm] && !(COLMAP_DIST[norm] in colIndex)) colIndex[COLMAP_DIST[norm]] = idx;
+  });
+  const s = (v)=> v===null||v===undefined? '' : String(v).trim();
+  return json.filas.filter(r=> r && s(r[colIndex.mun])).map(r=>({
+    mun: s(r[colIndex.mun]),
+    prov: s(r[colIndex.prov]),
+    codmun: 'codmun' in colIndex ? s(r[colIndex.codmun]) : '',
+    gal: 'gal' in colIndex ? (s(r[colIndex.gal]) || 'NO PERTENECE A NINGUN GRUPO') : '',
+    hab: 'hab' in colIndex ? toNumOrNull(r[colIndex.hab]) : null,
+    com: 'com' in colIndex ? toNumOrNull(r[colIndex.com]) : null,
+    cab: 'cab' in colIndex ? s(r[colIndex.cab]) : '',
+    distCabe: 'distCabe' in colIndex ? toNumOrNull(r[colIndex.distCabe]) : null,
+    mejor: 'mejor' in colIndex ? s(r[colIndex.mejor]) : '',
+    distMejor: 'distMejor' in colIndex ? toNumOrNull(r[colIndex.distMejor]) : null,
+    lat: 'lat' in colIndex ? toNumOrNull(r[colIndex.lat]) : null,
+    lng: 'lng' in colIndex ? toNumOrNull(r[colIndex.lng]) : null
+  }));
 }
 
 function handleFile(file){
@@ -1539,12 +1964,15 @@ function handleFile(file){
     try{
       const newData = parseWorkbook(e.target.result);
       DATA = newData;
+      DIST_DATA = []; // el Excel no trae los datos de distancias (solo están en Google Sheets)
+      DIST_PAGE = 0;
       clearStoredSource();
       $('#src-reload').style.display = 'none';
       buildFilterOptions();
       resetFilterInputs();
       applyFilters();
       updateMetaChips();
+      if(CURRENT_TAB==='distancias') renderDistancias();
       setStatus(`Cargado desde Excel · ${DATA.meta.generado}`);
       closeSourceModal();
     }catch(err){
@@ -1603,11 +2031,15 @@ async function connectSource(){
   try{
     const newData = await fetchFromApi(url, token);
     DATA = newData;
+    DIST_DATA = newData.distancias || [];
+    DIST_PAGE = 0;
+    buildDistFilterOptions();
     setStoredSource({url, token});
     buildFilterOptions();
     resetFilterInputs();
     applyFilters();
     updateMetaChips();
+    if(CURRENT_TAB==='distancias') renderDistancias();
     setStatus(`Conectado a Google Sheets · ${DATA.meta.n} registros · ${new Date().toLocaleString('es-ES')}`);
     $('#src-reload').style.display = '';
     closeSourceModal();
@@ -1624,9 +2056,13 @@ async function reloadSource(){
   try{
     const newData = await fetchFromApi(src.url, src.token);
     DATA = newData;
+    DIST_DATA = newData.distancias || [];
+    DIST_PAGE = 0;
+    buildDistFilterOptions();
     buildFilterOptions();
     applyFilters();
     updateMetaChips();
+    if(CURRENT_TAB==='distancias') renderDistancias();
     setStatus(`Conectado a Google Sheets · ${DATA.meta.n} registros · ${new Date().toLocaleString('es-ES')}`);
   }catch(err){
     console.error(err);
@@ -1640,10 +2076,14 @@ async function autoConnectOnLoad(){
   try{
     const newData = await fetchFromApi(src.url, src.token, {silent:true});
     DATA = newData;
+    DIST_DATA = newData.distancias || [];
+    DIST_PAGE = 0;
+    buildDistFilterOptions();
     buildFilterOptions();
     $('#f-estado').value = '1';
     applyFilters();
     updateMetaChips();
+    if(CURRENT_TAB==='distancias') renderDistancias();
     setStatus(`Conectado a Google Sheets · ${DATA.meta.n} registros · ${new Date().toLocaleString('es-ES')}`);
     $('#src-reload').style.display = '';
   }catch(err){
@@ -1662,19 +2102,18 @@ function updateMetaChips(){
 
 /* ============ Eventos ============ */
 function resetFilterInputs(){
-  $('#f-provincia').value='all'; $('#f-municipio').value='all'; $('#f-sector').value='all';
-  $('#f-estado').value='1'; $('#f-sexo').value='all'; $('#f-gal').value='all'; $('#f-categoria').value='all';
+  ['provincia','municipio','sector','sexo','categoria'].forEach(resetMultiSelect);
+  $('#f-estado').value='1';
   $('#f-hab-min').value=''; $('#f-hab-max').value='';
   $$('.chip').forEach(c=>c.classList.remove('active'));
   $('#table-search').value='';
 }
 
 function bindEvents(){
-  ['#f-sector','#f-estado','#f-sexo','#f-gal','#f-categoria','#f-hab-min','#f-hab-max','#f-municipio']
+  ['#f-estado','#f-hab-min','#f-hab-max']
     .forEach(sel=> $(sel).addEventListener('change', applyFilters));
   $('#f-hab-min').addEventListener('input', ()=>$$('.chip').forEach(c=>c.classList.remove('active')));
   $('#f-hab-max').addEventListener('input', ()=>$$('.chip').forEach(c=>c.classList.remove('active')));
-  $('#f-provincia').addEventListener('change', ()=>{ updateMunicipioOptions(); applyFilters(); });
   $('#table-search').addEventListener('input', debounce(()=>{ TABLE_PAGE=0; applyFilters(); }, 220));
 
   $('#btn-reset').addEventListener('click', ()=>{ resetFilterInputs(); updateMunicipioOptions(); applyFilters(); });
@@ -1683,6 +2122,23 @@ function bindEvents(){
   $('#pager-next').addEventListener('click', ()=>{
     const totalPages = Math.max(1, Math.ceil(FILTERED.length/PAGE_SIZE));
     if(TABLE_PAGE<totalPages-1){ TABLE_PAGE++; renderTable(); }
+  });
+
+  $('#dist-search').addEventListener('input', debounce(()=>{ DIST_PAGE=0; renderDistancias(); }, 220));
+  $('#dist-gal-filter').addEventListener('change', ()=>{ DIST_PAGE=0; renderDistancias(); });
+  $('#dist-pager-prev').addEventListener('click', ()=>{ if(DIST_PAGE>0){ DIST_PAGE--; renderDistancias(); } });
+  $('#dist-pager-next').addEventListener('click', ()=>{
+    const totalPages = Math.max(1, Math.ceil(DIST_FILTERED.length/DIST_PAGE_SIZE));
+    if(DIST_PAGE<totalPages-1){ DIST_PAGE++; renderDistancias(); }
+  });
+  $$('#tab-distancias thead th.sortable').forEach(th=>{
+    th.addEventListener('click', ()=>{
+      const key = th.dataset.sort;
+      if(DIST_SORT.key===key) DIST_SORT.dir *= -1;
+      else DIST_SORT = { key, dir:1 };
+      DIST_PAGE = 0;
+      renderDistancias();
+    });
   });
 
   $('#btn-theme').addEventListener('click', toggleTheme);
@@ -1785,6 +2241,7 @@ function init(){
   const stored = getStoredTheme();
   applyTheme(stored === 'light' ? 'light' : 'dark', false);
   applyChartDefaults();
+  initMultiSelects();
   buildFilterOptions();
   buildHabChips();
   updateMetaChips();
