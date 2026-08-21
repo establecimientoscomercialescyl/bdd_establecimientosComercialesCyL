@@ -13,7 +13,6 @@
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
 <script>
   // Carga robusta de librerías externas: prueba varias CDN por si alguna está bloqueada en la red.
   function loadScriptWithFallback(urls, checkGlobal){
@@ -50,13 +49,10 @@
       'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
       'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
       'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js'
-    ], 'XLSX'),
-    loadScriptWithFallback([
-      'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js',
-      'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',
-      'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
-    ], 'L')
+    ], 'XLSX')
   ]);
+  // Google Maps (mapa de la pestaña Distancias) se carga aparte y solo
+  // cuando hace falta, ver GOOGLE_MAPS_API_KEY y loadGoogleMaps() más abajo.
 </script>
 <style>
   :root{
@@ -848,6 +844,25 @@
  * ========================================================================== */
 const DEFAULT_SOURCE = null;
 
+/* ==========================================================================
+ * GOOGLE MAPS — clave de la API JavaScript de Google Maps, para el mapa de
+ * la pestaña "Distancias". Necesaria porque ese mapa pinta un marcador por
+ * municipio con su propia ficha emergente (algo que la versión gratuita sin
+ * clave, la de "maps.google.com/...&output=embed" que se usa en las fichas
+ * individuales de la tabla, no permite hacer con muchos puntos a la vez).
+ *
+ * Cómo conseguirla (gratis para este volumen de uso):
+ * 1. https://console.cloud.google.com/google/maps-apis → crear proyecto.
+ * 2. Habilitar la API "Maps JavaScript API".
+ * 3. Credenciales → Crear credenciales → Clave de API.
+ * 4. Restringir la clave a tu dominio (p.ej. tu-usuario.github.io/*) para
+ *    que nadie más pueda usarla desde otra web.
+ * 5. Pega la clave abajo y sube el archivo.
+ * Si se deja en blanco, esa pestaña muestra un aviso en vez del mapa; el
+ * resto del panel (tabla de distancias incluida) sigue funcionando igual.
+ * ========================================================================== */
+const GOOGLE_MAPS_API_KEY = '';
+
 /* ============ Utilidades ============ */
 const $ = (sel)=>document.querySelector(sel);
 const $$ = (sel)=>Array.from(document.querySelectorAll(sel));
@@ -1421,7 +1436,29 @@ function switchTab(tab){
 }
 
 /* ============ Pestaña distancias: municipio cabecera y municipio más cercano ============ */
-let DIST_MAP = null, DIST_MAP_LAYER = null;
+let DIST_MAP = null, DIST_MAP_MARKERS = [], DIST_MAP_INFOWINDOW = null;
+let _googleMapsPromise = null;
+
+/* Carga la API de Google Maps una sola vez, y solo cuando hace falta (al
+ * abrir por primera vez la pestaña Distancias), usando la clave configurada
+ * en GOOGLE_MAPS_API_KEY más arriba. */
+function loadGoogleMaps(){
+  if(_googleMapsPromise) return _googleMapsPromise;
+  _googleMapsPromise = new Promise((resolve, reject)=>{
+    if(typeof google !== 'undefined' && google.maps && google.maps.Map){ resolve(); return; }
+    if(!GOOGLE_MAPS_API_KEY){
+      reject(new Error('Falta configurar GOOGLE_MAPS_API_KEY en el código del dashboard.'));
+      return;
+    }
+    window.__initGoogleMapsCb = ()=> resolve();
+    const s = document.createElement('script');
+    s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GOOGLE_MAPS_API_KEY)}&callback=__initGoogleMapsCb&loading=async`;
+    s.async = true;
+    s.onerror = ()=> reject(new Error('No se pudo cargar Google Maps (revisa la clave, las restricciones de dominio o la conexión).'));
+    document.head.appendChild(s);
+  });
+  return _googleMapsPromise;
+}
 
 function buildDistFilterOptions(){
   const gals = Array.from(new Set(DIST_DATA.map(r=>r.gal))).sort((a,b)=>a.localeCompare(b,'es'));
@@ -1513,39 +1550,61 @@ function renderDistancias(){
   renderDistMap();
 }
 
-function renderDistMap(){
+async function renderDistMap(){
   const el = $('#dist-map');
   if(!el) return;
-  if(typeof L === 'undefined'){
-    el.innerHTML = '<div class="empty-state">No se pudo cargar la librería de mapas (Leaflet) desde la red. La tabla sigue funcionando con normalidad.</div>';
+
+  try{
+    await loadGoogleMaps();
+  }catch(err){
+    el.innerHTML = `<div class="empty-state">No se pudo cargar Google Maps: ${escapeHtml(err.message)}. La tabla de arriba sigue funcionando con normalidad.</div>`;
     return;
   }
+
+  // Si mientras se cargaba la API el usuario cambió de filtro varias veces,
+  // solo nos interesa la última llamada: si el contenedor ya no está vacío
+  // ni es nuestro mapa, seguimos igualmente (el mapa se reutiliza).
   if(!DIST_MAP){
     el.innerHTML = '';
-    DIST_MAP = L.map(el, { scrollWheelZoom:false }).setView([41.65, -4.7], 7);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 18, attribution: '© OpenStreetMap'
-    }).addTo(DIST_MAP);
-    DIST_MAP_LAYER = L.layerGroup().addTo(DIST_MAP);
+    DIST_MAP = new google.maps.Map(el, {
+      center: { lat: 41.65, lng: -4.7 },
+      zoom: 7,
+      streetViewControl: false,
+      mapTypeControl: false,
+      scrollwheel: false
+    });
+    DIST_MAP_INFOWINDOW = new google.maps.InfoWindow();
   }
-  DIST_MAP_LAYER.clearLayers();
 
-  const pts = [];
+  DIST_MAP_MARKERS.forEach(m=> m.setMap(null));
+  DIST_MAP_MARKERS = [];
+
+  const bounds = new google.maps.LatLngBounds();
+  let any = false;
   DIST_FILTERED.forEach(i=>{
     const row = DIST_DATA[i];
     if(row.lat===null || row.lng===null) return;
-    const marker = L.circleMarker([row.lat, row.lng], {
-      radius: 5, weight: 1, color:'#3B82F6', fillColor:'#3B82F6', fillOpacity:.75
+    const pos = { lat: row.lat, lng: row.lng };
+    const marker = new google.maps.Marker({
+      position: pos,
+      map: DIST_MAP,
+      title: row.mun,
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 6, fillColor:'#3B82F6', fillOpacity:.85,
+        strokeColor:'#1D4ED8', strokeWeight:1
+      }
     });
-    marker.bindPopup(`<b>${escapeHtml(row.mun)}</b><br>${titleCase(row.prov)}<br>${row.com===null?'—':fmt(row.com)} comercios · ${row.hab===null?'—':fmt(row.hab)} hab.<br>A cabecera (${escapeHtml(row.cab)||'—'}): ${row.distCabe===null?'—':row.distCabe.toLocaleString('es-ES',{maximumFractionDigits:1})+' km'}`);
-    marker.addTo(DIST_MAP_LAYER);
-    pts.push([row.lat, row.lng]);
+    marker.addListener('click', ()=>{
+      DIST_MAP_INFOWINDOW.setContent(`<div style="color:#0A0F1D;font-family:'Inter',sans-serif;"><b>${escapeHtml(row.mun)}</b><br>${escapeHtml(titleCase(row.prov))}<br>${row.com===null?'—':fmt(row.com)} comercios · ${row.hab===null?'—':fmt(row.hab)} hab.<br>A cabecera (${escapeHtml(row.cab)||'—'}): ${row.distCabe===null?'—':row.distCabe.toLocaleString('es-ES',{maximumFractionDigits:1})+' km'}</div>`);
+      DIST_MAP_INFOWINDOW.open(DIST_MAP, marker);
+    });
+    DIST_MAP_MARKERS.push(marker);
+    bounds.extend(pos);
+    any = true;
   });
 
-  setTimeout(()=>{ DIST_MAP.invalidateSize(); }, 50);
-  if(pts.length){
-    DIST_MAP.fitBounds(pts, { padding:[24,24], maxZoom:11 });
-  }
+  if(any) DIST_MAP.fitBounds(bounds, 24);
 }
 
 /* ============ Pestaña territorial: mapa de calor, pastel y peor abastecidos ============ */
@@ -2031,14 +2090,28 @@ function onDataLoaded(newData, statusMsg){
   DATA = newData;
   DIST_DATA = newData.distancias || [];
   DIST_PAGE = 0;
-  buildDistFilterOptions();
-  buildFilterOptions();
-  resetFilterInputs();
-  applyFilters();
-  updateMetaChips();
-  if(CURRENT_TAB==='distancias') renderDistancias();
+  // Importante: se muestra #app-content ANTES de pintar los gráficos. Si se
+  // dibujan con el contenedor todavía oculto (hidden), los <canvas> tienen
+  // ancho/alto 0 y Chart.js puede lanzar un error a mitad de render; como ese
+  // error interrumpía esta función antes de llegar a "ocultar el aviso de
+  // sin datos", el panel se quedaba tapado por el banner aunque los datos sí
+  // se hubieran cargado (los filtros ya mostraban cifras reales). Al mostrar
+  // el contenido primero, los canvas ya tienen tamaño real cuando se dibujan.
   hideNoDataState();
-  setStatus(statusMsg);
+  try{
+    buildDistFilterOptions();
+    buildFilterOptions();
+    resetFilterInputs();
+    applyFilters();
+    updateMetaChips();
+    if(CURRENT_TAB==='distancias') renderDistancias();
+    setStatus(statusMsg);
+  }catch(err){
+    // Aunque algo falle pintando un gráfico concreto, el panel se queda
+    // visible (con los datos cargados) en vez de tapado por el aviso.
+    console.error('Error al pintar el panel tras cargar datos:', err);
+    setStatus(statusMsg + ' (algún gráfico no se pudo pintar, revisa la consola)');
+  }
   $('#src-reload').style.display = '';
 }
 
