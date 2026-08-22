@@ -1283,7 +1283,10 @@ function renderDistKPIs(){
   const muSet = new Set();
   DIST_FILTERED.forEach(i=>{
     const row = DIST_DATA[i];
-    if(row.com!==null) com += row.com;
+    // "Comercios GAL" cuenta solo los activos (columna COMERCIOS ACTIVOS de
+    // EST.GAL); si esa columna no viniera cargada, se recurre al total
+    // (COMERCIOS TOT) para no dejar el indicador vacío.
+    com += (row.comActivos!==null ? row.comActivos : (row.com||0));
     if(row.hab!==null) hab += row.hab;
     const mi = findMunicipioIndex(row.codmun, row.mun, row.prov);
     if(mi!==null && mi!==undefined) muSet.add(mi);
@@ -2168,7 +2171,7 @@ function parseApiPayload(json){
 
 /* Cabeceras de la hoja EST.GAL -> claves internas de cada fila de distancias. */
 const COLMAP_DIST = {
-  'PROVINCIA':'prov', 'MUNICIPIO':'mun', 'COMERCIOS TOT':'com',
+  'PROVINCIA':'prov', 'MUNICIPIO':'mun', 'COMERCIOS TOT':'com', 'COMERCIOS ACTIVOS':'comActivos',
   'GRUPO DE ACCION LOCAL':'gal', 'HABITANTES':'hab',
   'MUNICIPIO CABECERA':'cab', 'DIST-CABE':'distCabe',
   'MEJOR MUNICI':'mejor', 'DIST-MEJ':'distMejor',
@@ -2193,6 +2196,7 @@ function parseDistanciasPayload(json){
     gal: 'gal' in colIndex ? (s(r[colIndex.gal]) || 'NO PERTENECE A NINGUN GRUPO') : '',
     hab: 'hab' in colIndex ? toNumOrNull(r[colIndex.hab]) : null,
     com: 'com' in colIndex ? toNumOrNull(r[colIndex.com]) : null,
+    comActivos: 'comActivos' in colIndex ? toNumOrNull(r[colIndex.comActivos]) : null,
     cab: 'cab' in colIndex ? s(r[colIndex.cab]) : '',
     distCabe: 'distCabe' in colIndex ? toNumOrNull(r[colIndex.distCabe]) : null,
     mejor: 'mejor' in colIndex ? s(r[colIndex.mejor]) : '',
