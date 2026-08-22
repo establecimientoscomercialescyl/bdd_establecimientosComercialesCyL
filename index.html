@@ -614,8 +614,9 @@
 
   <div id="app-content" hidden>
 
-  <div class="section-label">Indicadores</div>
+  <div class="section-label" id="kpis-label">Indicadores</div>
   <div class="kpis" id="kpis"></div>
+  <div class="kpis" id="kpis-distancias" hidden></div>
 
   <div class="tab-nav" role="tablist">
     <button class="tab-btn active" id="tab-btn-resumen" data-tab="resumen" role="tab">Resumen general</button>
@@ -1239,6 +1240,32 @@ function renderKPIs(){
   `).join('');
 }
 
+/* Indicadores propios de la pestaña Distancias (datos de la hoja EST.GAL,
+   no de BDD): reaccionan a los filtros de provincia/municipio compartidos,
+   al selector de Grupo de Acción Local y a la búsqueda de esa pestaña. */
+function renderDistKPIs(){
+  let com = 0, hab = 0;
+  DIST_FILTERED.forEach(i=>{
+    const row = DIST_DATA[i];
+    if(row.com!==null) com += row.com;
+    if(row.hab!==null) hab += row.hab;
+  });
+  const galSel = $('#dist-gal-filter') ? $('#dist-gal-filter').value : 'all';
+  const foot = galSel==='all' ? 'todos los grupos de acción local' : titleCase(galSel);
+  const kpis = [
+    {label:'Comercios GAL', value: fmt(com), foot, icon:'store', bg:'var(--blue-soft)', color:'var(--blue)'},
+    {label:'Habitantes GAL', value: fmt(hab), foot, icon:'population', bg:'var(--purple-soft)', color:'var(--purple)'}
+  ];
+  $('#kpis-distancias').innerHTML = kpis.map(k=>`
+    <div class="kpi">
+      <div class="kpi-icon" style="--kpi-bg:${k.bg}; --kpi-color:${k.color}">${kpiIcon(k.icon)}</div>
+      <div class="label">${k.label}</div>
+      <div class="value">${k.value}</div>
+      <div class="foot">${k.foot}</div>
+    </div>
+  `).join('');
+}
+
 /* ============ Gráficos ============ */
 function destroyChart(id){ if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
 
@@ -1511,6 +1538,11 @@ function switchTab(tab){
   $('#tab-territorial').hidden = tab!=='territorial';
   $('#tab-distancias').hidden = tab!=='distancias';
   $('#tab-contacto').hidden = tab!=='contacto';
+  // En la pestaña Distancias los indicadores de arriba vienen de otra hoja
+  // (EST.GAL, no BDD), así que se sustituyen por los propios de esa pestaña.
+  $('#kpis').hidden = tab==='distancias';
+  $('#kpis-distancias').hidden = tab!=='distancias';
+  $('#kpis-label').textContent = tab==='distancias' ? 'Indicadores de distancias' : 'Indicadores';
   if(tab==='territorial') renderTerritorial();
   if(tab==='distancias') renderDistancias();
   if(tab==='contacto') renderContacto();
@@ -1591,11 +1623,14 @@ function renderDistancias(){
     $('#dist-pager-page').textContent = '';
     $('#dist-pager-prev').disabled = true;
     $('#dist-pager-next').disabled = true;
+    DIST_FILTERED = [];
+    renderDistKPIs();
     renderDistMap();
     return;
   }
 
   applyDistFilters();
+  renderDistKPIs();
   const start = DIST_PAGE*DIST_PAGE_SIZE;
   const pageIdx = DIST_FILTERED.slice(start, start+DIST_PAGE_SIZE);
 
@@ -2109,7 +2144,11 @@ function parseDistanciasPayload(json){
     distMejor: 'distMejor' in colIndex ? toNumOrNull(r[colIndex.distMejor]) : null,
     lat: 'lat' in colIndex ? toNumOrNull(r[colIndex.lat]) : null,
     lng: 'lng' in colIndex ? toNumOrNull(r[colIndex.lng]) : null
-  }));
+  }))
+  // Se descartan los municipios que no pertenecen a ningún Grupo de Acción
+  // Local: no hacen falta en esta pestaña y así no hay que restarlos aparte
+  // en cada indicador, filtro o tabla.
+  .filter(row => normalizeHeader(row.gal) !== 'NO PERTENECE A NINGUN GRUPO');
 }
 
 function handleFile(file){
