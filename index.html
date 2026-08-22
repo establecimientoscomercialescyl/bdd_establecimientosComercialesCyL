@@ -202,10 +202,13 @@
   .filters{
     background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
     padding:18px 20px; box-shadow:var(--shadow);
-    display:grid; grid-template-columns:repeat(auto-fill,minmax(168px,1fr)); gap:16px;
+    display:flex; flex-direction:column; gap:14px;
   }
-  .field{ display:flex; flex-direction:column; gap:6px; min-width:0; }
-  .field label{ font-size:11.5px; font-weight:600; color:var(--text-mute); text-transform:uppercase; letter-spacing:.04em; }
+  .filters-row{
+    display:flex; flex-wrap:nowrap; align-items:flex-end; gap:14px;
+  }
+  .field{ display:flex; flex-direction:column; gap:6px; min-width:0; flex:1 1 120px; }
+  .field label{ font-size:11.5px; font-weight:600; color:var(--text-mute); text-transform:uppercase; letter-spacing:.04em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   select, input[type=date], input[type=number], input[type=text]{
     font-family:'Inter',sans-serif; font-size:13.5px; padding:8px 10px;
     border:1px solid var(--border); border-radius:8px; background:var(--card-2); color:var(--text);
@@ -215,17 +218,17 @@
   .range-row{ display:flex; gap:6px; align-items:center; }
   .range-row input{ width:0; flex:1; }
 
-  .hab-block{ grid-column:1/-1; }
-  .hab-inline{ display:flex; align-items:center; gap:20px; flex-wrap:wrap; }
-  .hab-inline .range-row{ flex:none; width:260px; }
-  .hab-inline .chips{ flex:1 1 260px; margin-top:0; }
+  .hab-block{ flex:2.4 1 300px; min-width:0; }
+  .hab-inline{ display:flex; align-items:center; gap:12px; flex-wrap:nowrap; min-width:0; }
+  .hab-inline .range-row{ flex:0 0 180px; }
+  .hab-inline .chips{ flex:1 1 auto; margin-top:0; min-width:0; }
   .hab-note{
     font-size:11.5px; color:var(--text-mute); line-height:1.45; margin:2px 0 0;
     background:var(--card-2); border-left:3px solid var(--blue); padding:7px 9px; border-radius:4px;
   }
   .chips{
     display:flex; gap:6px; flex-wrap:nowrap; margin-top:2px;
-    overflow-x:auto; scrollbar-width:none; -ms-overflow-style:none;
+    overflow-x:visible; scrollbar-width:none; -ms-overflow-style:none;
   }
   .chips::-webkit-scrollbar{ display:none; }
   .chip{
@@ -237,7 +240,7 @@
   .chip.active{ background:var(--blue-soft); border-color:var(--blue); color:var(--chip-active-text); }
 
   .filters-foot{
-    grid-column:1/-1; display:flex; justify-content:space-between; align-items:center;
+    display:flex; justify-content:space-between; align-items:center;
     padding-top:8px; margin-top:2px; border-top:1px dashed var(--border);
   }
   .filters-foot .count{ font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:var(--text-mute); }
@@ -500,6 +503,7 @@
 
   <div class="section-label">Filtros</div>
   <div class="filters" id="filters">
+    <div class="filters-row">
 
     <div class="field">
       <label for="f-provincia">Provincia</label>
@@ -590,6 +594,8 @@
         </div>
         <div class="chips" id="hab-chips"></div>
       </div>
+    </div>
+
     </div>
 
     <div class="filters-foot">
