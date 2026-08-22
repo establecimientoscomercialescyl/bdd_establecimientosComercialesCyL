@@ -189,7 +189,7 @@
   .btn svg{ width:15px; height:15px; }
 
   /* ---------- Layout ---------- */
-  main{ padding:22px clamp(16px,2.2vw,40px) 60px; max-width:1920px; margin:0 auto; }
+  main{ padding:22px clamp(16px,2.2vw,40px) 60px; max-width:100%; margin:0 auto; }
 
   .section-label{
     font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.12em;
@@ -1410,22 +1410,20 @@ function renderMapModalDetails(i){
   const mun = DATA.municipios[r.mun[i]];
   const provincia = titleCase(DATA.provs[r.prov[i]] || '');
   const sector = titleCase(DATA.sectors[r.sector[i]] || '');
-  const email = strOr(r.email[i]);
   const web = strOr(r.web[i]);
   const tel = strOr(r.tel[i]);
-  const mov = strOr(r.mov[i]);
+  const cp = strOr(r.cp ? r.cp[i] : '');
   const webHref = web ? (/^https?:\/\//i.test(web) ? web : 'https://'+web) : null;
 
   const html = [
     detailItem('Nº de registro', strOr(r.nre[i])),
     detailItem('Titular', strOr(r.titular[i])),
+    detailItem('Código postal', cp),
     detailItem('Municipio', mun ? titleCase(mun.n) : ''),
     detailItem('Provincia', provincia),
     detailItem('Población del municipio', mun ? fmt(mun.h) : ''),
     detailItem('Sector comercial', sector),
     detailItem('Teléfono', tel, tel ? {href:'tel:'+tel.replace(/\s+/g,'')} : {}),
-    detailItem('Móvil', mov, mov ? {href:'tel:'+mov.replace(/\s+/g,'')} : {}),
-    detailItem('Email', email, email ? {href:'mailto:'+email} : {}),
     detailItem('Web', web, webHref ? {href:webHref} : {}),
     detailItem('Última modificación', strOr(r.fmodi[i]))
   ].join('');
