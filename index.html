@@ -215,7 +215,10 @@
   .range-row{ display:flex; gap:6px; align-items:center; }
   .range-row input{ width:0; flex:1; }
 
-  .hab-block{ grid-column:span 2; }
+  .hab-block{ grid-column:1/-1; }
+  .hab-inline{ display:flex; align-items:center; gap:20px; flex-wrap:wrap; }
+  .hab-inline .range-row{ flex:none; width:260px; }
+  .hab-inline .chips{ flex:1 1 260px; margin-top:0; }
   .hab-note{
     font-size:11.5px; color:var(--text-mute); line-height:1.45; margin:2px 0 0;
     background:var(--card-2); border-left:3px solid var(--blue); padding:7px 9px; border-radius:4px;
@@ -299,7 +302,7 @@
   /* ---------- Charts ---------- */
   .grid-2{ display:grid; grid-template-columns:1.3fr 1fr; gap:16px; }
   .grid-3{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
-  @media (max-width:1000px){ .grid-2, .grid-3{ grid-template-columns:1fr; } .hab-block{ grid-column:1/-1; } }
+  @media (max-width:1000px){ .grid-2, .grid-3{ grid-template-columns:1fr; } }
 
   .card{
     background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
@@ -579,12 +582,14 @@
 
     <div class="field hab-block">
       <label>Habitantes del municipio</label>
-      <div class="range-row">
-        <input type="number" id="f-hab-min" placeholder="Mín.">
-        <span>–</span>
-        <input type="number" id="f-hab-max" placeholder="Máx.">
+      <div class="hab-inline">
+        <div class="range-row">
+          <input type="number" id="f-hab-min" placeholder="Mín.">
+          <span>–</span>
+          <input type="number" id="f-hab-max" placeholder="Máx.">
+        </div>
+        <div class="chips" id="hab-chips"></div>
       </div>
-      <div class="chips" id="hab-chips"></div>
     </div>
 
     <div class="filters-foot">
@@ -1635,12 +1640,18 @@ function renderDistMap(){
   DIST_MAP_LAYER.clearLayers();
   DIST_HL_LAYER.clearLayers();
 
+  // Se calcula antes de pintar los puntos base para poder atenuarlos (gris) en
+  // cuanto haya una selección activa, y así los 3 puntos resaltados destaquen.
+  const selRow = (DIST_HIGHLIGHT_IDX!==null && DIST_DATA[DIST_HIGHLIGHT_IDX]) ? DIST_DATA[DIST_HIGHLIGHT_IDX] : null;
+  const baseColor = selRow ? '#94A3B8' : '#3B82F6';
+  const baseOpacity = selRow ? .55 : .75;
+
   const pts = [];
   DIST_FILTERED.forEach(i=>{
     const row = DIST_DATA[i];
     if(row.lat===null || row.lng===null) return;
     const marker = L.circleMarker([row.lat, row.lng], {
-      radius: 5, weight: 1, color:'#3B82F6', fillColor:'#3B82F6', fillOpacity:.75
+      radius: 5, weight: 1, color:baseColor, fillColor:baseColor, fillOpacity:baseOpacity
     });
     marker.bindPopup(`<b>${escapeHtml(row.mun)}</b><br>${titleCase(row.prov)}<br>${row.com===null?'—':fmt(row.com)} comercios · ${row.hab===null?'—':fmt(row.hab)} hab.<br>A cabecera (${escapeHtml(row.cab)||'—'}): ${row.distCabe===null?'—':row.distCabe.toLocaleString('es-ES',{maximumFractionDigits:1})+' km'}`);
     marker.addTo(DIST_MAP_LAYER);
@@ -1649,7 +1660,6 @@ function renderDistMap(){
 
   // Resaltado de la fila seleccionada: municipio elegido, su cabecera y el más cercano.
   let hlPts = null;
-  const selRow = (DIST_HIGHLIGHT_IDX!==null && DIST_DATA[DIST_HIGHLIGHT_IDX]) ? DIST_DATA[DIST_HIGHLIGHT_IDX] : null;
   if(selRow && selRow.lat!==null && selRow.lng!==null){
     hlPts = [[selRow.lat, selRow.lng]];
     const selMarker = L.circleMarker([selRow.lat, selRow.lng], { radius:9, weight:2, color:'#1D4ED8', fillColor:'#3B82F6', fillOpacity:.95 });
