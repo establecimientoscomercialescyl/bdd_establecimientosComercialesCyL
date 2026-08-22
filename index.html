@@ -220,10 +220,15 @@
     font-size:11.5px; color:var(--text-mute); line-height:1.45; margin:2px 0 0;
     background:var(--card-2); border-left:3px solid var(--blue); padding:7px 9px; border-radius:4px;
   }
-  .chips{ display:flex; gap:6px; flex-wrap:wrap; margin-top:2px; }
+  .chips{
+    display:flex; gap:6px; flex-wrap:nowrap; margin-top:2px;
+    overflow-x:auto; scrollbar-width:none; -ms-overflow-style:none;
+  }
+  .chips::-webkit-scrollbar{ display:none; }
   .chip{
     font-family:'IBM Plex Mono',monospace; font-size:11px; padding:5px 9px; border-radius:100px;
     border:1px solid var(--border); background:var(--card-2); cursor:pointer; color:var(--text-mute);
+    flex:none; white-space:nowrap;
   }
   .chip:hover{ border-color:var(--blue); color:var(--blue); }
   .chip.active{ background:var(--blue-soft); border-color:var(--blue); color:var(--chip-active-text); }
@@ -331,9 +336,17 @@
   thead th.sortable{ cursor:pointer; user-select:none; }
   thead th.sortable:hover{ color:var(--text); }
   thead th.sortable .sort-arrow{ display:inline-block; width:12px; opacity:.6; }
-  #dist-table-body tr{ cursor:default; }
-  #dist-table-body tr:hover{ background:transparent; }
+  #dist-table-body tr{ cursor:pointer; }
+  #dist-table-body tr:hover{ background:var(--card-2); }
   #dist-table-body tr:hover td:first-child{ color:inherit; }
+  #dist-table-body tr.dist-row-active{ background:var(--blue-soft); }
+  #dist-table-body tr.dist-row-active td:first-child{ color:var(--blue); font-weight:600; }
+  .dist-map-legend{
+    display:flex; flex-wrap:wrap; gap:14px; padding:8px 14px; font-size:11.5px; color:var(--text-mute);
+    border-top:1px solid var(--border); background:var(--card-2); border-radius:0 0 14px 14px;
+  }
+  .dist-map-legend span{ display:inline-flex; align-items:center; gap:6px; }
+  .dist-map-legend i{ width:10px; height:10px; border-radius:50%; display:inline-block; flex:none; }
   .table-scroll{ overflow:auto; max-height:480px; }
   .badge{ font-family:'IBM Plex Mono',monospace; font-size:11px; padding:2px 8px; border-radius:100px; }
   .badge.on{ background:var(--green-soft); color:var(--badge-on-text); }
@@ -765,8 +778,14 @@
   </div>
 
   <div class="card" style="margin-top:16px;">
-    <h3 style="margin:0 0 12px;">Mapa de localización · municipios del conjunto filtrado</h3>
-    <div id="dist-map" style="height:440px; border-radius:14px; overflow:hidden;"></div>
+    <h3 style="margin:0 0 4px;">Mapa de localización · municipios del conjunto filtrado</h3>
+    <p style="margin:0 0 12px; font-size:12.5px; color:var(--text-mute);">Haz clic en una fila de la tabla para ver en el mapa el municipio, su cabecera y el municipio más cercano.</p>
+    <div id="dist-map" style="height:440px; border-radius:14px 14px 0 0; overflow:hidden;"></div>
+    <div class="dist-map-legend" id="dist-map-legend" hidden>
+      <span><i style="background:#3B82F6;"></i>Municipio seleccionado</span>
+      <span><i style="background:#22C55E;"></i>Municipio cabecera</span>
+      <span><i style="background:#F59E0B;"></i>Municipio más cercano</span>
+    </div>
   </div>
 
   </div>
@@ -914,6 +933,7 @@ let DIST_FILTERED = [];     // índices sobre DIST_DATA que pasan la búsqueda
 let DIST_PAGE = 0;
 const DIST_PAGE_SIZE = 50;
 let DIST_SORT = { key:'mun', dir:1 };
+let DIST_HIGHLIGHT_IDX = null;  // índice sobre DIST_DATA de la fila seleccionada para resaltar en el mapa
 
 /* ============ Construcción de selects ============ */
 function fillSelect(sel, options){
@@ -1486,7 +1506,25 @@ function switchTab(tab){
 }
 
 /* ============ Pestaña distancias: municipio cabecera y municipio más cercano ============ */
-let DIST_MAP = null, DIST_MAP_LAYER = null;
+let DIST_MAP = null, DIST_MAP_LAYER = null, DIST_HL_LAYER = null;
+
+/* Busca en DIST_DATA el municipio por nombre (para localizar la cabecera o el
+   más cercano de una fila, que solo vienen como texto). Si hay varios
+   municipios con el mismo nombre, prioriza el de la misma provincia. */
+function findDistRowByName(name, preferProv){
+  if(!name) return null;
+  const norm = normalizeHeader(name);
+  const preferNorm = preferProv ? normalizeHeader(preferProv) : null;
+  let fallback = null;
+  for(let k=0;k<DIST_DATA.length;k++){
+    const row = DIST_DATA[k];
+    if(normalizeHeader(row.mun)===norm){
+      if(preferNorm && normalizeHeader(row.prov)===preferNorm) return row;
+      if(!fallback) fallback = row;
+    }
+  }
+  return fallback;
+}
 
 function buildDistFilterOptions(){
   const gals = Array.from(new Set(DIST_DATA.map(r=>r.gal))).sort((a,b)=>a.localeCompare(b,'es'));
@@ -1556,7 +1594,7 @@ function renderDistancias(){
     const km = (v)=> v===null ? '—' : v.toLocaleString('es-ES',{maximumFractionDigits:1})+' km';
     body.innerHTML = pageIdx.map(i=>{
       const row = DIST_DATA[i];
-      return `<tr>
+      return `<tr data-idx="${i}" class="${i===DIST_HIGHLIGHT_IDX?'dist-row-active':''}">
         <td>${escapeHtml(row.mun)}</td>
         <td>${titleCase(row.prov)}</td>
         <td>${row.hab===null?'—':fmt(row.hab)}</td>
@@ -1592,8 +1630,10 @@ function renderDistMap(){
       maxZoom: 18, attribution: '© OpenStreetMap'
     }).addTo(DIST_MAP);
     DIST_MAP_LAYER = L.layerGroup().addTo(DIST_MAP);
+    DIST_HL_LAYER = L.layerGroup().addTo(DIST_MAP);
   }
   DIST_MAP_LAYER.clearLayers();
+  DIST_HL_LAYER.clearLayers();
 
   const pts = [];
   DIST_FILTERED.forEach(i=>{
@@ -1607,8 +1647,38 @@ function renderDistMap(){
     pts.push([row.lat, row.lng]);
   });
 
+  // Resaltado de la fila seleccionada: municipio elegido, su cabecera y el más cercano.
+  let hlPts = null;
+  const selRow = (DIST_HIGHLIGHT_IDX!==null && DIST_DATA[DIST_HIGHLIGHT_IDX]) ? DIST_DATA[DIST_HIGHLIGHT_IDX] : null;
+  if(selRow && selRow.lat!==null && selRow.lng!==null){
+    hlPts = [[selRow.lat, selRow.lng]];
+    const selMarker = L.circleMarker([selRow.lat, selRow.lng], { radius:9, weight:2, color:'#1D4ED8', fillColor:'#3B82F6', fillOpacity:.95 });
+    selMarker.bindPopup(`<b>${escapeHtml(selRow.mun)}</b><br>Municipio seleccionado`);
+    selMarker.addTo(DIST_HL_LAYER);
+
+    const cabRow = findDistRowByName(selRow.cab, selRow.prov);
+    if(cabRow && cabRow.lat!==null && cabRow.lng!==null){
+      const m = L.circleMarker([cabRow.lat, cabRow.lng], { radius:9, weight:2, color:'#15803D', fillColor:'#22C55E', fillOpacity:.95 });
+      m.bindPopup(`<b>${escapeHtml(cabRow.mun)}</b><br>Municipio cabecera${selRow.distCabe!==null? ' · '+selRow.distCabe.toLocaleString('es-ES',{maximumFractionDigits:1})+' km':''}`);
+      m.addTo(DIST_HL_LAYER);
+      hlPts.push([cabRow.lat, cabRow.lng]);
+      L.polyline([[selRow.lat,selRow.lng],[cabRow.lat,cabRow.lng]], { color:'#22C55E', weight:2, dashArray:'5,6', opacity:.8 }).addTo(DIST_HL_LAYER);
+    }
+    const mejRow = findDistRowByName(selRow.mejor, selRow.prov);
+    if(mejRow && mejRow.lat!==null && mejRow.lng!==null){
+      const m = L.circleMarker([mejRow.lat, mejRow.lng], { radius:9, weight:2, color:'#B45309', fillColor:'#F59E0B', fillOpacity:.95 });
+      m.bindPopup(`<b>${escapeHtml(mejRow.mun)}</b><br>Municipio más cercano${selRow.distMejor!==null? ' · '+selRow.distMejor.toLocaleString('es-ES',{maximumFractionDigits:1})+' km':''}`);
+      m.addTo(DIST_HL_LAYER);
+      hlPts.push([mejRow.lat, mejRow.lng]);
+      L.polyline([[selRow.lat,selRow.lng],[mejRow.lat,mejRow.lng]], { color:'#F59E0B', weight:2, dashArray:'5,6', opacity:.8 }).addTo(DIST_HL_LAYER);
+    }
+  }
+  if($('#dist-map-legend')) $('#dist-map-legend').hidden = !selRow;
+
   setTimeout(()=>{ DIST_MAP.invalidateSize(); }, 50);
-  if(pts.length){
+  if(hlPts && hlPts.length){
+    DIST_MAP.fitBounds(hlPts, { padding:[40,40], maxZoom:13 });
+  } else if(pts.length){
     DIST_MAP.fitBounds(pts, { padding:[24,24], maxZoom:11 });
   }
 }
@@ -2121,6 +2191,7 @@ function onDataLoaded(newData, statusMsg){
   DATA = newData;
   DIST_DATA = newData.distancias || [];
   DIST_PAGE = 0;
+  DIST_HIGHLIGHT_IDX = null;
   // Importante: se muestra #app-content ANTES de pintar los gráficos. Si se
   // dibujan con el contenedor todavía oculto (hidden), los <canvas> tienen
   // ancho/alto 0 y Chart.js puede lanzar un error a mitad de render; como ese
@@ -2222,6 +2293,13 @@ function bindEvents(){
 
   $('#dist-search').addEventListener('input', debounce(()=>{ DIST_PAGE=0; renderDistancias(); }, 220));
   $('#dist-gal-filter').addEventListener('change', ()=>{ DIST_PAGE=0; renderDistancias(); });
+  $('#dist-table-body').addEventListener('click', (e)=>{
+    const tr = e.target.closest('tr[data-idx]');
+    if(!tr) return;
+    const idx = parseInt(tr.dataset.idx, 10);
+    DIST_HIGHLIGHT_IDX = (DIST_HIGHLIGHT_IDX===idx) ? null : idx; // clic de nuevo en la misma fila = quitar resaltado
+    renderDistancias();
+  });
   $('#dist-pager-prev').addEventListener('click', ()=>{ if(DIST_PAGE>0){ DIST_PAGE--; renderDistancias(); } });
   $('#dist-pager-next').addEventListener('click', ()=>{
     const totalPages = Math.max(1, Math.ceil(DIST_FILTERED.length/DIST_PAGE_SIZE));
