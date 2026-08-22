@@ -285,6 +285,7 @@
   .kpis{
     display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px;
   }
+  .kpis[hidden]{ display:none; }
   .kpi{
     background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
     padding:18px 20px; box-shadow:var(--shadow); position:relative; overflow:hidden;
@@ -1240,21 +1241,75 @@ function renderKPIs(){
   `).join('');
 }
 
+/* ============ Cruce municipios BDD ↔ EST.GAL (para los indicadores de la pestaña Distancias) ============ */
+let MUN_INDEX_BY_CODE = null, MUN_INDEX_BY_NAME = null;
+function normalizeCode(v){
+  const digits = String(v||'').replace(/\D/g,'');
+  return digits ? String(parseInt(digits,10)) : ''; // quita ceros a la izquierda para comparar códigos INE
+}
+function buildMunLookup(){
+  MUN_INDEX_BY_CODE = new Map();
+  MUN_INDEX_BY_NAME = new Map();
+  (DATA.municipios||[]).forEach((m,mi)=>{
+    const code = normalizeCode(m.c);
+    if(code && !MUN_INDEX_BY_CODE.has(code)) MUN_INDEX_BY_CODE.set(code, mi);
+    const nameKey = normalizeHeader(m.n);
+    if(!MUN_INDEX_BY_NAME.has(nameKey)) MUN_INDEX_BY_NAME.set(nameKey, []);
+    MUN_INDEX_BY_NAME.get(nameKey).push(mi);
+  });
+}
+/* Busca en DATA.municipios el municipio de una fila de EST.GAL: primero por
+   código INE (ID_MUNICIPIO en BDD / C.INE en EST.GAL) y, si no hay
+   coincidencia, por nombre (desempatando por provincia si hay varios). */
+function findMunicipioIndex(codmun, name, prov){
+  if(MUN_INDEX_BY_CODE===null) buildMunLookup();
+  const code = normalizeCode(codmun);
+  if(code && MUN_INDEX_BY_CODE.has(code)) return MUN_INDEX_BY_CODE.get(code);
+  const candidates = MUN_INDEX_BY_NAME.get(normalizeHeader(name));
+  if(!candidates || !candidates.length) return null;
+  if(candidates.length===1) return candidates[0];
+  const provNorm = normalizeHeader(prov);
+  for(const mi of candidates){
+    if(normalizeHeader(DATA.provs[DATA.municipios[mi].p])===provNorm) return mi;
+  }
+  return candidates[0];
+}
+
 /* Indicadores propios de la pestaña Distancias (datos de la hoja EST.GAL,
    no de BDD): reaccionan a los filtros de provincia/municipio compartidos,
    al selector de Grupo de Acción Local y a la búsqueda de esa pestaña. */
 function renderDistKPIs(){
   let com = 0, hab = 0;
+  const muSet = new Set();
   DIST_FILTERED.forEach(i=>{
     const row = DIST_DATA[i];
     if(row.com!==null) com += row.com;
     if(row.hab!==null) hab += row.hab;
+    const mi = findMunicipioIndex(row.codmun, row.mun, row.prov);
+    if(mi!==null && mi!==undefined) muSet.add(mi);
   });
+
+  // Comercios de la BDD (ya con los filtros generales de arriba aplicados,
+  // vía FILTERED) que caen dentro de esos municipios.
+  let total = 0, conEmail = 0, conTel = 0, conWeb = 0;
+  const r = DATA.rows;
+  FILTERED.forEach(i=>{
+    if(!muSet.has(r.mun[i])) return;
+    total++;
+    if(r.email[i]) conEmail++;
+    if(r.tel[i] || r.mov[i]) conTel++;
+    if(r.web[i]) conWeb++;
+  });
+  const pct = (n)=> total? fmtPct(n/total) : '—';
+
   const galSel = $('#dist-gal-filter') ? $('#dist-gal-filter').value : 'all';
-  const foot = galSel==='all' ? 'todos los grupos de acción local' : titleCase(galSel);
+  const grupo = galSel==='all' ? 'todos los grupos de acción local' : titleCase(galSel);
   const kpis = [
-    {label:'Comercios GAL', value: fmt(com), foot, icon:'store', bg:'var(--blue-soft)', color:'var(--blue)'},
-    {label:'Habitantes GAL', value: fmt(hab), foot, icon:'population', bg:'var(--purple-soft)', color:'var(--purple)'}
+    {label:'Comercios GAL', value: fmt(com), foot: grupo, icon:'store', bg:'var(--blue-soft)', color:'var(--blue)'},
+    {label:'Habitantes GAL', value: fmt(hab), foot: grupo, icon:'population', bg:'var(--purple-soft)', color:'var(--purple)'},
+    {label:'Con email', value: fmt(conEmail), foot: `${pct(conEmail)} de ${fmt(total)} comercios (BDD)`, icon:'mail', bg:'var(--orange-soft)', color:'var(--orange)'},
+    {label:'Con teléfono o móvil', value: fmt(conTel), foot: `${pct(conTel)} de ${fmt(total)} comercios (BDD)`, icon:'phone', bg:'var(--teal-soft)', color:'var(--teal)'},
+    {label:'Con página web', value: fmt(conWeb), foot: `${pct(conWeb)} de ${fmt(total)} comercios (BDD)`, icon:'globe', bg:'var(--green-soft)', color:'var(--green)'}
   ];
   $('#kpis-distancias').innerHTML = kpis.map(k=>`
     <div class="kpi">
@@ -2117,7 +2172,7 @@ const COLMAP_DIST = {
   'GRUPO DE ACCION LOCAL':'gal', 'HABITANTES':'hab',
   'MUNICIPIO CABECERA':'cab', 'DIST-CABE':'distCabe',
   'MEJOR MUNICI':'mejor', 'DIST-MEJ':'distMejor',
-  'ID_MUNICIPIO':'codmun', 'LAM':'lat', 'LOM':'lng'
+  'ID_MUNICIPIO':'codmun', 'CINE':'codmun', 'LAM':'lat', 'LOM':'lng'
 };
 function toNumOrNull(v){
   if(v===null || v===undefined || v==='') return null;
@@ -2247,6 +2302,7 @@ function onDataLoaded(newData, statusMsg){
   DIST_DATA = newData.distancias || [];
   DIST_PAGE = 0;
   DIST_HIGHLIGHT_IDX = null;
+  MUN_INDEX_BY_CODE = null; MUN_INDEX_BY_NAME = null; // se reconstruye con los nuevos datos, ver findMunicipioIndex
   // Importante: se muestra #app-content ANTES de pintar los gráficos. Si se
   // dibujan con el contenedor todavía oculto (hidden), los <canvas> tienen
   // ancho/alto 0 y Chart.js puede lanzar un error a mitad de render; como ese
