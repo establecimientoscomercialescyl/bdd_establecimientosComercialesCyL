@@ -277,18 +277,16 @@
   .msel-option{
     display:flex; align-items:center; gap:8px; padding:6px 6px; border-radius:6px;
     font-size:13px; cursor:pointer; white-space:nowrap; position:relative;
+    flex:0 0 auto;
   }
   .msel-option:hover{ background:var(--border-soft); }
-  .msel-option input[type=checkbox]{
-    position:absolute; opacity:0; width:16px; height:16px; margin:0; pointer-events:none;
-  }
   .msel-check{
-    width:16px; height:16px; flex:0 0 16px; min-width:16px; min-height:16px;
+    box-sizing:border-box; width:16px; height:16px; flex:0 0 16px; min-width:16px; min-height:16px;
     border:1.5px solid var(--text-mute); border-radius:4px;
-    background:var(--card); position:relative; display:inline-block;
+    background:var(--card); position:relative; display:block;
   }
-  .msel-option input:checked ~ .msel-check{ background:var(--blue); border-color:var(--blue); }
-  .msel-option input:checked ~ .msel-check::after{
+  .msel-check.is-checked{ background:var(--blue); border-color:var(--blue); }
+  .msel-check.is-checked::after{
     content:''; position:absolute; left:4px; top:1px; width:4px; height:8px;
     border:solid #fff; border-width:0 2px 2px 0; transform:rotate(45deg);
   }
@@ -1041,10 +1039,12 @@ function initMultiSelect(key, onChange){
       const row = document.createElement('label');
       row.className = 'msel-option';
       const checked = MULTI_STATE[key].has(val);
-      row.innerHTML = `<input type="checkbox" ${checked?'checked':''}><span class="msel-check"></span><span class="msel-label"></span>`;
+      row.innerHTML = `<input type="checkbox" ${checked?'checked':''} style="position:absolute;opacity:0;width:16px;height:16px;margin:0;pointer-events:none;"><span class="msel-check${checked?' is-checked':''}"></span><span class="msel-label"></span>`;
       row.querySelector('.msel-label').textContent = label;
+      const checkSpan = row.querySelector('.msel-check');
       row.querySelector('input').addEventListener('change', (e)=>{
         if(e.target.checked) MULTI_STATE[key].add(val); else MULTI_STATE[key].delete(val);
+        checkSpan.classList.toggle('is-checked', e.target.checked); // el aspecto marcado/sin marcar lo controla JS directamente, no un selector CSS
         updateButtonLabel();
         onChange();
       });
