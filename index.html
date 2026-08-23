@@ -276,14 +276,15 @@
   .msel-options{ max-height:220px; overflow-y:auto; display:flex; flex-direction:column; }
   .msel-option{
     display:flex; align-items:center; gap:8px; padding:6px 6px; border-radius:6px;
-    font-size:13px; cursor:pointer; white-space:nowrap;
+    font-size:13px; cursor:pointer; white-space:nowrap; position:relative;
   }
   .msel-option:hover{ background:var(--border-soft); }
   .msel-option input[type=checkbox]{
     position:absolute; opacity:0; width:16px; height:16px; margin:0; pointer-events:none;
   }
   .msel-check{
-    width:16px; height:16px; flex:none; border:1.5px solid var(--text-mute); border-radius:4px;
+    width:16px; height:16px; flex:0 0 16px; min-width:16px; min-height:16px;
+    border:1.5px solid var(--text-mute); border-radius:4px;
     background:var(--card); position:relative; display:inline-block;
   }
   .msel-option input:checked ~ .msel-check{ background:var(--blue); border-color:var(--blue); }
@@ -292,6 +293,7 @@
     border:solid #fff; border-width:0 2px 2px 0; transform:rotate(45deg);
   }
   .msel-option:hover .msel-check{ border-color:var(--blue); }
+  .msel-label{ flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .msel-empty{ font-size:12.5px; color:var(--text-mute); padding:8px 6px; }
 
   /* ---------- KPIs ---------- */
