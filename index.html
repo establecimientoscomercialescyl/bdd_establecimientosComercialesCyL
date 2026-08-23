@@ -709,8 +709,13 @@
       <table>
         <thead>
           <tr>
-            <th>Nombre comercial</th><th>Titular</th><th>Dirección</th><th>Municipio</th><th>Provincia</th>
-            <th>Sector</th><th>Estado</th>
+            <th class="sortable" data-sort="nombre">Nombre comercial</th>
+            <th class="sortable" data-sort="titular">Titular</th>
+            <th class="sortable" data-sort="dir">Dirección</th>
+            <th class="sortable" data-sort="municipio">Municipio</th>
+            <th class="sortable" data-sort="provincia">Provincia</th>
+            <th class="sortable" data-sort="sector">Sector</th>
+            <th class="sortable" data-sort="estado">Estado</th>
           </tr>
         </thead>
         <tbody id="table-body"></tbody>
@@ -755,7 +760,14 @@
       <div class="table-scroll" style="max-height:400px;">
         <table>
           <thead>
-            <tr><th>Municipio</th><th>Provincia</th><th>Nº comercios</th><th>Hab. / comercio</th><th>Habitantes</th><th>Dist. al mejor abastecido</th></tr>
+            <tr>
+              <th class="sortable" data-sort="nombre">Municipio</th>
+              <th class="sortable" data-sort="prov">Provincia</th>
+              <th class="sortable" data-sort="comercios">Nº comercios</th>
+              <th class="sortable" data-sort="habPorComercio">Hab. / comercio</th>
+              <th class="sortable" data-sort="hab">Habitantes</th>
+              <th class="sortable" data-sort="dist">Dist. al mejor abastecido</th>
+            </tr>
           </thead>
           <tbody id="peor-abastecidos-body"></tbody>
         </table>
@@ -983,6 +995,7 @@ function LABEL_COLOR(){ return cv('--chart-label'); }
 let DATA = null;      // dataset activo
 let FILTERED = [];    // array de índices de fila que pasan el filtro
 let TABLE_PAGE = 0;
+let TABLE_SORT = { key:null, dir:1 };
 const PAGE_SIZE = 40;
 const charts = {};
 
@@ -1543,6 +1556,39 @@ function renderScatter(){
 /* ============ Tabla ============ */
 function renderTable(){
   const r = DATA.rows;
+
+  // Orden elegido por el usuario al hacer clic en una cabecera de columna
+  // (por defecto no se reordena: se respeta el orden que ya trae FILTERED).
+  if(TABLE_SORT.key){
+    const {key, dir} = TABLE_SORT;
+    const val = (i)=>{
+      switch(key){
+        case 'nombre': return (strOr(r.nombre[i])||'').toLowerCase();
+        case 'titular': return (strOr(r.titular[i])||'').toLowerCase();
+        case 'dir': return (strOr(r.dir?r.dir[i]:'')||'').toLowerCase();
+        case 'municipio': return DATA.municipios[r.mun[i]].n.toLowerCase();
+        case 'provincia': return DATA.provs[r.prov[i]].toLowerCase();
+        case 'sector': return DATA.sectors[r.sector[i]].toLowerCase();
+        case 'estado': return r.estado[i];
+        default: return '';
+      }
+    };
+    FILTERED.sort((ia,ib)=>{
+      const a = val(ia), b = val(ib);
+      return sortCmp(a, b, dir);
+    });
+  }
+
+  $$('#tab-resumen thead th.sortable').forEach(th=>{
+    th.querySelector('.sort-arrow')?.remove();
+    if(th.dataset.sort===TABLE_SORT.key){
+      const arrow = document.createElement('span');
+      arrow.className = 'sort-arrow';
+      arrow.textContent = TABLE_SORT.dir===1 ? '▲' : '▼';
+      th.appendChild(arrow);
+    }
+  });
+
   const start = TABLE_PAGE*PAGE_SIZE;
   const pageIdx = FILTERED.slice(start, start+PAGE_SIZE);
   const body = $('#table-body');
@@ -1794,6 +1840,21 @@ function distSortValue(row, key){
   if(v===null || v===undefined) return null;
   return typeof v==='string' ? v.toLowerCase() : v;
 }
+/* Comparador genérico para ordenar columnas de tabla: los vacíos siempre van
+   al final (sea cual sea el sentido), y el texto se compara con las reglas
+   del español (localeCompare) en vez de por código Unicode — si no, "Ávila"
+   con tilde queda ordenada detrás de la Z, porque 'á' > 'z' en Unicode. */
+function sortCmp(a, b, dir){
+  if(a===null && b===null) return 0;
+  if(a===null) return 1;
+  if(b===null) return -1;
+  if(typeof a==='string' && typeof b==='string'){
+    return a.localeCompare(b, 'es', {sensitivity:'base', numeric:true}) * dir;
+  }
+  if(a<b) return -1*dir;
+  if(a>b) return 1*dir;
+  return 0;
+}
 function applyDistFilters(){
   // Esta pestaña vive de otra hoja (EST.GAL) y está pensada para mirarla por
   // Grupo de Acción Local, así que es intencionadamente independiente de los
@@ -1812,12 +1873,7 @@ function applyDistFilters(){
   const {key, dir} = DIST_SORT;
   DIST_FILTERED.sort((ia,ib)=>{
     const a = distSortValue(DIST_DATA[ia], key), b = distSortValue(DIST_DATA[ib], key);
-    if(a===null && b===null) return 0;
-    if(a===null) return 1;   // los vacíos siempre al final, sea cual sea el sentido
-    if(b===null) return -1;
-    if(a<b) return -1*dir;
-    if(a>b) return 1*dir;
-    return 0;
+    return sortCmp(a, b, dir);
   });
 }
 function renderDistancias(){
@@ -2030,16 +2086,42 @@ function renderPieProvincia(){
   });
 }
 
+let PEOR_SORT = { key:'habPorComercio', dir:-1 }; // por defecto: peor abastecido primero (igual que antes de poder ordenar por columna)
+
 function renderPeorAbastecidos(){
   const r = DATA.rows;
   const munCounts = new Map();
   for(const i of FILTERED){ munCounts.set(r.mun[i], (munCounts.get(r.mun[i])||0)+1); }
-  const rows = Array.from(munCounts.entries()).map(([mi,c])=>{
+  let rows = Array.from(munCounts.entries()).map(([mi,c])=>{
     const m = DATA.municipios[mi];
     return { mi, nombre:m.n, prov: titleCase(DATA.provs[m.p]), comercios:c, hab:m.h, habPorComercio: c>0? m.h/c : Infinity };
   }).filter(x=>x.comercios>0)
     .sort((a,b)=> b.habPorComercio - a.habPorComercio)
     .slice(0,20);
+
+  // A cada uno de esos 20 municipios ya seleccionados se le añade la
+  // distancia (numérica, para poder ordenar) al municipio más cercano mejor
+  // abastecido, cruzando con EST.GAL igual que en la ficha del mapa.
+  rows = rows.map(x=>{
+    const galRow = findGalRowForMunicipio(x.mi);
+    return { ...x, dist: galRow && galRow.distMejor!==null ? galRow.distMejor : null };
+  });
+
+  // El orden de columna elegido por el usuario reordena estos MISMOS 20
+  // municipios (no cambia cuáles son los "peor abastecidos": eso lo sigue
+  // decidiendo siempre habPorComercio de mayor a menor, arriba).
+  const {key, dir} = PEOR_SORT;
+  rows.sort((a,b)=> sortCmp(a[key], b[key], dir));
+
+  $$('#tab-territorial thead th.sortable').forEach(th=>{
+    th.querySelector('.sort-arrow')?.remove();
+    if(th.dataset.sort===PEOR_SORT.key){
+      const arrow = document.createElement('span');
+      arrow.className = 'sort-arrow';
+      arrow.textContent = PEOR_SORT.dir===1 ? '▲' : '▼';
+      th.appendChild(arrow);
+    }
+  });
 
   const body = $('#peor-abastecidos-body');
   if(!rows.length){
@@ -2047,10 +2129,7 @@ function renderPeorAbastecidos(){
     return;
   }
   body.innerHTML = rows.map(x=>{
-    const galRow = findGalRowForMunicipio(x.mi);
-    const dist = galRow && galRow.distMejor!==null
-      ? galRow.distMejor.toLocaleString('es-ES',{maximumFractionDigits:1})+' km'
-      : '—';
+    const dist = x.dist!==null ? x.dist.toLocaleString('es-ES',{maximumFractionDigits:1})+' km' : '—';
     return `
     <tr data-mi="${x.mi}" data-com="${x.comercios}">
       <td>${escapeHtml(x.nombre)}</td>
@@ -2574,6 +2653,23 @@ function bindEvents(){
   $('#pager-next').addEventListener('click', ()=>{
     const totalPages = Math.max(1, Math.ceil(FILTERED.length/PAGE_SIZE));
     if(TABLE_PAGE<totalPages-1){ TABLE_PAGE++; renderTable(); }
+  });
+  $$('#tab-resumen thead th.sortable').forEach(th=>{
+    th.addEventListener('click', ()=>{
+      const key = th.dataset.sort;
+      if(TABLE_SORT.key===key) TABLE_SORT.dir *= -1;
+      else TABLE_SORT = { key, dir:1 };
+      TABLE_PAGE = 0;
+      renderTable();
+    });
+  });
+  $$('#tab-territorial thead th.sortable').forEach(th=>{
+    th.addEventListener('click', ()=>{
+      const key = th.dataset.sort;
+      if(PEOR_SORT.key===key) PEOR_SORT.dir *= -1;
+      else PEOR_SORT = { key, dir:1 };
+      renderPeorAbastecidos();
+    });
   });
 
   $('#dist-search').addEventListener('input', debounce(()=>{ DIST_PAGE=0; renderDistancias(); }, 220));
