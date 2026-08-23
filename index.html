@@ -345,6 +345,8 @@
   thead th.sortable:hover{ color:var(--text); }
   thead th.sortable .sort-arrow{ display:inline-block; width:12px; opacity:.6; }
   #dist-table-body tr{ cursor:pointer; }
+  #peor-abastecidos-body tr{ cursor:pointer; }
+  #peor-abastecidos-body tr:hover{ background:var(--card-2); }
   #dist-table-body tr:hover{ background:var(--card-2); }
   #dist-table-body tr:hover td:first-child{ color:inherit; }
   #dist-table-body tr.dist-row-active{ background:var(--blue-soft); }
@@ -353,6 +355,7 @@
     display:flex; flex-wrap:wrap; gap:14px; padding:8px 14px; font-size:11.5px; color:var(--text-mute);
     border-top:1px solid var(--border); background:var(--card-2); border-radius:0 0 14px 14px;
   }
+  .dist-map-legend[hidden]{ display:none; }
   .dist-map-legend span{ display:inline-flex; align-items:center; gap:6px; }
   .dist-map-legend i{ width:10px; height:10px; border-radius:50%; display:inline-block; flex:none; }
   .table-scroll{ overflow:auto; max-height:480px; }
@@ -889,6 +892,26 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="mun-map-modal" hidden>
+  <div class="modal-panel">
+    <div class="modal-head">
+      <div>
+        <h3 id="mun-map-title">—</h3>
+        <p id="mun-map-sub">Municipio más cercano mejor abastecido</p>
+      </div>
+      <button class="modal-close" id="mun-map-close" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div id="mun-map" style="height:300px; background:var(--card-2);"></div>
+    <div class="dist-map-legend" id="mun-map-legend">
+      <span><i style="background:#3B82F6;"></i><span id="mun-map-legend-a">Municipio</span></span>
+      <span><i style="background:#F59E0B;"></i><span id="mun-map-legend-b">Municipio más cercano</span></span>
+    </div>
+    <p id="mun-map-note" class="card-sub" style="padding:0 18px 14px; margin:0;" hidden></p>
+  </div>
+</div>
+
 
 <script>
 (function(){
@@ -1273,6 +1296,32 @@ function findMunicipioIndex(codmun, name, prov){
   }
   return candidates[0];
 }
+/* Inversa de findMunicipioIndex: dado un municipio de la BDD (índice en
+   DATA.municipios), busca su fila correspondiente en EST.GAL (DIST_DATA_ALL,
+   sin excluir "no pertenece a ningún grupo", ya que esta búsqueda también
+   tiene que encontrar capitales de provincia). Primero por código INE, y si
+   no hay coincidencia, por nombre (desempatando por provincia). */
+function findGalRowForMunicipio(mi){
+  const m = DATA.municipios[mi];
+  if(!m) return null;
+  const code = normalizeCode(m.c);
+  if(code){
+    for(let k=0;k<DIST_DATA_ALL.length;k++){
+      if(normalizeCode(DIST_DATA_ALL[k].codmun)===code) return DIST_DATA_ALL[k];
+    }
+  }
+  const nameKey = normalizeHeader(m.n);
+  const provNorm = normalizeHeader(DATA.provs[m.p]);
+  let fallback = null;
+  for(let k=0;k<DIST_DATA_ALL.length;k++){
+    const row = DIST_DATA_ALL[k];
+    if(normalizeHeader(row.mun)===nameKey){
+      if(normalizeHeader(row.prov)===provNorm) return row;
+      if(!fallback) fallback = row;
+    }
+  }
+  return fallback;
+}
 
 /* Indicadores propios de la pestaña Distancias (datos de la hoja EST.GAL,
    no de BDD): reaccionan a los filtros de provincia/municipio compartidos,
@@ -1565,6 +1614,80 @@ function openMapModal(row){
 function closeMapModal(){
   $('#map-modal').hidden = true;
   $('#map-modal-iframe').src = 'about:blank';
+}
+
+/* ============ Modal "20 municipios peor abastecidos": municipio + su mejor municipio cercano (EST.GAL) ============ */
+let MUN_MAP = null, MUN_MAP_LAYER = null;
+
+function openMunMapModal(mi, comCount){
+  const m = DATA.municipios[mi];
+  if(!m) return;
+  $('#mun-map-title').textContent = titleCase(m.n);
+  $('#mun-map').innerHTML = '';
+  MUN_MAP = null; // se recrea siempre: el contenedor se vació arriba
+
+  const galRow = findGalRowForMunicipio(mi);
+  const note = $('#mun-map-note');
+  note.hidden = true; note.textContent = '';
+
+  if(!galRow || galRow.lat===null || galRow.lng===null){
+    note.hidden = false;
+    note.textContent = 'No hay datos de coordenadas para este municipio en la hoja de distancias (EST.GAL).';
+    $('#mun-map-legend').hidden = true;
+    $('#mun-map-modal').hidden = false;
+    return;
+  }
+
+  const mejRow = galRow.mejor ? findDistRowByName(galRow.mejor, galRow.prov) : null;
+  const hasMej = mejRow && mejRow.lat!==null && mejRow.lng!==null;
+
+  $('#mun-map-legend').hidden = false;
+  $('#mun-map-legend-a').textContent = titleCase(m.n);
+  $('#mun-map-legend-b').textContent = hasMej ? titleCase(mejRow.mun) : 'Municipio más cercano';
+  if(!hasMej){
+    note.hidden = false;
+    note.textContent = galRow.mejor
+      ? `No se ha encontrado en el mapa el municipio más cercano indicado en EST.GAL ("${galRow.mejor}").`
+      : 'Este municipio no tiene un "municipio más cercano" registrado en EST.GAL.';
+  }
+
+  $('#mun-map-modal').hidden = false;
+
+  setTimeout(()=>{
+    if(typeof L === 'undefined'){
+      $('#mun-map').innerHTML = '<div class="empty-state">No se pudo cargar la librería de mapas (Leaflet) desde la red.</div>';
+      return;
+    }
+    MUN_MAP = L.map('mun-map', { scrollWheelZoom:false }).setView([galRow.lat, galRow.lng], 10);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18, attribution: '© OpenStreetMap'
+    }).addTo(MUN_MAP);
+    MUN_MAP_LAYER = L.layerGroup().addTo(MUN_MAP);
+
+    const pts = [[galRow.lat, galRow.lng]];
+    const selMarker = L.circleMarker([galRow.lat, galRow.lng], { radius:9, weight:2, color:'#1D4ED8', fillColor:'#3B82F6', fillOpacity:.95 });
+    selMarker.bindPopup(`<b>${escapeHtml(m.n)}</b><br>${fmt(comCount)} comercios`);
+    selMarker.addTo(MUN_MAP_LAYER);
+
+    if(hasMej){
+      const comMej = mejRow.comActivos!==null ? mejRow.comActivos : (mejRow.com||0);
+      const km = galRow.distMejor!==null ? galRow.distMejor.toLocaleString('es-ES',{maximumFractionDigits:1})+' km' : '—';
+      const mejMarker = L.circleMarker([mejRow.lat, mejRow.lng], { radius:9, weight:2, color:'#B45309', fillColor:'#F59E0B', fillOpacity:.95 });
+      mejMarker.bindPopup(`<b>${escapeHtml(mejRow.mun)}</b><br>${fmt(comMej)} comercios<br>a ${km} de ${escapeHtml(m.n)}`);
+      mejMarker.addTo(MUN_MAP_LAYER);
+      pts.push([mejRow.lat, mejRow.lng]);
+      L.polyline(pts, { color:'#F59E0B', weight:2, dashArray:'5,6', opacity:.8 }).addTo(MUN_MAP_LAYER);
+    }
+
+    MUN_MAP.invalidateSize();
+    if(pts.length>1) MUN_MAP.fitBounds(pts, { padding:[30,30], maxZoom:13 });
+  }, 30);
+}
+
+function closeMunMapModal(){
+  $('#mun-map-modal').hidden = true;
+  if(MUN_MAP){ MUN_MAP.remove(); MUN_MAP = null; }
+  $('#mun-map').innerHTML = '';
 }
 
 /* ============ Render general ============ */
@@ -1887,7 +2010,7 @@ function renderPeorAbastecidos(){
   for(const i of FILTERED){ munCounts.set(r.mun[i], (munCounts.get(r.mun[i])||0)+1); }
   const rows = Array.from(munCounts.entries()).map(([mi,c])=>{
     const m = DATA.municipios[mi];
-    return { nombre:m.n, prov: titleCase(DATA.provs[m.p]), comercios:c, hab:m.h, habPorComercio: c>0? m.h/c : Infinity };
+    return { mi, nombre:m.n, prov: titleCase(DATA.provs[m.p]), comercios:c, hab:m.h, habPorComercio: c>0? m.h/c : Infinity };
   }).filter(x=>x.comercios>0)
     .sort((a,b)=> b.habPorComercio - a.habPorComercio)
     .slice(0,20);
@@ -1898,7 +2021,7 @@ function renderPeorAbastecidos(){
     return;
   }
   body.innerHTML = rows.map(x=>`
-    <tr>
+    <tr data-mi="${x.mi}" data-com="${x.comercios}">
       <td>${escapeHtml(x.nombre)}</td>
       <td>${escapeHtml(x.prov)}</td>
       <td>${fmt(x.comercios)}</td>
@@ -2475,9 +2598,17 @@ function bindEvents(){
   });
   $('#map-modal-close').addEventListener('click', closeMapModal);
   $('#map-modal').addEventListener('click', (e)=>{ if(e.target.id==='map-modal') closeMapModal(); });
+  $('#peor-abastecidos-body').addEventListener('click', (e)=>{
+    const tr = e.target.closest('tr[data-mi]');
+    if(!tr) return;
+    openMunMapModal(Number(tr.dataset.mi), Number(tr.dataset.com));
+  });
+  $('#mun-map-close').addEventListener('click', closeMunMapModal);
+  $('#mun-map-modal').addEventListener('click', (e)=>{ if(e.target.id==='mun-map-modal') closeMunMapModal(); });
   document.addEventListener('keydown', (e)=>{
     if(e.key!=='Escape') return;
     if(!$('#map-modal').hidden) closeMapModal();
+    if(!$('#mun-map-modal').hidden) closeMunMapModal();
     if(!$('#source-modal').hidden) closeSourceModal();
   });
 }
