@@ -725,7 +725,7 @@
     <div class="card">
       <h3>Comercios por provincia</h3>
       <p class="card-sub">% sobre el total filtrado</p>
-      <div class="chart-wrap"><canvas id="chart-provincia-pie"></canvas></div>
+      <div class="chart-wrap" style="min-height:200px; max-height:240px;"><canvas id="chart-provincia-pie"></canvas></div>
     </div>
     <div class="card">
       <h3>20 municipios peor abastecidos</h3>
@@ -733,7 +733,7 @@
       <div class="table-scroll" style="max-height:400px;">
         <table>
           <thead>
-            <tr><th>Municipio</th><th>Provincia</th><th>Nº comercios</th><th>Hab. / comercio</th><th>Habitantes</th></tr>
+            <tr><th>Municipio</th><th>Provincia</th><th>Nº comercios</th><th>Hab. / comercio</th><th>Habitantes</th><th>Dist. al mejor abastecido</th></tr>
           </thead>
           <tbody id="peor-abastecidos-body"></tbody>
         </table>
@@ -2017,18 +2017,25 @@ function renderPeorAbastecidos(){
 
   const body = $('#peor-abastecidos-body');
   if(!rows.length){
-    body.innerHTML = `<tr><td colspan="5"><div class="empty-state">No hay municipios con establecimientos en el conjunto filtrado.</div></td></tr>`;
+    body.innerHTML = `<tr><td colspan="6"><div class="empty-state">No hay municipios con establecimientos en el conjunto filtrado.</div></td></tr>`;
     return;
   }
-  body.innerHTML = rows.map(x=>`
+  body.innerHTML = rows.map(x=>{
+    const galRow = findGalRowForMunicipio(x.mi);
+    const dist = galRow && galRow.distMejor!==null
+      ? galRow.distMejor.toLocaleString('es-ES',{maximumFractionDigits:1})+' km'
+      : '—';
+    return `
     <tr data-mi="${x.mi}" data-com="${x.comercios}">
       <td>${escapeHtml(x.nombre)}</td>
       <td>${escapeHtml(x.prov)}</td>
       <td>${fmt(x.comercios)}</td>
       <td>${fmt(Math.round(x.habPorComercio))}</td>
       <td>${fmt(x.hab)}</td>
+      <td>${dist}</td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 }
 
 /* ============ Pestaña de contacto ============ */
