@@ -370,9 +370,16 @@
   .dist-map-legend[hidden]{ display:none; }
   .dist-map-legend span{ display:inline-flex; align-items:center; gap:6px; }
   .dist-map-legend i{ width:10px; height:10px; border-radius:50%; display:inline-block; flex:none; }
-  .dist-layout{ display:grid; grid-template-columns:minmax(0,1.6fr) minmax(300px,1fr); gap:16px; align-items:start; }
-  .dist-map-card #dist-map{ width:100%; }
-  @media (max-width:1100px){ .dist-layout{ grid-template-columns:1fr; } }
+  .dist-layout{ display:grid; grid-template-columns:minmax(0,1.6fr) minmax(300px,1fr); gap:16px; align-items:stretch; }
+  .dist-layout .table-card, .dist-layout .dist-map-card{ display:flex; flex-direction:column; height:620px; }
+  .dist-layout .table-scroll{ flex:1; min-height:0; max-height:none; }
+  .dist-map-card #dist-map{ flex:1; min-height:0; width:100%; height:auto; }
+  @media (max-width:1100px){
+    .dist-layout{ grid-template-columns:1fr; }
+    .dist-layout .table-card, .dist-layout .dist-map-card{ height:auto; }
+    .dist-layout .table-scroll{ max-height:480px; }
+    .dist-map-card #dist-map{ flex:none; height:420px; }
+  }
   .table-scroll{ overflow:auto; max-height:480px; }
   .badge{ font-family:'IBM Plex Mono',monospace; font-size:11px; padding:2px 8px; border-radius:100px; }
   .badge.on{ background:var(--green-soft); color:var(--badge-on-text); }
@@ -810,7 +817,7 @@
   <div class="card dist-map-card">
     <h3 style="margin:0 0 4px;">Mapa de localización</h3>
     <p style="margin:0 0 12px; font-size:12.5px; color:var(--text-mute);">Haz clic en una fila de la tabla para ver en el mapa el municipio, su cabecera y el municipio más cercano.</p>
-    <div id="dist-map" style="height:560px; border-radius:14px 14px 0 0; overflow:hidden;"></div>
+    <div id="dist-map" style="border-radius:14px 14px 0 0; overflow:hidden;"></div>
     <div class="dist-map-legend" id="dist-map-legend" hidden>
       <span><i style="background:#3B82F6;"></i>Municipio seleccionado</span>
       <span><i style="background:#22C55E;"></i>Municipio cabecera</span>
