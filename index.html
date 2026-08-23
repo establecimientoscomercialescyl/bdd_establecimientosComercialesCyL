@@ -370,6 +370,9 @@
   .dist-map-legend[hidden]{ display:none; }
   .dist-map-legend span{ display:inline-flex; align-items:center; gap:6px; }
   .dist-map-legend i{ width:10px; height:10px; border-radius:50%; display:inline-block; flex:none; }
+  .dist-layout{ display:grid; grid-template-columns:minmax(0,1.6fr) minmax(300px,1fr); gap:16px; align-items:start; }
+  .dist-map-card #dist-map{ width:100%; }
+  @media (max-width:1100px){ .dist-layout{ grid-template-columns:1fr; } }
   .table-scroll{ overflow:auto; max-height:480px; }
   .badge{ font-family:'IBM Plex Mono',monospace; font-size:11px; padding:2px 8px; border-radius:100px; }
   .badge.on{ background:var(--green-soft); color:var(--badge-on-text); }
@@ -768,6 +771,8 @@
     </div>
   </div>
 
+  <div class="dist-layout">
+
   <div class="table-card">
     <div class="table-head">
       <h3>Municipio cabecera y municipio más cercano</h3>
@@ -781,7 +786,6 @@
         <thead>
           <tr>
             <th class="sortable" data-sort="mun">Municipio</th>
-            <th class="sortable" data-sort="prov">Provincia</th>
             <th class="sortable" data-sort="hab">Habitantes</th>
             <th class="sortable" data-sort="com">Comercios</th>
             <th class="sortable" data-sort="cab">Municipio cabecera</th>
@@ -803,15 +807,17 @@
     </div>
   </div>
 
-  <div class="card" style="margin-top:16px;">
-    <h3 style="margin:0 0 4px;">Mapa de localización · municipios del conjunto filtrado</h3>
+  <div class="card dist-map-card">
+    <h3 style="margin:0 0 4px;">Mapa de localización</h3>
     <p style="margin:0 0 12px; font-size:12.5px; color:var(--text-mute);">Haz clic en una fila de la tabla para ver en el mapa el municipio, su cabecera y el municipio más cercano.</p>
-    <div id="dist-map" style="height:440px; border-radius:14px 14px 0 0; overflow:hidden;"></div>
+    <div id="dist-map" style="height:560px; border-radius:14px 14px 0 0; overflow:hidden;"></div>
     <div class="dist-map-legend" id="dist-map-legend" hidden>
       <span><i style="background:#3B82F6;"></i>Municipio seleccionado</span>
       <span><i style="background:#22C55E;"></i>Municipio cabecera</span>
       <span><i style="background:#F59E0B;"></i>Municipio más cercano</span>
     </div>
+  </div>
+
   </div>
 
   </div>
@@ -1820,7 +1826,7 @@ function renderDistancias(){
 
   const body = $('#dist-table-body');
   if(DIST_DATA.length===0){
-    body.innerHTML = `<tr><td colspan="8"><div class="empty-state">No hay datos de distancias cargados todavía. Conecta con Google Sheets desde «Fuente de datos» para verlos (esta pestaña no está disponible al cargar desde Excel).</div></td></tr>`;
+    body.innerHTML = `<tr><td colspan="7"><div class="empty-state">No hay datos de distancias cargados todavía. Conecta con Google Sheets desde «Fuente de datos» para verlos (esta pestaña no está disponible al cargar desde Excel).</div></td></tr>`;
     $('#dist-pager-count').textContent = 'Sin resultados';
     $('#dist-pager-page').textContent = '';
     $('#dist-pager-prev').disabled = true;
@@ -1837,14 +1843,13 @@ function renderDistancias(){
   const pageIdx = DIST_FILTERED.slice(start, start+DIST_PAGE_SIZE);
 
   if(pageIdx.length===0){
-    body.innerHTML = `<tr><td colspan="8"><div class="empty-state">No hay municipios que coincidan con los filtros o la búsqueda.</div></td></tr>`;
+    body.innerHTML = `<tr><td colspan="7"><div class="empty-state">No hay municipios que coincidan con los filtros o la búsqueda.</div></td></tr>`;
   } else {
     const km = (v)=> v===null ? '—' : v.toLocaleString('es-ES',{maximumFractionDigits:1})+' km';
     body.innerHTML = pageIdx.map(i=>{
       const row = DIST_DATA[i];
       return `<tr data-idx="${i}" class="${i===DIST_HIGHLIGHT_IDX?'dist-row-active':''}">
         <td>${escapeHtml(row.mun)}</td>
-        <td>${titleCase(row.prov)}</td>
         <td>${row.hab===null?'—':fmt(row.hab)}</td>
         <td>${row.com===null?'—':fmt(row.com)}</td>
         <td>${escapeHtml(row.cab)||'—'}</td>
