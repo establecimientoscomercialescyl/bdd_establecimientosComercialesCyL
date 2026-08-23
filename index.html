@@ -204,6 +204,7 @@
     padding:18px 20px; box-shadow:var(--shadow);
     display:flex; flex-direction:column; gap:14px;
   }
+  .filters[hidden]{ display:none; }
   .filters-row{
     display:flex; flex-wrap:nowrap; align-items:flex-end; gap:14px;
   }
@@ -749,9 +750,6 @@
         <label for="dist-gal-filter">Grupo de acción local</label>
         <select id="dist-gal-filter"><option value="all">Todos</option></select>
       </div>
-      <div class="foot" style="color:var(--text-mute); font-size:12.5px; max-width:460px;">
-        Esta pestaña también respeta los filtros de la parte superior (Provincia, Municipio, Sector, Estado, Titularidad, Categoría y Habitantes): un municipio se muestra si cumple el filtro directamente (Provincia/Municipio/Habitantes) o si tiene al menos un comercio de la tabla de establecimientos que cumple el resto.
-      </div>
     </div>
   </div>
 
@@ -1293,18 +1291,20 @@ function renderDistKPIs(){
     if(mi!==null && mi!==undefined) muSet.add(mi);
   });
 
-  // Comercios de la BDD (ya con los filtros generales de arriba aplicados,
-  // vía FILTERED) que caen dentro de esos municipios.
+  // Comercios de la BDD que caen dentro de esos municipios. Se cuentan TODOS
+  // (activos y de baja), sin aplicar los filtros generales de arriba, ya que
+  // esta pestaña es intencionadamente independiente de ellos.
   let total = 0, conEmail = 0, conTel = 0, conWeb = 0;
   const r = DATA.rows;
-  FILTERED.forEach(i=>{
-    if(!muSet.has(r.mun[i])) return;
+  const n = r.mun.length;
+  for(let i=0;i<n;i++){
+    if(!muSet.has(r.mun[i])) continue;
     total++;
     if(r.email[i]) conEmail++;
     if(r.tel[i] || r.mov[i]) conTel++;
     if(r.web[i]) conWeb++;
-  });
-  const pct = (n)=> total? fmtPct(n/total) : '—';
+  }
+  const pct = (n2)=> total? fmtPct(n2/total) : '—';
 
   const galSel = $('#dist-gal-filter') ? $('#dist-gal-filter').value : 'all';
   const grupo = galSel==='all' ? 'todos los grupos de acción local' : titleCase(galSel);
@@ -1602,6 +1602,10 @@ function switchTab(tab){
   $('#kpis').hidden = tab==='distancias';
   $('#kpis-distancias').hidden = tab!=='distancias';
   $('#kpis-label').textContent = tab==='distancias' ? 'Indicadores de distancias' : 'Indicadores';
+  // Los filtros generales de arriba tampoco aplican a esta pestaña (tiene su
+  // propio filtro de Grupo de Acción Local y su propio buscador), así que se
+  // ocultan del todo para no dar a entender que están fallando si se usan.
+  $('#filters').hidden = tab==='distancias';
   if(tab==='territorial') renderTerritorial();
   if(tab==='distancias') renderDistancias();
   if(tab==='contacto') renderContacto();
@@ -1641,37 +1645,17 @@ function distSortValue(row, key){
   return typeof v==='string' ? v.toLowerCase() : v;
 }
 function applyDistFilters(){
-  const gf = getFilters(); // provincia y municipio se comparten con los filtros generales de arriba
+  // Esta pestaña vive de otra hoja (EST.GAL) y está pensada para mirarla por
+  // Grupo de Acción Local, así que es intencionadamente independiente de los
+  // filtros generales de arriba (que, de hecho, se ocultan mientras se está
+  // en esta pestaña — ver switchTab). Solo se aplican su propio selector de
+  // GAL y su propio buscador.
   const galSel = $('#dist-gal-filter') ? $('#dist-gal-filter').value : 'all';
   const q = ($('#dist-search').value||'').trim().toLowerCase();
 
-  const selProvNames = gf.prov.length ? gf.prov.map(i=>normalizeHeader(DATA.provs[i])) : null;
-  const selMunCodes = gf.mun.length ? new Set(gf.mun.map(i=>String((DATA.municipios[i]||{}).c||'').trim())) : null;
-
-  // Sector comercial, Estado, Titularidad y Categoría no existen como columna
-  // en EST.GAL (es una tabla por municipio, no por comercio) — se conectan
-  // por cruce: un municipio pasa el filtro si tiene al menos un comercio de
-  // la BDD que cumple esos filtros (ya calculado en FILTERED). Provincia y
-  // Municipio se comprueban aparte arriba, y Habitantes tiene su propia
-  // columna en EST.GAL, así que no hace falta cruzar nada para esos tres.
-  const needsCross = gf.sector.length>0 || gf.estado!=='all' || gf.sexo.length>0 || gf.cat.length>0;
-  let munWithMatch = null;
-  if(needsCross){
-    munWithMatch = new Set();
-    FILTERED.forEach(i=> munWithMatch.add(DATA.rows.mun[i]));
-  }
-
   DIST_FILTERED = DIST_DATA.map((_,i)=>i).filter(i=>{
     const row = DIST_DATA[i];
-    if(selProvNames && !selProvNames.includes(normalizeHeader(row.prov))) return false;
-    if(selMunCodes && !selMunCodes.has(String(row.codmun||'').trim())) return false;
     if(galSel!=='all' && row.gal!==galSel) return false;
-    if(gf.habMin!==null && (row.hab===null || row.hab<gf.habMin)) return false;
-    if(gf.habMax!==null && (row.hab===null || row.hab>gf.habMax)) return false;
-    if(munWithMatch){
-      const mi = findMunicipioIndex(row.codmun, row.mun, row.prov);
-      if(mi===null || mi===undefined || !munWithMatch.has(mi)) return false;
-    }
     if(q && !(row.mun.toLowerCase().includes(q) || row.prov.toLowerCase().includes(q))) return false;
     return true;
   });
