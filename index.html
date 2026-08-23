@@ -279,17 +279,19 @@
     font-size:13px; cursor:pointer; white-space:nowrap;
   }
   .msel-option:hover{ background:var(--border-soft); }
-  .msel-option input{
-    appearance:none; -webkit-appearance:none; width:16px; height:16px; flex:none;
-    margin:0; border:1.5px solid var(--text-mute); border-radius:4px;
-    background:var(--card); cursor:pointer; position:relative;
+  .msel-option input[type=checkbox]{
+    position:absolute; opacity:0; width:16px; height:16px; margin:0; pointer-events:none;
   }
-  .msel-option input:checked{ background:var(--blue); border-color:var(--blue); }
-  .msel-option input:checked::after{
+  .msel-check{
+    width:16px; height:16px; flex:none; border:1.5px solid var(--text-mute); border-radius:4px;
+    background:var(--card); position:relative; display:inline-block;
+  }
+  .msel-option input:checked ~ .msel-check{ background:var(--blue); border-color:var(--blue); }
+  .msel-option input:checked ~ .msel-check::after{
     content:''; position:absolute; left:4px; top:1px; width:4px; height:8px;
     border:solid #fff; border-width:0 2px 2px 0; transform:rotate(45deg);
   }
-  .msel-option input:hover{ border-color:var(--blue); }
+  .msel-option:hover .msel-check{ border-color:var(--blue); }
   .msel-empty{ font-size:12.5px; color:var(--text-mute); padding:8px 6px; }
 
   /* ---------- KPIs ---------- */
@@ -1037,8 +1039,8 @@ function initMultiSelect(key, onChange){
       const row = document.createElement('label');
       row.className = 'msel-option';
       const checked = MULTI_STATE[key].has(val);
-      row.innerHTML = `<input type="checkbox" ${checked?'checked':''}><span></span>`;
-      row.querySelector('span').textContent = label;
+      row.innerHTML = `<input type="checkbox" ${checked?'checked':''}><span class="msel-check"></span><span class="msel-label"></span>`;
+      row.querySelector('.msel-label').textContent = label;
       row.querySelector('input').addEventListener('change', (e)=>{
         if(e.target.checked) MULTI_STATE[key].add(val); else MULTI_STATE[key].delete(val);
         updateButtonLabel();
