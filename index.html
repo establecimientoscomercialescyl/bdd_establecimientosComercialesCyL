@@ -749,8 +749,8 @@
         <label for="dist-gal-filter">Grupo de acción local</label>
         <select id="dist-gal-filter"><option value="all">Todos</option></select>
       </div>
-      <div class="foot" style="color:var(--text-mute); font-size:12.5px; max-width:420px;">
-        Esta pestaña también respeta los filtros de Provincia y Municipio de la parte superior, ya que comparten esa información con la hoja de establecimientos.
+      <div class="foot" style="color:var(--text-mute); font-size:12.5px; max-width:460px;">
+        Esta pestaña también respeta los filtros de la parte superior (Provincia, Municipio, Sector, Estado, Titularidad, Categoría y Habitantes): un municipio se muestra si cumple el filtro directamente (Provincia/Municipio/Habitantes) o si tiene al menos un comercio de la tabla de establecimientos que cumple el resto.
       </div>
     </div>
   </div>
@@ -941,7 +941,8 @@ const PAGE_SIZE = 40;
 const charts = {};
 
 /* ============ Distancias entre municipios (hoja EST.GAL) ============ */
-let DIST_DATA = [];         // array de objetos {mun,prov,gal,hab,com,cab,distCabe,mejor,distMejor}
+let DIST_DATA = [];         // array de objetos {mun,prov,gal,hab,com,cab,distCabe,mejor,distMejor} — sin los municipios "no pertenece a ningún grupo"
+let DIST_DATA_ALL = [];     // igual, pero SIN excluir esos municipios (para localizar cabeceras/más cercanos que sean capitales de provincia, etc.)
 let DIST_FILTERED = [];     // índices sobre DIST_DATA que pasan la búsqueda
 let DIST_PAGE = 0;
 const DIST_PAGE_SIZE = 50;
@@ -1610,15 +1611,18 @@ function switchTab(tab){
 let DIST_MAP = null, DIST_MAP_LAYER = null, DIST_HL_LAYER = null;
 
 /* Busca en DIST_DATA el municipio por nombre (para localizar la cabecera o el
-   más cercano de una fila, que solo vienen como texto). Si hay varios
-   municipios con el mismo nombre, prioriza el de la misma provincia. */
+   más cercano de una fila, que solo vienen como texto). Busca en el listado
+   completo (DIST_DATA_ALL), no en el ya filtrado, para poder localizar
+   también cabeceras o municipios más cercanos que no pertenezcan a ningún
+   Grupo de Acción Local (típicamente las capitales de provincia). Si hay
+   varios municipios con el mismo nombre, prioriza el de la misma provincia. */
 function findDistRowByName(name, preferProv){
   if(!name) return null;
   const norm = normalizeHeader(name);
   const preferNorm = preferProv ? normalizeHeader(preferProv) : null;
   let fallback = null;
-  for(let k=0;k<DIST_DATA.length;k++){
-    const row = DIST_DATA[k];
+  for(let k=0;k<DIST_DATA_ALL.length;k++){
+    const row = DIST_DATA_ALL[k];
     if(normalizeHeader(row.mun)===norm){
       if(preferNorm && normalizeHeader(row.prov)===preferNorm) return row;
       if(!fallback) fallback = row;
@@ -1644,11 +1648,30 @@ function applyDistFilters(){
   const selProvNames = gf.prov.length ? gf.prov.map(i=>normalizeHeader(DATA.provs[i])) : null;
   const selMunCodes = gf.mun.length ? new Set(gf.mun.map(i=>String((DATA.municipios[i]||{}).c||'').trim())) : null;
 
+  // Sector comercial, Estado, Titularidad y Categoría no existen como columna
+  // en EST.GAL (es una tabla por municipio, no por comercio) — se conectan
+  // por cruce: un municipio pasa el filtro si tiene al menos un comercio de
+  // la BDD que cumple esos filtros (ya calculado en FILTERED). Provincia y
+  // Municipio se comprueban aparte arriba, y Habitantes tiene su propia
+  // columna en EST.GAL, así que no hace falta cruzar nada para esos tres.
+  const needsCross = gf.sector.length>0 || gf.estado!=='all' || gf.sexo.length>0 || gf.cat.length>0;
+  let munWithMatch = null;
+  if(needsCross){
+    munWithMatch = new Set();
+    FILTERED.forEach(i=> munWithMatch.add(DATA.rows.mun[i]));
+  }
+
   DIST_FILTERED = DIST_DATA.map((_,i)=>i).filter(i=>{
     const row = DIST_DATA[i];
     if(selProvNames && !selProvNames.includes(normalizeHeader(row.prov))) return false;
     if(selMunCodes && !selMunCodes.has(String(row.codmun||'').trim())) return false;
     if(galSel!=='all' && row.gal!==galSel) return false;
+    if(gf.habMin!==null && (row.hab===null || row.hab<gf.habMin)) return false;
+    if(gf.habMax!==null && (row.hab===null || row.hab>gf.habMax)) return false;
+    if(munWithMatch){
+      const mi = findMunicipioIndex(row.codmun, row.mun, row.prov);
+      if(mi===null || mi===undefined || !munWithMatch.has(mi)) return false;
+    }
     if(q && !(row.mun.toLowerCase().includes(q) || row.prov.toLowerCase().includes(q))) return false;
     return true;
   });
@@ -2189,6 +2212,11 @@ function parseDistanciasPayload(json){
     if(COLMAP_DIST[norm] && !(COLMAP_DIST[norm] in colIndex)) colIndex[COLMAP_DIST[norm]] = idx;
   });
   const s = (v)=> v===null||v===undefined? '' : String(v).trim();
+  // Devuelve TODOS los municipios de EST.GAL, incluidos los que no pertenecen
+  // a ningún Grupo de Acción Local (p.ej. las capitales de provincia). La
+  // exclusión de esos municipios de la tabla/filtro/indicadores se aplica
+  // más adelante sobre DIST_DATA, no aquí — así siguen disponibles como
+  // referencia cuando son la cabecera o el municipio más cercano de otro.
   return json.filas.filter(r=> r && s(r[colIndex.mun])).map(r=>({
     mun: s(r[colIndex.mun]),
     prov: s(r[colIndex.prov]),
@@ -2203,11 +2231,7 @@ function parseDistanciasPayload(json){
     distMejor: 'distMejor' in colIndex ? toNumOrNull(r[colIndex.distMejor]) : null,
     lat: 'lat' in colIndex ? toNumOrNull(r[colIndex.lat]) : null,
     lng: 'lng' in colIndex ? toNumOrNull(r[colIndex.lng]) : null
-  }))
-  // Se descartan los municipios que no pertenecen a ningún Grupo de Acción
-  // Local: no hacen falta en esta pestaña y así no hay que restarlos aparte
-  // en cada indicador, filtro o tabla.
-  .filter(row => normalizeHeader(row.gal) !== 'NO PERTENECE A NINGUN GRUPO');
+  }));
 }
 
 function handleFile(file){
@@ -2303,7 +2327,13 @@ async function fetchFromApi(url, token, {silent, retries=2}={}){
 /* Centraliza lo que hay que hacer cada vez que llega un dataset nuevo (conectar, recargar o autoconectar). */
 function onDataLoaded(newData, statusMsg){
   DATA = newData;
-  DIST_DATA = newData.distancias || [];
+  DIST_DATA_ALL = newData.distancias || [];
+  // La tabla/filtro/indicadores de esta pestaña no necesitan los municipios
+  // que no pertenecen a ningún Grupo de Acción Local (p.ej. las capitales de
+  // provincia) — se excluyen aquí. DIST_DATA_ALL (sin excluir) se conserva
+  // aparte para poder localizarlos igualmente cuando son la cabecera o el
+  // municipio más cercano de otro que sí aparece en la tabla.
+  DIST_DATA = DIST_DATA_ALL.filter(row => normalizeHeader(row.gal) !== 'NO PERTENECE A NINGUN GRUPO');
   DIST_PAGE = 0;
   DIST_HIGHLIGHT_IDX = null;
   MUN_INDEX_BY_CODE = null; MUN_INDEX_BY_NAME = null; // se reconstruye con los nuevos datos, ver findMunicipioIndex
