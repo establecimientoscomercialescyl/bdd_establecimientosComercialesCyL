@@ -725,7 +725,7 @@
     <div class="card">
       <h3>Comercios por provincia</h3>
       <p class="card-sub">% sobre el total filtrado</p>
-      <div class="chart-wrap" style="min-height:200px; max-height:240px;"><canvas id="chart-provincia-pie"></canvas></div>
+      <div class="chart-wrap" style="min-height:220px; max-height:260px;"><canvas id="chart-provincia-pie"></canvas></div>
     </div>
     <div class="card">
       <h3>20 municipios peor abastecidos</h3>
@@ -2000,7 +2000,7 @@ function renderPieProvincia(){
         datalabels: dlPlugin({ color:'#fff', font:{family:FONT_BODY,size:11,weight:'600'},
           formatter:(v)=> v && total? Math.round(v/total*100)+'%' : '' }) }]},
     options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ position:'bottom', labels:{ color:TICK_COLOR(), font:{family:FONT_BODY, size:11}, boxWidth:10, padding:12 } } } }
+      plugins:{ legend:{ position:'right', align:'center', labels:{ color:TICK_COLOR(), font:{family:FONT_BODY, size:11}, boxWidth:10, padding:10 } } } }
   });
 }
 
