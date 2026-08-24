@@ -307,6 +307,7 @@
   .card{
     background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
     padding:18px 20px 12px; box-shadow:var(--shadow); display:flex; flex-direction:column;
+    position:relative;
   }
   .card h3{
     font-family:'Inter',sans-serif; font-weight:600; font-size:15.5px; margin:0 0 2px; color:var(--text);
@@ -437,6 +438,34 @@
     box-shadow:0 20px 60px rgba(0,0,0,.5); width:100%; max-width:620px; overflow:hidden;
   }
   .modal-panel-wide{ max-width:880px; }
+  .max-modal-panel{
+    max-width:min(1400px, 94vw); width:94vw; height:90vh;
+    display:flex; flex-direction:column;
+  }
+  .max-modal-body{
+    flex:1; min-height:0; padding:18px; overflow:auto;
+    display:flex;
+  }
+  .max-modal-body > *{ flex:1; min-height:0; width:100%; }
+  /* Overrides mientras una tarjeta está dentro del modal de ampliar, para
+     que aproveche todo el alto disponible en vez del tope pequeño que tiene
+     en su sitio normal del dashboard. */
+  .is-maximized{
+    height:100% !important; box-shadow:none !important; border:none !important;
+    display:flex !important; flex-direction:column !important;
+  }
+  .is-maximized .chart-wrap{ max-height:none !important; min-height:0 !important; flex:1; }
+  .is-maximized .table-scroll{ max-height:none !important; flex:1; min-height:0; }
+  .is-maximized .heatmap-wrap{ max-height:none !important; }
+
+  .card-max-btn{
+    position:absolute; top:14px; right:14px; z-index:2;
+    width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center;
+    background:var(--card-2); border:1px solid var(--border); color:var(--text-mute); cursor:pointer;
+  }
+  .card-max-btn:hover{ color:var(--blue); border-color:var(--blue); }
+  .card-max-btn svg{ width:15px; height:15px; }
+  .table-head .card-max-btn{ position:static; flex:none; }
   .modal-head{
     display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
     padding:16px 18px; border-bottom:1px solid var(--border);
@@ -926,6 +955,18 @@
       <span><i style="background:#F59E0B;"></i><span id="mun-map-legend-b">Municipio más cercano</span></span>
     </div>
     <p id="mun-map-note" class="card-sub" style="padding:0 18px 14px; margin:0;" hidden></p>
+  </div>
+</div>
+
+<div class="modal-overlay" id="max-modal" hidden>
+  <div class="modal-panel max-modal-panel">
+    <div class="modal-head">
+      <h3 id="max-modal-title">—</h3>
+      <button class="modal-close" id="max-modal-close" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="max-modal-body" id="max-modal-body"></div>
   </div>
 </div>
 
@@ -1711,6 +1752,75 @@ function closeMunMapModal(){
   $('#mun-map-modal').hidden = true;
   if(MUN_MAP){ MUN_MAP.remove(); MUN_MAP = null; }
   $('#mun-map').innerHTML = '';
+}
+
+/* ============ Botón "Ampliar" en gráficos y tablas ============ */
+/* Se inyecta automáticamente en cualquier .card o .table-card que contenga
+   un gráfico, una tabla o el mapa de Distancias — así no hay que acordarse
+   de añadirlo a mano en cada tarjeta nueva que se cree en el futuro. */
+let MAXIMIZED = null; // { el, parent, next } de la tarjeta actualmente ampliada, o null
+
+function initMaximizeButtons(){
+  $$('main .card, main .table-card').forEach(card=>{
+    if(card.querySelector(':scope > .card-max-btn, :scope > .table-head .card-max-btn')) return;
+    if(!card.querySelector('canvas, .table-scroll, .heatmap-wrap, #dist-map')) return; // no es una tarjeta con contenido ampliable
+
+    const h3 = card.querySelector('h3');
+    const title = h3 ? h3.textContent.trim() : 'Vista ampliada';
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'card-max-btn';
+    btn.title = 'Ampliar';
+    btn.setAttribute('aria-label', 'Ampliar');
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>';
+    btn.addEventListener('click', (e)=>{ e.stopPropagation(); openMaximize(card, title); });
+
+    const head = card.querySelector(':scope > .table-head');
+    if(head){
+      // Se agrupan el buscador y el botón juntos a la derecha de la cabecera
+      // (si no, el "space-between" de 3 elementos dejaría el buscador en medio).
+      const searchBox = head.querySelector(':scope > .search-box');
+      const endWrap = document.createElement('div');
+      endWrap.style.cssText = 'display:flex; align-items:center; gap:10px;';
+      if(searchBox){ head.removeChild(searchBox); endWrap.appendChild(searchBox); }
+      endWrap.appendChild(btn);
+      head.appendChild(endWrap);
+    } else {
+      card.appendChild(btn);
+    }
+  });
+}
+
+function resizeMaximizedContent(el){
+  requestAnimationFrame(()=>{
+    el.querySelectorAll('canvas').forEach(cv=>{
+      const ch = (typeof Chart!=='undefined' && Chart.getChart) ? Chart.getChart(cv) : null;
+      if(ch) ch.resize();
+    });
+    if(el.querySelector('#dist-map') && typeof DIST_MAP!=='undefined' && DIST_MAP) DIST_MAP.invalidateSize();
+  });
+}
+
+function openMaximize(card, title){
+  if(MAXIMIZED) closeMaximize();
+  MAXIMIZED = { el: card, parent: card.parentElement, next: card.nextElementSibling };
+  $('#max-modal-title').textContent = title;
+  card.classList.add('is-maximized');
+  $('#max-modal-body').appendChild(card);
+  $('#max-modal').hidden = false;
+  resizeMaximizedContent(card);
+}
+
+function closeMaximize(){
+  if(!MAXIMIZED) return;
+  const { el, parent, next } = MAXIMIZED;
+  el.classList.remove('is-maximized');
+  if(next && next.parentElement===parent) parent.insertBefore(el, next);
+  else parent.appendChild(el);
+  $('#max-modal').hidden = true;
+  MAXIMIZED = null;
+  resizeMaximizedContent(el);
 }
 
 /* ============ Render general ============ */
@@ -2681,10 +2791,13 @@ function bindEvents(){
   });
   $('#mun-map-close').addEventListener('click', closeMunMapModal);
   $('#mun-map-modal').addEventListener('click', (e)=>{ if(e.target.id==='mun-map-modal') closeMunMapModal(); });
+  $('#max-modal-close').addEventListener('click', closeMaximize);
+  $('#max-modal').addEventListener('click', (e)=>{ if(e.target.id==='max-modal') closeMaximize(); });
   document.addEventListener('keydown', (e)=>{
     if(e.key!=='Escape') return;
     if(!$('#map-modal').hidden) closeMapModal();
     if(!$('#mun-map-modal').hidden) closeMunMapModal();
+    if(!$('#max-modal').hidden) closeMaximize();
     if(!$('#source-modal').hidden) closeSourceModal();
   });
 }
@@ -2753,6 +2866,7 @@ function init(){
   applyTheme(stored === 'light' ? 'light' : 'dark', false);
   applyChartDefaults();
   initMultiSelects();
+  initMaximizeButtons();
   bindEvents();
   showNoDataState();
   attemptInitialConnection();
