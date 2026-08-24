@@ -184,6 +184,8 @@
   .btn-primary:hover{ filter:brightness(1.1); }
   .btn-ghost{ background:rgba(255,255,255,.06); color:#EAEFFB; border:1px solid rgba(255,255,255,.16); }
   .btn-ghost:hover{ background:rgba(255,255,255,.12); }
+  .btn-outline{ background:var(--card-2); color:var(--text); border:1px solid var(--border); }
+  .btn-outline:hover{ background:var(--border-soft); }
   .btn svg{ width:15px; height:15px; }
 
   /* ---------- Layout ---------- */
@@ -767,6 +769,7 @@
         <label for="dist-gal-filter">Grupo de acción local</label>
         <select id="dist-gal-filter"><option value="all">Todos</option></select>
       </div>
+      <button class="btn btn-outline" id="dist-clear-selection" type="button">Limpiar selección</button>
     </div>
   </div>
 
@@ -867,9 +870,9 @@
     <div class="modal-body-pad">
       <div style="display:flex; flex-direction:column; gap:10px;">
         <button class="btn btn-primary" id="src-connect" type="button">Cargar datos online de Google Sheet</button>
-        <button class="btn btn-ghost" id="src-manual-excel" type="button">Cargar datos locales del archivo Excel (BASE DE DATOS_2027)</button>
+        <button class="btn btn-outline" id="src-manual-excel" type="button">Cargar datos locales del archivo Excel (BASE DE DATOS_2027)</button>
       </div>
-      <button class="btn btn-ghost" id="src-reload" type="button" style="display:none; margin-top:10px;">Recargar ahora</button>
+      <button class="btn btn-outline" id="src-reload" type="button" style="display:none; margin-top:10px;">Recargar ahora</button>
     </div>
   </div>
 </div>
@@ -2589,6 +2592,12 @@ function bindEvents(){
 
   $('#dist-search').addEventListener('input', debounce(()=>{ DIST_PAGE=0; renderDistancias(); }, 220));
   $('#dist-gal-filter').addEventListener('change', ()=>{ DIST_PAGE=0; renderDistancias(); });
+  $('#dist-clear-selection').addEventListener('click', ()=>{
+    $('#dist-gal-filter').value = 'all';
+    DIST_HIGHLIGHT_IDX = null;
+    DIST_PAGE = 0;
+    renderDistancias();
+  });
   $('#dist-table-body').addEventListener('click', (e)=>{
     const tr = e.target.closest('tr[data-idx]');
     if(!tr) return;
