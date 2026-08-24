@@ -1412,7 +1412,7 @@ function renderSexo(){
 
 function renderEvolucion(){
   const r = DATA.rows;
-  const altasByYear = new Map(), bajasByYear = new Map();
+  const altasByYear = new Map(), bajasByYear = new Map(), modiByYear = new Map();
   for(const i of FILTERED){
     if(r.falta[i]!==null){
       const y = dayToDate(r.falta[i]).getUTCFullYear();
@@ -1422,8 +1422,12 @@ function renderEvolucion(){
       const y = dayToDate(r.fbaja[i]).getUTCFullYear();
       bajasByYear.set(y, (bajasByYear.get(y)||0)+1);
     }
+    if(r.fmodiDay[i]!==null){
+      const y = dayToDate(r.fmodiDay[i]).getUTCFullYear();
+      modiByYear.set(y, (modiByYear.get(y)||0)+1);
+    }
   }
-  const years = Array.from(new Set([...altasByYear.keys(), ...bajasByYear.keys()])).sort();
+  const years = Array.from(new Set([...altasByYear.keys(), ...bajasByYear.keys(), ...modiByYear.keys()])).sort();
   destroyChart('evolucion');
   charts.evolucion = new Chart($('#chart-evolucion'), {
     type:'bar',
@@ -1433,6 +1437,8 @@ function renderEvolucion(){
           datalabels: dlPlugin({ anchor:'end', align:'top', color:'#8FE3AA', font:{family:FONT_BODY,size:9.5,weight:'600'}, formatter:v=>v||'' }) },
         { label:'Bajas', data: years.map(y=>bajasByYear.get(y)||0), backgroundColor:'#EF4444', borderRadius:5, maxBarThickness:26,
           datalabels: dlPlugin({ anchor:'end', align:'top', color:'#FFA5A5', font:{family:FONT_BODY,size:9.5,weight:'600'}, formatter:v=>v||'' }) },
+        { label:'Modificaciones', data: years.map(y=>modiByYear.get(y)||0), backgroundColor:'#3B82F6', borderRadius:5, maxBarThickness:26,
+          datalabels: dlPlugin({ anchor:'end', align:'top', color:'#93C5FD', font:{family:FONT_BODY,size:9.5,weight:'600'}, formatter:v=>v||'' }) },
       ]},
     options: baseOpts({ layout:{ padding:{ top:20 } },
       plugins:{ legend:{ display:true, position:'bottom', labels:{color:TICK_COLOR(),font:{family:FONT_BODY,size:11}, boxWidth:10} } },
@@ -2290,7 +2296,7 @@ function buildDatasetFromRows(headerRow, dataRowsRaw){
   });
   const munIndexOf = new Map(munCodes.map((cm,i)=>[cm,i]));
 
-  const out = { prov:[], mun:[], sector:[], cat:[], estado:[], sexo:[], gal:[], falta:[], fbaja:[], nombre:[], titular:[], cp:[], email:[], web:[], dir:[], lat:[], lng:[], phone:[], tel:[], mov:[], nre:[], fmodi:[] };
+  const out = { prov:[], mun:[], sector:[], cat:[], estado:[], sexo:[], gal:[], falta:[], fbaja:[], nombre:[], titular:[], cp:[], email:[], web:[], dir:[], lat:[], lng:[], phone:[], tel:[], mov:[], nre:[], fmodi:[], fmodiDay:[] };
 
   function parseLatLng(v){
     if(v===null || v===undefined || v==='') return [null,null];
@@ -2326,6 +2332,7 @@ function buildDatasetFromRows(headerRow, dataRowsRaw){
     out.phone.push(!!telVal || !!movVal);
     out.nre.push('nre' in colIndex ? s(r[colIndex.nre]) : '');
     out.fmodi.push('fmodi' in colIndex ? formatDateDisplay(r[colIndex.fmodi]) : '');
+    out.fmodiDay.push('fmodi' in colIndex ? excelDateToDays(r[colIndex.fmodi]) : null);
     out.dir.push('dir' in colIndex ? s(r[colIndex.dir]) : '');
     const [lat,lng] = 'loc' in colIndex ? parseLatLng(r[colIndex.loc]) : [null,null];
     out.lat.push(lat); out.lng.push(lng);
