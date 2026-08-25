@@ -973,6 +973,30 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="prov-map-modal" hidden>
+  <div class="modal-panel modal-panel-wide">
+    <div class="modal-head">
+      <div>
+        <h3 id="prov-map-title">—</h3>
+        <p>Establecimientos activos y de baja de la provincia</p>
+      </div>
+      <button class="modal-close" id="prov-map-close" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-detail-body">
+      <div class="modal-map-wrap">
+        <div id="prov-map" style="position:absolute; inset:0; width:100%; height:100%; background:var(--card-2);"></div>
+      </div>
+      <div class="modal-detail-list" id="prov-map-details"></div>
+    </div>
+    <div class="dist-map-legend">
+      <span><i style="background:#22C55E;"></i>Activos</span>
+      <span><i style="background:#EF4444;"></i>Bajas</span>
+    </div>
+  </div>
+</div>
+
 
 <script>
 (function(){
@@ -2206,7 +2230,7 @@ function renderEstudioProvincias(){
   const body = $('#estudio-provincias-body');
   const rowsHtml = stats.map(s=>`
     <tr>
-      <td style="${provNameCell}">${escapeHtml(s.nombre)}</td>
+      <td style="${provNameCell} cursor:pointer;" data-pi="${s.pi}" title="Ver mapa de ${escapeHtml(s.nombre)}">${escapeHtml(s.nombre)}</td>
       <td>${fmt(s.total)}</td>
       <td>${fmt(s.activos)}</td>
       <td>${pct(s.activos, totalRow.activos)}</td>
@@ -2243,6 +2267,77 @@ function renderEstudioProvincias(){
 
 /* Convierte la tabla "Establecimientos por provincia" en una matriz de
    filas (encabezado + datos) lista para exportar a Excel. */
+/* ---- Modal "mapa de la provincia": clic en el nombre de una provincia
+   en la tabla "Establecimientos por provincia" ---- */
+let PROV_MAP = null, PROV_MAP_LAYER = null;
+
+function renderProvMapDetails(s){
+  const pct = (v,total)=> total? (v/total*100).toLocaleString('es-ES',{maximumFractionDigits:2})+'%' : '—';
+  const html = [
+    detailItem('Provincia', s.nombre),
+    detailItem('Nº de activos', fmt(s.activos)),
+    detailItem('Nº de bajas', fmt(s.bajas)),
+    detailItem('Densidad comercial', s.densidad!==null? fmtDec(s.densidad,1)+' ‰' : '—'),
+    detailItem('Habitantes por comercio', s.habPorComercio!==null? fmtDec(s.habPorComercio,0) : '—'),
+    detailItem('% con teléfono o móvil', pct(s.conTelefono, s.total)),
+    detailItem('% con email', pct(s.conEmail, s.total)),
+  ].join('');
+  $('#prov-map-details').innerHTML = html;
+}
+
+function openProvinciaMapModal(pi){
+  const { stats } = estudioProvinciasStats();
+  const s = stats.find(x=>x.pi===pi);
+  if(!s) return;
+
+  $('#prov-map-title').textContent = s.nombre;
+  renderProvMapDetails(s);
+  $('#prov-map-modal').hidden = false;
+  $('#prov-map').innerHTML = '';
+  PROV_MAP = null; // se recrea siempre: el contenedor se vació arriba
+
+  setTimeout(()=>{
+    if(typeof L === 'undefined'){
+      $('#prov-map').innerHTML = '<div class="empty-state">No se pudo cargar la librería de mapas (Leaflet) desde la red.</div>';
+      return;
+    }
+    const r = DATA.rows;
+    PROV_MAP = L.map('prov-map', { scrollWheelZoom:false });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18, attribution: '© OpenStreetMap'
+    }).addTo(PROV_MAP);
+    PROV_MAP_LAYER = L.layerGroup().addTo(PROV_MAP);
+
+    const pts = [];
+    for(const i of FILTERED){
+      if(r.prov[i]!==pi) continue;
+      const lat = r.lat ? r.lat[i] : null, lng = r.lng ? r.lng[i] : null;
+      if(lat===null || lat===undefined || lng===null || lng===undefined) continue;
+      const isActivo = r.estado[i]===1;
+      const marker = L.circleMarker([lat,lng], {
+        radius:4, weight:1,
+        color: isActivo? '#16A34A' : '#DC2626',
+        fillColor: isActivo? '#22C55E' : '#EF4444',
+        fillOpacity:.85
+      });
+      marker.bindPopup(`<b>${escapeHtml(strOr(r.nombre[i]) || 'Establecimiento')}</b><br>${escapeHtml(DATA.municipios[r.mun[i]].n)}<br>${isActivo? 'Activo' : 'De baja'}`);
+      marker.addTo(PROV_MAP_LAYER);
+      pts.push([lat,lng]);
+    }
+
+    if(pts.length){
+      PROV_MAP.fitBounds(pts, { padding:[20,20], maxZoom:12 });
+    }else{
+      PROV_MAP.setView([41.65,-4.7], 7);
+    }
+    setTimeout(()=>{ if(PROV_MAP) PROV_MAP.invalidateSize(); }, 60);
+  }, 30);
+}
+
+function closeProvMapModal(){
+  $('#prov-map-modal').hidden = true;
+}
+
 function estudioProvinciasGetAOA(){
   const { stats, totalRow } = estudioProvinciasStats();
   const pctNum = (v,total)=> total? Math.round(v/total*10000)/100 : '';
@@ -2345,6 +2440,7 @@ function estudioProvinciasStats(){
     munSeen.forEach(mi=> hab += DATA.municipios[mi].h);
     const total = activos+bajas;
     return {
+      pi,
       nombre: titleCase(DATA.provs[pi]),
       total, activos, bajas, hab, conTelefono, conEmail,
       densidad: hab? (total/(hab/1000)) : null,
@@ -3088,10 +3184,18 @@ function bindEvents(){
   });
   $('#mun-map-close').addEventListener('click', closeMunMapModal);
   $('#mun-map-modal').addEventListener('click', (e)=>{ if(e.target.id==='mun-map-modal') closeMunMapModal(); });
+  $('#estudio-provincias-body').addEventListener('click', (e)=>{
+    const td = e.target.closest('td[data-pi]');
+    if(!td) return;
+    openProvinciaMapModal(Number(td.dataset.pi));
+  });
+  $('#prov-map-close').addEventListener('click', closeProvMapModal);
+  $('#prov-map-modal').addEventListener('click', (e)=>{ if(e.target.id==='prov-map-modal') closeProvMapModal(); });
   document.addEventListener('keydown', (e)=>{
     if(e.key!=='Escape') return;
     if(!$('#map-modal').hidden) closeMapModal();
     if(!$('#mun-map-modal').hidden) closeMunMapModal();
+    if(!$('#prov-map-modal').hidden) closeProvMapModal();
     if(!$('#source-modal').hidden) closeSourceModal();
   });
 }
