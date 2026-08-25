@@ -631,6 +631,7 @@
     <button class="tab-btn active" id="tab-btn-resumen" data-tab="resumen" role="tab">Resumen general</button>
     <button class="tab-btn" id="tab-btn-territorial" data-tab="territorial" role="tab">Análisis territorial</button>
     <button class="tab-btn" id="tab-btn-distancias" data-tab="distancias" role="tab">Distancias</button>
+    <button class="tab-btn" id="tab-btn-estudio" data-tab="estudio" role="tab">Estudio de datos</button>
     <button class="tab-btn" id="tab-btn-contacto" data-tab="contacto" role="tab">Contacto</button>
   </div>
 
@@ -653,7 +654,7 @@
   <div class="section-label">Evolución y sectores</div>
   <div class="grid-2">
     <div class="card">
-      <h3>Altas, Modificaciones y bajas por año</h3>
+      <h3>Altas y bajas por año</h3>
       <p class="card-sub">Movimiento del registro desde la primera fecha disponible</p>
       <div class="chart-wrap"><canvas id="chart-evolucion"></canvas></div>
     </div>
@@ -820,6 +821,58 @@
     </div>
   </div>
 
+  </div>
+
+  </div>
+
+  <div class="tab-panel" id="tab-estudio" hidden>
+
+  <div class="section-label" style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+    <span>Estudio de datos</span>
+    <button class="btn btn-outline" id="export-estudio-all" type="button"><svg width="14" height="14" viewBox="0 0 24 24" style="vertical-align:-2px;margin-right:6px;" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="20" height="20" rx="4" fill="#21A366"/><rect x="6" y="6" width="4.5" height="4.5" fill="#fff"/><rect x="13.5" y="6" width="4.5" height="4.5" fill="#fff"/><rect x="6" y="13.5" width="4.5" height="4.5" fill="#fff"/><rect x="13.5" y="13.5" width="4.5" height="4.5" fill="#fff"/></svg>Exportar todas las tablas a Excel</button>
+  </div>
+  <p class="hab-note" id="estudio-estado-note" style="margin:-4px 0 16px;">Mientras estás en esta pestaña el filtro Estado se pone en "Todos" automáticamente, para que Activos y Bajas se vean completos; al salir se restaura a lo que tenías seleccionado.</p>
+
+  <div class="table-card">
+    <div class="table-head">
+      <h3>Establecimientos por provincia</h3>
+      <button class="btn btn-outline" id="export-estudio-provincias" type="button"><svg width="14" height="14" viewBox="0 0 24 24" style="vertical-align:-2px;margin-right:6px;" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="20" height="20" rx="4" fill="#21A366"/><rect x="6" y="6" width="4.5" height="4.5" fill="#fff"/><rect x="13.5" y="6" width="4.5" height="4.5" fill="#fff"/><rect x="6" y="13.5" width="4.5" height="4.5" fill="#fff"/><rect x="13.5" y="13.5" width="4.5" height="4.5" fill="#fff"/></svg>Exportar a Excel</button>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Provincia</th>
+            <th>Totales</th>
+            <th>Activos</th>
+            <th>% Activos</th>
+            <th>Bajas</th>
+            <th>Habitantes</th>
+            <th>% Habitantes</th>
+            <th>Densidad comercial</th>
+            <th>Habit / comercio</th>
+            <th>Con teléfono o móvil</th>
+            <th>% Teléfono o móvil</th>
+            <th>Con email</th>
+            <th>% Email</th>
+          </tr>
+        </thead>
+        <tbody id="estudio-provincias-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="table-card" style="margin-top:16px;">
+    <div class="table-head">
+      <h3>Establecimientos por sector y provincia</h3>
+      <button class="btn btn-outline" id="export-estudio-sectores" type="button"><svg width="14" height="14" viewBox="0 0 24 24" style="vertical-align:-2px;margin-right:6px;" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="20" height="20" rx="4" fill="#21A366"/><rect x="6" y="6" width="4.5" height="4.5" fill="#fff"/><rect x="13.5" y="6" width="4.5" height="4.5" fill="#fff"/><rect x="6" y="13.5" width="4.5" height="4.5" fill="#fff"/><rect x="13.5" y="13.5" width="4.5" height="4.5" fill="#fff"/></svg>Exportar a Excel</button>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr id="estudio-sectores-head"></tr></thead>
+        <tbody id="estudio-sectores-body"></tbody>
+      </table>
+    </div>
   </div>
 
   </div>
@@ -1189,6 +1242,7 @@ function applyFilters(){
   TABLE_PAGE = 0;
   render();
   if(CURRENT_TAB==='distancias') renderDistancias();
+  if(CURRENT_TAB==='estudio') renderEstudioDatos();
 }
 
 /* ============ KPIs ============ */
@@ -1736,12 +1790,17 @@ function render(){
 
 /* ============ Pestañas ============ */
 let CURRENT_TAB = 'resumen';
+// Recuerda qué tenías seleccionado en el filtro Estado antes de entrar en
+// "Estudio de datos", para poder restaurarlo al salir (ver más abajo).
+let ESTUDIO_PREV_ESTADO = null;
 function switchTab(tab){
+  const prevTab = CURRENT_TAB;
   CURRENT_TAB = tab;
   $$('.tab-btn').forEach(b=> b.classList.toggle('active', b.dataset.tab===tab));
   $('#tab-resumen').hidden = tab!=='resumen';
   $('#tab-territorial').hidden = tab!=='territorial';
   $('#tab-distancias').hidden = tab!=='distancias';
+  $('#tab-estudio').hidden = tab!=='estudio';
   $('#tab-contacto').hidden = tab!=='contacto';
   // En la pestaña Distancias los indicadores de arriba vienen de otra hoja
   // (EST.GAL, no BDD), así que se sustituyen por los propios de esa pestaña.
@@ -1752,8 +1811,23 @@ function switchTab(tab){
   // propio filtro de Grupo de Acción Local y su propio buscador), así que se
   // ocultan del todo para no dar a entender que están fallando si se usan.
   $('#filters').hidden = tab==='distancias';
+
+  // "Estudio de datos" necesita ver Activos y Bajas a la vez, así que al
+  // entrar se fuerza el filtro Estado a "Todos" (guardando lo que hubiera
+  // antes) y al salir se restaura tal cual estaba.
+  if(tab==='estudio' && prevTab!=='estudio'){
+    ESTUDIO_PREV_ESTADO = $('#f-estado').value;
+    $('#f-estado').value = 'all';
+    applyFilters();
+  } else if(prevTab==='estudio' && tab!=='estudio'){
+    if(ESTUDIO_PREV_ESTADO!==null) $('#f-estado').value = ESTUDIO_PREV_ESTADO;
+    ESTUDIO_PREV_ESTADO = null;
+    applyFilters();
+  }
+
   if(tab==='territorial') renderTerritorial();
   if(tab==='distancias') renderDistancias();
+  if(tab==='estudio') renderEstudioDatos();
   if(tab==='contacto') renderContacto();
 }
 
@@ -2093,7 +2167,201 @@ function renderPeorAbastecidos(){
   }).join('');
 }
 
-/* ============ Pestaña de contacto ============ */
+/* ============ Pestaña "Estudio de datos" ============ */
+
+// Registro de tablas exportables de esta pestaña: cada una aporta un título
+// (para el nombre de la hoja Excel) y una función que calcula sus datos
+// AL MOMENTO de exportar (así siempre exporta lo que se ve, ya filtrado).
+// Las tablas que se añadan en el futuro solo tienen que empujar aquí un
+// objeto {title, getAOA} para aparecer también en "Exportar todas".
+const ESTUDIO_TABLES = [];
+
+function renderEstudioProvincias(){
+  const { stats, totalRow } = estudioProvinciasStats();
+  const fmtNum = (v,dec)=> v===null? '—' : v.toLocaleString('es-ES',{maximumFractionDigits:dec});
+  const pct = (v,total)=> total? (v/total*100).toLocaleString('es-ES',{maximumFractionDigits:2})+'%' : '—';
+  const provNameCell = 'font-weight:700; font-size:14px; background:var(--blue-soft);';
+
+  const body = $('#estudio-provincias-body');
+  const rowsHtml = stats.map(s=>`
+    <tr>
+      <td style="${provNameCell}">${escapeHtml(s.nombre)}</td>
+      <td>${fmt(s.total)}</td>
+      <td>${fmt(s.activos)}</td>
+      <td>${pct(s.activos, totalRow.activos)}</td>
+      <td>${fmt(s.bajas)}</td>
+      <td>${fmt(s.hab)}</td>
+      <td>${pct(s.hab, totalRow.hab)}</td>
+      <td>${fmtNum(s.densidad,1)}</td>
+      <td>${fmtNum(s.habPorComercio,0)}</td>
+      <td>${fmt(s.conTelefono)}</td>
+      <td>${pct(s.conTelefono, s.total)}</td>
+      <td>${fmt(s.conEmail)}</td>
+      <td>${pct(s.conEmail, s.total)}</td>
+    </tr>
+  `).join('');
+  const totalHtml = `
+    <tr style="font-weight:700; background:var(--blue-soft);">
+      <td style="font-size:14px;">Castilla y León</td>
+      <td>${fmt(totalRow.total)}</td>
+      <td>${fmt(totalRow.activos)}</td>
+      <td>100%</td>
+      <td>${fmt(totalRow.bajas)}</td>
+      <td>${fmt(totalRow.hab)}</td>
+      <td>100%</td>
+      <td>${fmtNum(totalRow.densidad,1)}</td>
+      <td>${fmtNum(totalRow.habPorComercio,0)}</td>
+      <td>${fmt(totalRow.conTelefono)}</td>
+      <td>${pct(totalRow.conTelefono, totalRow.total)}</td>
+      <td>${fmt(totalRow.conEmail)}</td>
+      <td>${pct(totalRow.conEmail, totalRow.total)}</td>
+    </tr>
+  `;
+  body.innerHTML = rowsHtml + totalHtml;
+}
+
+/* Convierte la tabla "Establecimientos por provincia" en una matriz de
+   filas (encabezado + datos) lista para exportar a Excel. */
+function estudioProvinciasGetAOA(){
+  const { stats, totalRow } = estudioProvinciasStats();
+  const pctNum = (v,total)=> total? Math.round(v/total*10000)/100 : '';
+  const header = ['Provincia', 'Totales', 'Activos', '% Activos', 'Bajas', 'Habitantes', '% Habitantes', 'Densidad comercial', 'Habit / comercio', 'Con teléfono o móvil', '% Teléfono o móvil', 'Con email', '% Email'];
+  const rows = stats.map(s=>[
+    s.nombre, s.total, s.activos, pctNum(s.activos, totalRow.activos), s.bajas, s.hab, pctNum(s.hab, totalRow.hab),
+    s.densidad!==null? Math.round(s.densidad*10)/10 : '',
+    s.habPorComercio!==null? Math.round(s.habPorComercio) : '',
+    s.conTelefono, pctNum(s.conTelefono, s.total), s.conEmail, pctNum(s.conEmail, s.total)
+  ]);
+  rows.push([
+    'Castilla y León', totalRow.total, totalRow.activos, 100, totalRow.bajas, totalRow.hab, 100,
+    totalRow.densidad!==null? Math.round(totalRow.densidad*10)/10 : '',
+    totalRow.habPorComercio!==null? Math.round(totalRow.habPorComercio) : '',
+    totalRow.conTelefono, pctNum(totalRow.conTelefono, totalRow.total), totalRow.conEmail, pctNum(totalRow.conEmail, totalRow.total)
+  ]);
+  return [header, ...rows];
+}
+ESTUDIO_TABLES.push({ title:'Establecimientos por provincia', getAOA: estudioProvinciasGetAOA });
+
+/* ---- Tabla: establecimientos por sector y provincia (matriz + totales) ---- */
+function estudioSectorProvinciaStats(){
+  const r = DATA.rows;
+  const provOrder = DATA.provs.map((p,i)=>i).sort((a,b)=>DATA.provs[a].localeCompare(DATA.provs[b],'es'));
+  const sectorOrder = DATA.sectors.map((s,i)=>i).sort((a,b)=>DATA.sectors[a].localeCompare(DATA.sectors[b],'es'));
+
+  const matrix = sectorOrder.map(()=> provOrder.map(()=>0));
+  const provIdxOf = new Map(provOrder.map((pi,ci)=>[pi,ci]));
+  const sectorIdxOf = new Map(sectorOrder.map((si,ri)=>[si,ri]));
+  for(const i of FILTERED){
+    const ri = sectorIdxOf.get(r.sector[i]);
+    const ci = provIdxOf.get(r.prov[i]);
+    matrix[ri][ci]++;
+  }
+  const rowTotals = matrix.map(row=> row.reduce((a,b)=>a+b,0));
+  const colTotals = provOrder.map((_,ci)=> matrix.reduce((a,row)=>a+row[ci],0));
+  const grandTotal = rowTotals.reduce((a,b)=>a+b,0);
+
+  return {
+    provNames: provOrder.map(pi=>titleCase(DATA.provs[pi])),
+    sectorNames: sectorOrder.map(si=>DATA.sectors[si]),
+    matrix, rowTotals, colTotals, grandTotal
+  };
+}
+
+function renderEstudioSectores(){
+  const { provNames, sectorNames, matrix, rowTotals, colTotals, grandTotal } = estudioSectorProvinciaStats();
+
+  const head = $('#estudio-sectores-head');
+  head.innerHTML = `<th>Sector comercial</th>${provNames.map(n=>`<th>${escapeHtml(n)}</th>`).join('')}<th>Total</th>`;
+
+  const body = $('#estudio-sectores-body');
+  const rowsHtml = sectorNames.map((name,ri)=>`
+    <tr>
+      <td>${escapeHtml(name)}</td>
+      ${matrix[ri].map(v=>`<td>${fmt(v)}</td>`).join('')}
+      <td style="font-weight:700;">${fmt(rowTotals[ri])}</td>
+    </tr>
+  `).join('');
+  const totalHtml = `
+    <tr style="font-weight:700;">
+      <td>Total</td>
+      ${colTotals.map(v=>`<td>${fmt(v)}</td>`).join('')}
+      <td>${fmt(grandTotal)}</td>
+    </tr>
+  `;
+  body.innerHTML = rowsHtml + totalHtml;
+}
+
+function estudioSectoresGetAOA(){
+  const { provNames, sectorNames, matrix, rowTotals, colTotals, grandTotal } = estudioSectorProvinciaStats();
+  const header = ['Sector comercial', ...provNames, 'Total'];
+  const rows = sectorNames.map((name,ri)=> [name, ...matrix[ri], rowTotals[ri]]);
+  rows.push(['Total', ...colTotals, grandTotal]);
+  return [header, ...rows];
+}
+ESTUDIO_TABLES.push({ title:'Establecimientos por sector y provincia', getAOA: estudioSectoresGetAOA });
+
+function renderEstudioDatos(){
+  renderEstudioProvincias();
+  renderEstudioSectores();
+}
+
+function estudioProvinciasStats(){
+  const r = DATA.rows;
+  const provOrder = DATA.provs.map((p,i)=>i).sort((a,b)=>DATA.provs[a].localeCompare(DATA.provs[b],'es'));
+
+  const stats = provOrder.map(pi=>{
+    let activos=0, bajas=0, conTelefono=0, conEmail=0;
+    const munSeen = new Set();
+    for(const i of FILTERED){
+      if(r.prov[i]!==pi) continue;
+      if(r.estado[i]===1) activos++; else bajas++;
+      if(r.phone[i]) conTelefono++;
+      if(r.email[i]) conEmail++;
+      munSeen.add(r.mun[i]);
+    }
+    let hab = 0;
+    munSeen.forEach(mi=> hab += DATA.municipios[mi].h);
+    const total = activos+bajas;
+    return {
+      nombre: titleCase(DATA.provs[pi]),
+      total, activos, bajas, hab, conTelefono, conEmail,
+      densidad: hab? (total/(hab/1000)) : null,
+      habPorComercio: total? (hab/total) : null
+    };
+  });
+
+  const totalRow = stats.reduce((acc,s)=>({
+    total: acc.total+s.total, activos: acc.activos+s.activos, bajas: acc.bajas+s.bajas, hab: acc.hab+s.hab,
+    conTelefono: acc.conTelefono+s.conTelefono, conEmail: acc.conEmail+s.conEmail
+  }), {total:0, activos:0, bajas:0, hab:0, conTelefono:0, conEmail:0});
+  totalRow.densidad = totalRow.hab? (totalRow.total/(totalRow.hab/1000)) : null;
+  totalRow.habPorComercio = totalRow.total? (totalRow.hab/totalRow.total) : null;
+
+  return { stats, totalRow };
+}
+
+/* Descarga un único libro Excel con una hoja por tabla dada (array de
+   {title, getAOA}). Los nombres de hoja se recortan a 31 caracteres, que es
+   el límite de Excel. */
+function downloadExcelWorkbook(tables, filename){
+  if(typeof XLSX==='undefined'){
+    alert('No se ha podido cargar la librería necesaria para exportar a Excel. Comprueba la conexión a internet y vuelve a intentarlo.');
+    return;
+  }
+  const wb = XLSX.utils.book_new();
+  const usedNames = new Set();
+  tables.forEach(t=>{
+    let name = t.title.replace(/[\\/*?:\[\]]/g,'').slice(0,31) || 'Hoja';
+    let n2 = name, i=2;
+    while(usedNames.has(n2)){ n2 = name.slice(0,28)+'_'+i; i++; }
+    usedNames.add(n2);
+    const ws = XLSX.utils.aoa_to_sheet(t.getAOA());
+    XLSX.utils.book_append_sheet(wb, ws, n2);
+  });
+  XLSX.writeFile(wb, filename);
+}
+
+
 function renderContacto(){
   renderContactoKPIs();
   renderContactoHeatmap();
@@ -2562,7 +2830,9 @@ function updateMetaChips(){
 /* ============ Eventos ============ */
 function resetFilterInputs(){
   ['provincia','municipio','sector','sexo','categoria'].forEach(resetMultiSelect);
-  $('#f-estado').value='1';
+  // En "Estudio de datos" el estado por defecto es "Todos" (ver switchTab);
+  // limpiar filtros ahí no debe volver a "Activos" y romper esa vista.
+  $('#f-estado').value = CURRENT_TAB==='estudio' ? 'all' : '1';
   $('#f-hab-min').value=''; $('#f-hab-max').value='';
   $('#table-search').value='';
 }
@@ -2631,6 +2901,16 @@ function bindEvents(){
   $('#btn-fullscreen').addEventListener('click', toggleFullscreen);
 
   $$('.tab-btn').forEach(btn=> btn.addEventListener('click', ()=> switchTab(btn.dataset.tab)));
+
+  $('#export-estudio-provincias').addEventListener('click', ()=>{
+    downloadExcelWorkbook([{ title:'Establecimientos por provincia', getAOA: estudioProvinciasGetAOA }], 'Establecimientos_por_provincia.xlsx');
+  });
+  $('#export-estudio-sectores').addEventListener('click', ()=>{
+    downloadExcelWorkbook([{ title:'Establecimientos por sector y provincia', getAOA: estudioSectoresGetAOA }], 'Establecimientos_por_sector_y_provincia.xlsx');
+  });
+  $('#export-estudio-all').addEventListener('click', ()=>{
+    downloadExcelWorkbook(ESTUDIO_TABLES, 'Estudio_de_datos.xlsx');
+  });
 
   $('#btn-datasource').addEventListener('click', openSourceModal);
   $('#no-data-btn').addEventListener('click', openSourceModal);
