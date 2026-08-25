@@ -992,8 +992,29 @@ const DEFAULT_SOURCE = {
 /* ============ Utilidades ============ */
 const $ = (sel)=>document.querySelector(sel);
 const $$ = (sel)=>Array.from(document.querySelectorAll(sel));
-const fmt = (n)=> n.toLocaleString('es-ES');
+/* El es-ES "de fábrica" de los navegadores (vía Intl/toLocaleString) solo
+   agrupa los miles a partir de 5 cifras (10.000+): un número de 4 cifras
+   como 2940 se queda sin punto ("2940"), mientras que 15000 sí lo lleva
+   ("15.000"). Es el comportamiento estándar del locale, pero da un
+   resultado inconsistente a la vista en las tablas, así que aquí
+   agrupamos los miles nosotros mismos para que el punto aparezca siempre
+   a partir de 1.000, sin excepciones. */
+function fmt(n){
+  if(n===null || n===undefined || Number.isNaN(n)) return '—';
+  const neg = n<0;
+  const [intPart, decPart] = Math.abs(n).toString().split('.');
+  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return (neg?'-':'') + grouped + (decPart? ','+decPart : '');
+}
 const fmtPct = (n)=> (n*100).toLocaleString('es-ES',{maximumFractionDigits:1})+'%';
+/* Igual que fmt(), pero admite decimales (con coma, como en español). */
+function fmtDec(v, dec){
+  if(v===null || v===undefined || Number.isNaN(v)) return '—';
+  const neg = v<0;
+  const [intPart, decPart] = Math.abs(v).toFixed(dec).split('.');
+  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return (neg?'-':'') + grouped + (decPart? ','+decPart : '');
+}
 
 function dayToDate(d){
   if(d===null || d===undefined) return null;
@@ -1488,11 +1509,11 @@ function renderEvolucion(){
     data:{ labels: years,
       datasets:[
         { label:'Altas', data: years.map(y=>altasByYear.get(y)||0), backgroundColor:'#22C55E', borderRadius:5, maxBarThickness:26,
-          datalabels: dlPlugin({ anchor:'end', align:'top', color:'#8FE3AA', font:{family:FONT_BODY,size:9.5,weight:'600'}, formatter:v=>v||'' }) },
+          datalabels: dlPlugin({ anchor:'end', align:'top', color:'#8FE3AA', font:{family:FONT_BODY,size:9.5,weight:'600'}, formatter:v=>v? fmt(v) : '' }) },
         { label:'Bajas', data: years.map(y=>bajasByYear.get(y)||0), backgroundColor:'#EF4444', borderRadius:5, maxBarThickness:26,
-          datalabels: dlPlugin({ anchor:'end', align:'top', color:'#FFA5A5', font:{family:FONT_BODY,size:9.5,weight:'600'}, formatter:v=>v||'' }) },
+          datalabels: dlPlugin({ anchor:'end', align:'top', color:'#FFA5A5', font:{family:FONT_BODY,size:9.5,weight:'600'}, formatter:v=>v? fmt(v) : '' }) },
         { label:'Modificaciones', data: years.map(y=>modiByYear.get(y)||0), backgroundColor:'#3B82F6', borderRadius:5, maxBarThickness:26,
-          datalabels: dlPlugin({ anchor:'end', align:'top', color:'#93C5FD', font:{family:FONT_BODY,size:9.5,weight:'600'}, formatter:v=>v||'' }) },
+          datalabels: dlPlugin({ anchor:'end', align:'top', color:'#93C5FD', font:{family:FONT_BODY,size:9.5,weight:'600'}, formatter:v=>v? fmt(v) : '' }) },
       ]},
     options: baseOpts({ layout:{ padding:{ top:20 } },
       plugins:{ legend:{ display:true, position:'bottom', labels:{color:TICK_COLOR(),font:{family:FONT_BODY,size:11}, boxWidth:10} } },
@@ -2178,7 +2199,7 @@ const ESTUDIO_TABLES = [];
 
 function renderEstudioProvincias(){
   const { stats, totalRow } = estudioProvinciasStats();
-  const fmtNum = (v,dec)=> v===null? '—' : v.toLocaleString('es-ES',{maximumFractionDigits:dec});
+  const fmtNum = (v,dec)=> fmtDec(v,dec);
   const pct = (v,total)=> total? (v/total*100).toLocaleString('es-ES',{maximumFractionDigits:2})+'%' : '—';
   const provNameCell = 'font-weight:700; font-size:14px; background:var(--blue-soft);';
 
@@ -2269,21 +2290,22 @@ function estudioSectorProvinciaStats(){
 
 function renderEstudioSectores(){
   const { provNames, sectorNames, matrix, rowTotals, colTotals, grandTotal } = estudioSectorProvinciaStats();
+  const highlightBg = 'background:var(--blue-soft);';
 
   const head = $('#estudio-sectores-head');
-  head.innerHTML = `<th>Sector comercial</th>${provNames.map(n=>`<th>${escapeHtml(n)}</th>`).join('')}<th>Total</th>`;
+  head.innerHTML = `<th>Sector comercial</th>${provNames.map(n=>`<th>${escapeHtml(n)}</th>`).join('')}<th style="${highlightBg}">Total</th>`;
 
   const body = $('#estudio-sectores-body');
   const rowsHtml = sectorNames.map((name,ri)=>`
     <tr>
-      <td>${escapeHtml(name)}</td>
+      <td style="font-weight:700; font-size:14px; ${highlightBg}">${escapeHtml(name)}</td>
       ${matrix[ri].map(v=>`<td>${fmt(v)}</td>`).join('')}
-      <td style="font-weight:700;">${fmt(rowTotals[ri])}</td>
+      <td style="font-weight:700; ${highlightBg}">${fmt(rowTotals[ri])}</td>
     </tr>
   `).join('');
   const totalHtml = `
-    <tr style="font-weight:700;">
-      <td>Total</td>
+    <tr style="font-weight:700; ${highlightBg}">
+      <td style="font-size:14px;">Total</td>
       ${colTotals.map(v=>`<td>${fmt(v)}</td>`).join('')}
       <td>${fmt(grandTotal)}</td>
     </tr>
@@ -2340,25 +2362,146 @@ function estudioProvinciasStats(){
   return { stats, totalRow };
 }
 
+/* Carga ExcelJS bajo demanda (solo hace falta para exportar; es una
+   librería más pesada que XLSX, así que no se carga hasta el primer
+   clic en "Exportar a Excel"). Usa el mismo mecanismo de CDNs con
+   fallback que el resto de librerías externas. */
+function ensureExcelJS(){
+  if(typeof ExcelJS !== 'undefined') return Promise.resolve();
+  if(!window.__exceljsReady){
+    window.__exceljsReady = loadScriptWithFallback([
+      'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js',
+      'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js',
+      'https://unpkg.com/exceljs@4.4.0/dist/exceljs.min.js'
+    ], 'ExcelJS');
+  }
+  return window.__exceljsReady;
+}
+
+/* Resumen legible de los filtros generales activos en el momento de
+   exportar, para dejar constancia en el propio Excel de con qué filtros
+   se generó la tabla. */
+function getFilterSummaryRows(){
+  const f = getFilters();
+  const joinOrTodos = (arr, todos)=> arr.length? arr.join(', ') : todos;
+
+  const provNames = f.prov.map(i=>titleCase(DATA.provs[i])).sort((a,b)=>a.localeCompare(b,'es'));
+  const munNames = f.mun.map(i=>DATA.municipios[i].n).sort((a,b)=>a.localeCompare(b,'es'));
+  const sectorNames = f.sector.map(i=>titleCase(DATA.sectors[i])).sort((a,b)=>a.localeCompare(b,'es'));
+  const catNames = f.cat.map(i=>DATA.cats[i]).sort((a,b)=>a.localeCompare(b,'es'));
+  const sexoNames = f.sexo.map(i=>titleCase(DATA.sexos[i])).sort((a,b)=>a.localeCompare(b,'es'));
+  const estadoLabel = f.estado==='all' ? 'Todos' : (f.estado==='1' ? 'Activos' : 'De baja');
+  const habRange = (f.habMin!==null || f.habMax!==null)
+    ? `${f.habMin!==null? fmt(f.habMin) : 'sin mínimo'} – ${f.habMax!==null? fmt(f.habMax) : 'sin máximo'}`
+    : 'Todos';
+
+  const rows = [
+    ['Provincia', joinOrTodos(provNames, 'Todas')],
+    ['Municipio', joinOrTodos(munNames, 'Todos')],
+    ['Sector comercial', joinOrTodos(sectorNames, 'Todos')],
+    ['Categoría', joinOrTodos(catNames, 'Todas')],
+    ['Estado', estadoLabel],
+    ['Sexo', joinOrTodos(sexoNames, 'Todos')],
+    ['Habitantes del municipio', habRange],
+  ];
+  if(f.q) rows.push(['Búsqueda (nombre/titular)', $('#table-search').value.trim()]);
+  rows.push(['Fecha de exportación', new Date().toLocaleString('es-ES')]);
+  return rows;
+}
+
+/* Nombre de hoja de Excel válido: sin los caracteres que Excel prohíbe
+   (: \ / ? * [ ]), máximo 31 caracteres, sin repetirse dentro del
+   conjunto "used" dado. Admite espacios y tildes, a diferencia de los
+   nombres de tabla (más abajo), que Excel exige más estrictos. */
+function uniqueSheetName(raw, used){
+  let base = raw.replace(/[:\\\/\?\*\[\]]/g,'').trim().slice(0,31) || 'Hoja';
+  let name = base, i=2;
+  while(used.has(name)){ const suf = '_'+i; name = base.slice(0,31-suf.length)+suf; i++; }
+  used.add(name);
+  return name;
+}
+
+/* Nombre de tabla de Excel válido: solo letras/números/guion bajo,
+   empieza por letra, y sin repetirse dentro del set "used" dado. */
+function uniqueExcelName(raw, used, maxLen){
+  let base = raw.replace(/[^A-Za-z0-9_]/g,'_').replace(/^[^A-Za-z]+/,'') || 'Hoja';
+  base = base.slice(0, maxLen);
+  let name = base, i=2;
+  while(used.has(name)){ name = base.slice(0, maxLen-4)+'_'+i; i++; }
+  used.add(name);
+  return name;
+}
+
 /* Descarga un único libro Excel con una hoja por tabla dada (array de
-   {title, getAOA}). Los nombres de hoja se recortan a 31 caracteres, que es
-   el límite de Excel. */
-function downloadExcelWorkbook(tables, filename){
-  if(typeof XLSX==='undefined'){
+   {title, getAOA}). Cada hoja incluye arriba un resumen de los filtros
+   generales activos en el momento de exportar, y debajo la tabla en
+   formato de tabla nativa de Excel (con cabecera y bandas de color). */
+async function downloadExcelWorkbook(tables, filename){
+  try{
+    await ensureExcelJS();
+  }catch(err){
     alert('No se ha podido cargar la librería necesaria para exportar a Excel. Comprueba la conexión a internet y vuelve a intentarlo.');
     return;
   }
-  const wb = XLSX.utils.book_new();
-  const usedNames = new Set();
+
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'Panel de Comercio · Castilla y León';
+  wb.created = new Date();
+
+  const summaryRows = getFilterSummaryRows();
+  const usedSheetNames = new Set();
+  const usedTableNames = new Set();
+
   tables.forEach(t=>{
-    let name = t.title.replace(/[\\/*?:\[\]]/g,'').slice(0,31) || 'Hoja';
-    let n2 = name, i=2;
-    while(usedNames.has(n2)){ n2 = name.slice(0,28)+'_'+i; i++; }
-    usedNames.add(n2);
-    const ws = XLSX.utils.aoa_to_sheet(t.getAOA());
-    XLSX.utils.book_append_sheet(wb, ws, n2);
+    const sheetName = uniqueSheetName(t.title, usedSheetNames);
+    const ws = wb.addWorksheet(sheetName);
+
+    // --- Bloque "Filtros aplicados" ---
+    const titleRow = ws.addRow(['Filtros aplicados']);
+    titleRow.getCell(1).font = { bold:true, size:12 };
+    ws.mergeCells(1,1,1,2);
+    summaryRows.forEach(([label, value])=>{
+      const row = ws.addRow([label, value]);
+      row.getCell(1).font = { bold:true };
+      row.getCell(1).alignment = { vertical:'top' };
+      row.getCell(2).alignment = { vertical:'top', wrapText:true };
+    });
+    ws.addRow([]); // separación en blanco antes de la tabla
+
+    // --- Tabla de datos (tabla nativa de Excel, con filtro y bandas) ---
+    const aoa = t.getAOA();
+    const header = aoa[0];
+    const dataRows = aoa.slice(1);
+    const startRow = ws.rowCount + 1;
+    const tableName = uniqueExcelName('Tabla_'+t.title, usedTableNames, 30);
+
+    ws.addTable({
+      name: tableName,
+      ref: `A${startRow}`,
+      headerRow: true,
+      style: { theme:'TableStyleMedium9', showRowStripes:true },
+      columns: header.map(h=>({ name: String(h) })),
+      rows: dataRows
+    });
+
+    // Anchos de columna aproximados según el contenido más largo.
+    const colCount = Math.max(header.length, 2);
+    for(let c=1;c<=colCount;c++){
+      let maxLen = String(header[c-1]??'').length + 2;
+      dataRows.forEach(r=>{ const len = String(r[c-1]??'').length + 2; if(len>maxLen) maxLen = len; });
+      ws.getColumn(c).width = Math.min(Math.max(maxLen, 10), 42);
+    }
+    if(ws.getColumn(1).width < 26) ws.getColumn(1).width = 26;
+    if(ws.getColumn(2).width < 34) ws.getColumn(2).width = 34;
   });
-  XLSX.writeFile(wb, filename);
+
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=> URL.revokeObjectURL(url), 2000);
 }
 
 
@@ -3009,6 +3152,12 @@ function applyChartDefaults(){
   Chart.defaults.plugins.tooltip.borderWidth = 1;
   Chart.defaults.plugins.tooltip.padding = 10;
   Chart.defaults.plugins.tooltip.cornerRadius = 8;
+  // Los ejes numéricos por defecto de Chart.js usan el locale del navegador,
+  // que en español no agrupa los miles hasta 5 cifras (deja "5000" sin punto
+  // pero pone "10.000"). Se sustituye por nuestro fmt(), que sí es consistente
+  // desde 1.000 en adelante, salvo que el propio gráfico ya defina su callback.
+  Chart.defaults.scales.linear.ticks.callback = (value)=> fmt(Math.round(value));
+  Chart.defaults.scales.logarithmic.ticks.callback = (value)=> fmt(Math.round(value));
   if(typeof ChartDataLabels !== 'undefined'){ Chart.defaults.set('plugins.datalabels', { display:false }); }
 }
 
