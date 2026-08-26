@@ -439,6 +439,12 @@
     box-shadow:0 20px 60px rgba(0,0,0,.5); width:100%; max-width:620px; overflow:hidden;
   }
   .modal-panel-wide{ max-width:880px; }
+  .modal-panel-xl{ max-width:1180px; }
+  .modal-detail-body-xl{ max-height:min(85vh, 760px); }
+  .modal-map-wrap-xl{ flex:2 1 560px; aspect-ratio:auto; min-height:460px; }
+  @media (max-width:900px){
+    .modal-map-wrap-xl{ min-height:340px; }
+  }
   .modal-head{
     display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
     padding:16px 18px; border-bottom:1px solid var(--border);
@@ -838,6 +844,7 @@
       <h3>Establecimientos por provincia</h3>
       <button class="btn btn-outline" id="export-estudio-provincias" type="button"><svg width="14" height="14" viewBox="0 0 24 24" style="vertical-align:-2px;margin-right:6px;" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="20" height="20" rx="4" fill="#21A366"/><rect x="6" y="6" width="4.5" height="4.5" fill="#fff"/><rect x="13.5" y="6" width="4.5" height="4.5" fill="#fff"/><rect x="6" y="13.5" width="4.5" height="4.5" fill="#fff"/><rect x="13.5" y="13.5" width="4.5" height="4.5" fill="#fff"/></svg>Exportar a Excel</button>
     </div>
+    <p class="hab-note" style="margin:0; padding:10px 20px 0;">Mapa de calor: <span style="color:#22C55E; font-weight:600;">Densidad comercial</span> y <span style="color:#F59E0B; font-weight:600;">Habitantes por comercio</span> — cuanto más intenso el color, mayor el valor dentro de las 9 provincias.</p>
     <div class="table-scroll">
       <table>
         <thead>
@@ -974,7 +981,7 @@
 </div>
 
 <div class="modal-overlay" id="prov-map-modal" hidden>
-  <div class="modal-panel modal-panel-wide">
+  <div class="modal-panel modal-panel-wide modal-panel-xl">
     <div class="modal-head">
       <div>
         <h3 id="prov-map-title">—</h3>
@@ -984,8 +991,8 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg>
       </button>
     </div>
-    <div class="modal-detail-body">
-      <div class="modal-map-wrap">
+    <div class="modal-detail-body modal-detail-body-xl">
+      <div class="modal-map-wrap modal-map-wrap-xl">
         <div id="prov-map" style="position:absolute; inset:0; width:100%; height:100%; background:var(--card-2);"></div>
       </div>
       <div class="modal-detail-list" id="prov-map-details"></div>
@@ -2237,11 +2244,30 @@ function renderPeorAbastecidos(){
 // objeto {title, getAOA} para aparecer también en "Exportar todas".
 const ESTUDIO_TABLES = [];
 
+/* Colorea una celda como mapa de calor: cuanto más alto el valor dentro
+   del rango [min,max] del conjunto, más intenso el color. Reutilizable
+   para cualquier columna numérica de cualquier tabla. rgb es una cadena
+   tipo "34,197,94" (formato para rgba()). */
+function heatColor(value, min, max, rgb){
+  if(value===null || value===undefined || Number.isNaN(value) || max===min) return '';
+  const t = Math.max(0, Math.min(1, (value-min)/(max-min)));
+  const alpha = 0.10 + t*0.55;
+  return `background:rgba(${rgb},${alpha.toFixed(3)});`;
+}
+
 function renderEstudioProvincias(){
   const { stats, totalRow } = estudioProvinciasStats();
   const fmtNum = (v,dec)=> fmtDec(v,dec);
   const pct = (v,total)=> total? (v/total*100).toLocaleString('es-ES',{maximumFractionDigits:2})+'%' : '—';
   const provNameCell = 'font-weight:700; font-size:14px; background:var(--blue-soft);';
+
+  // Mapa de calor sobre Densidad comercial y Habitantes por comercio,
+  // calculado solo sobre las 9 provincias (la fila de Castilla y León
+  // queda al margen, ya tiene su propio resaltado).
+  const densVals = stats.map(s=>s.densidad).filter(v=>v!==null);
+  const habComVals = stats.map(s=>s.habPorComercio).filter(v=>v!==null);
+  const densMin = densVals.length? Math.min(...densVals) : 0, densMax = densVals.length? Math.max(...densVals) : 0;
+  const habComMin = habComVals.length? Math.min(...habComVals) : 0, habComMax = habComVals.length? Math.max(...habComVals) : 0;
 
   const body = $('#estudio-provincias-body');
   const rowsHtml = stats.map(s=>`
@@ -2253,8 +2279,8 @@ function renderEstudioProvincias(){
       <td>${fmt(s.bajas)}</td>
       <td>${fmt(s.hab)}</td>
       <td>${pct(s.hab, totalRow.hab)}</td>
-      <td>${fmtNum(s.densidad,1)}</td>
-      <td>${fmtNum(s.habPorComercio,0)}</td>
+      <td style="${heatColor(s.densidad, densMin, densMax, '34,197,94')}">${fmtNum(s.densidad,1)}</td>
+      <td style="${heatColor(s.habPorComercio, habComMin, habComMax, '245,158,11')}">${fmtNum(s.habPorComercio,0)}</td>
       <td>${fmt(s.conTelefono)}</td>
       <td>${pct(s.conTelefono, s.total)}</td>
       <td>${fmt(s.conEmail)}</td>
@@ -2326,11 +2352,10 @@ function openProvinciaMapModal(pi){
 
     // Contorno de la provincia (si hay datos de la hoja GEO cargados).
     let boundsLayer = null;
-    // Los límites vienen incrustados en el propio dashboard (ver
-    // PROV_GEO_BY_NAME más arriba); si algún día la hoja GEO trae una
-    // versión propia para esa provincia, esa tiene prioridad.
-    const key = normalizeHeader(s.nombre);
-    const geom = (DATA.geoProvincias && DATA.geoProvincias[key]) || PROV_GEO_BY_NAME[key] || null;
+    // Los límites de provincia vienen incrustados en el propio dashboard
+    // (ver PROV_GEO_BY_NAME más arriba), así que siempre están disponibles
+    // sin depender de ninguna hoja de cálculo.
+    const geom = PROV_GEO_BY_NAME[normalizeHeader(s.nombre)] || null;
     if(geom){
       try{
         boundsLayer = L.geoJSON(geom, {
@@ -2890,22 +2915,7 @@ function parseWorkbook(ab){
   const rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:null});
   if(!rows.length) throw new Error('La hoja está vacía.');
   const headerRow = rows[0].map(h=>h===null?'':h);
-  const dataset = buildDatasetFromRows(headerRow, rows.slice(1));
-
-  // Si el Excel también trae una hoja "GEO" (como en Google Sheets), se usa
-  // para pintar el contorno de la provincia en el mapa; si no está, el mapa
-  // simplemente se queda solo con los puntos, sin límites.
-  const geoSheetName = wb.SheetNames.find(n=> normalizeHeader(n)==='GEO');
-  if(geoSheetName){
-    const geoRows = XLSX.utils.sheet_to_json(wb.Sheets[geoSheetName], {header:1, raw:true, defval:null});
-    if(geoRows.length){
-      const geoHeader = geoRows[0].map(h=>h===null?'':h);
-      dataset.geoProvincias = parseGeoPayload({ columnas: geoHeader, filas: geoRows.slice(1) });
-    }
-  }
-  if(!dataset.geoProvincias) dataset.geoProvincias = {};
-
-  return dataset;
+  return buildDatasetFromRows(headerRow, rows.slice(1));
 }
 
 function parseApiPayload(json){
@@ -2916,87 +2926,7 @@ function parseApiPayload(json){
   dataset.distancias = (json.distancias && Array.isArray(json.distancias.columnas) && Array.isArray(json.distancias.filas))
     ? parseDistanciasPayload(json.distancias)
     : [];
-  dataset.geoProvincias = (json.geo && Array.isArray(json.geo.columnas) && Array.isArray(json.geo.filas))
-    ? parseGeoPayload(json.geo)
-    : {};
   return dataset;
-}
-
-/* Cabeceras de la hoja GEO -> claves internas. */
-const COLMAP_GEO = { 'PROVINCIA':'prov', 'GEO SHAPE':'shape', 'GEO POINT':'point', 'COD_INE':'codine' };
-
-/* Intenta interpretar el contenido de la columna "Geo Shape" como
-   geometría GeoJSON, siendo tolerante con formatos ligeramente
-   distintos de cómo puede llegar copiado desde la hoja de cálculo. */
-/* Deduce el tipo de geometría GeoJSON (Point/LineString/Polygon/
-   MultiPolygon...) a partir de cuántos niveles de array anidados tiene
-   "coordinates", para cuando la celda no trae la clave "type" (como pasa
-   con el campo "Geo Shape" tal cual viene de la hoja de cálculo). */
-function inferGeometryType(coords){
-  let depth = 0, cur = coords;
-  while(Array.isArray(cur)){ depth++; cur = cur[0]; }
-  if(depth===3) return 'Polygon';
-  if(depth===4) return 'MultiPolygon';
-  if(depth===2) return 'MultiPoint';
-  if(depth===1) return 'Point';
-  return null;
-}
-
-function parseGeoShapeValue(raw){
-  if(raw===null || raw===undefined || raw==='') return null;
-  const text = String(raw).trim();
-  const withType = (obj)=>{
-    if(!obj || typeof obj!=='object' || !obj.coordinates) return null;
-    if(!obj.type){
-      const inferred = inferGeometryType(obj.coordinates);
-      if(!inferred) return null;
-      obj = Object.assign({}, obj, { type: inferred });
-    }
-    return obj;
-  };
-  // Caso normal: la celda ya es un objeto GeoJSON, con o sin la clave
-  // "type" (el campo "Geo Shape" tal cual lo exporta la hoja de cálculo
-  // suele traer solo "coordinates", sin "type").
-  try{
-    const obj = withType(JSON.parse(text));
-    if(obj) return obj;
-  }catch(e){}
-  // Por si falta la llave exterior: "type":"Polygon","coordinates":[...]
-  try{
-    const obj = withType(JSON.parse('{'+text+'}'));
-    if(obj) return obj;
-  }catch(e){}
-  // Por si la celda es directamente el array de coordenadas.
-  if(text.startsWith('[')){
-    try{
-      const coords = JSON.parse(text);
-      const obj = withType({ coordinates: coords });
-      if(obj) return obj;
-    }catch(e){}
-  }
-  return null;
-}
-
-/* Devuelve un mapa { NOMBRE_PROVINCIA_NORMALIZADO: geometríaGeoJSON } a
-   partir de la hoja GEO, para poder pintar el contorno de cada provincia
-   en el mapa del modal de "Estudio de datos". */
-function parseGeoPayload(json){
-  const colIndex = {};
-  json.columnas.forEach((h,idx)=>{
-    const norm = normalizeHeader(h===null||h===undefined? '': h);
-    if(COLMAP_GEO[norm] && !(COLMAP_GEO[norm] in colIndex)) colIndex[COLMAP_GEO[norm]] = idx;
-  });
-  if(!('prov' in colIndex) || !('shape' in colIndex)) return {};
-  const out = {};
-  json.filas.forEach(r=>{
-    if(!r) return;
-    const provName = r[colIndex.prov];
-    if(provName===null || provName===undefined || provName==='') return;
-    const geom = parseGeoShapeValue(r[colIndex.shape]);
-    if(!geom) return;
-    out[normalizeHeader(provName)] = geom;
-  });
-  return out;
 }
 
 /* Cabeceras de la hoja EST.GAL -> claves internas de cada fila de distancias. */
