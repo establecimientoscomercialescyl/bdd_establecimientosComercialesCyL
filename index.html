@@ -348,6 +348,26 @@
   #dist-table-body tr:hover td:first-child{ color:inherit; }
   #dist-table-body tr.dist-row-active{ background:var(--blue-soft); }
   #dist-table-body tr.dist-row-active td:first-child{ color:var(--blue); font-weight:600; }
+  /* ---- Comparativa (gráfico tipo pirámide) ---- */
+  .comp-row{
+    display:grid; grid-template-columns: 1fr 200px 1fr;
+    align-items:center; gap:12px; margin-bottom:12px;
+  }
+  .comp-row-label{ text-align:center; font-size:12.5px; color:var(--text-mute); font-weight:600; }
+  .comp-bar-wrap{
+    height:32px; background:var(--card-2); border-radius:999px; overflow:hidden;
+    display:flex; position:relative;
+  }
+  .comp-bar-wrap.a{ justify-content:flex-end; }
+  .comp-bar-wrap.b{ justify-content:flex-start; }
+  .comp-bar{
+    height:100%; display:flex; align-items:center;
+    font-size:12px; font-weight:700; color:#fff; white-space:nowrap;
+    border-radius:999px; min-width:2px; transition:width .25s ease;
+  }
+  .comp-bar-wrap.a .comp-bar{ background:linear-gradient(90deg, #60A5FA, var(--blue)); justify-content:flex-end; padding-right:10px; }
+  .comp-bar-wrap.b .comp-bar{ background:linear-gradient(90deg, var(--pink), #F472B6); justify-content:flex-start; padding-left:10px; }
+  .comp-bar-empty{ font-size:12px; color:var(--text-mute); padding:0 10px; }
   .dist-map-legend{
     display:flex; flex-wrap:wrap; gap:14px; padding:8px 14px; font-size:11.5px; color:var(--text-mute);
     border-top:1px solid var(--border); background:var(--card-2); border-radius:0 0 14px 14px;
@@ -638,6 +658,7 @@
     <button class="tab-btn" id="tab-btn-territorial" data-tab="territorial" role="tab">Análisis territorial</button>
     <button class="tab-btn" id="tab-btn-distancias" data-tab="distancias" role="tab">Distancias</button>
     <button class="tab-btn" id="tab-btn-estudio" data-tab="estudio" role="tab">Estudio de datos</button>
+    <button class="tab-btn" id="tab-btn-comparativa" data-tab="comparativa" role="tab">Comparativa</button>
     <button class="tab-btn" id="tab-btn-contacto" data-tab="contacto" role="tab">Contacto</button>
   </div>
 
@@ -844,6 +865,7 @@
       <h3>Establecimientos por provincia</h3>
       <button class="btn btn-outline" id="export-estudio-provincias" type="button"><svg width="14" height="14" viewBox="0 0 24 24" style="vertical-align:-2px;margin-right:6px;" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="20" height="20" rx="4" fill="#21A366"/><rect x="6" y="6" width="4.5" height="4.5" fill="#fff"/><rect x="13.5" y="6" width="4.5" height="4.5" fill="#fff"/><rect x="6" y="13.5" width="4.5" height="4.5" fill="#fff"/><rect x="13.5" y="13.5" width="4.5" height="4.5" fill="#fff"/></svg>Exportar a Excel</button>
     </div>
+    <p class="hab-note" style="margin:0; padding:10px 20px 0;">Mapa de calor: <span style="color:#22C55E; font-weight:600;">Densidad comercial</span> y <span style="color:#F59E0B; font-weight:600;">Habitantes por comercio</span> — cuanto más intenso el color, mayor el valor dentro de las 9 provincias.</p>
     <div class="table-scroll">
       <table>
         <thead>
@@ -879,6 +901,34 @@
         <tbody id="estudio-sectores-body"></tbody>
       </table>
     </div>
+  </div>
+
+  </div>
+
+  <div class="tab-panel" id="tab-comparativa" hidden>
+
+  <div class="section-label">Comparativa entre provincias</div>
+  <div class="card">
+    <div style="display:flex; gap:20px; flex-wrap:wrap; align-items:flex-end;">
+      <div class="field" style="flex:1 1 220px; max-width:320px;">
+        <label for="comp-a">Opción A</label>
+        <select id="comp-a"></select>
+      </div>
+      <div class="field" style="flex:1 1 220px; max-width:320px;">
+        <label for="comp-b">Opción B</label>
+        <select id="comp-b"></select>
+      </div>
+    </div>
+    <p class="hab-note" style="margin:14px 0 0;">La comparación usa los mismos filtros generales de arriba (fuerza Estado en "Todos" mientras estás en esta pestaña, igual que en "Estudio de datos"), y cada fila está a su propia escala: la barra más larga es siempre el valor más alto de esa fila, no una escala común entre filas.</p>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <div id="comp-head" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:22px; gap:12px;">
+      <div id="comp-head-a" style="font-family:'Inter',sans-serif; font-weight:700; font-size:16px;">—</div>
+      <div style="font-family:'Inter',sans-serif; font-weight:800; font-size:13px; color:var(--text-mute); letter-spacing:.06em;">VS</div>
+      <div id="comp-head-b" style="font-family:'Inter',sans-serif; font-weight:700; font-size:16px; text-align:right;">—</div>
+    </div>
+    <div id="comp-rows"></div>
   </div>
 
   </div>
@@ -1310,6 +1360,7 @@ function applyFilters(){
   render();
   if(CURRENT_TAB==='distancias') renderDistancias();
   if(CURRENT_TAB==='estudio') renderEstudioDatos();
+  if(CURRENT_TAB==='comparativa') renderComparativa();
 }
 
 /* ============ KPIs ============ */
@@ -1858,8 +1909,9 @@ function render(){
 /* ============ Pestañas ============ */
 let CURRENT_TAB = 'resumen';
 // Recuerda qué tenías seleccionado en el filtro Estado antes de entrar en
-// "Estudio de datos", para poder restaurarlo al salir (ver más abajo).
+// "Estudio de datos" o "Comparativa", para poder restaurarlo al salir.
 let ESTUDIO_PREV_ESTADO = null;
+const ESTADO_TODOS_TABS = ['estudio', 'comparativa'];
 function switchTab(tab){
   const prevTab = CURRENT_TAB;
   CURRENT_TAB = tab;
@@ -1868,6 +1920,7 @@ function switchTab(tab){
   $('#tab-territorial').hidden = tab!=='territorial';
   $('#tab-distancias').hidden = tab!=='distancias';
   $('#tab-estudio').hidden = tab!=='estudio';
+  $('#tab-comparativa').hidden = tab!=='comparativa';
   $('#tab-contacto').hidden = tab!=='contacto';
   // En la pestaña Distancias los indicadores de arriba vienen de otra hoja
   // (EST.GAL, no BDD), así que se sustituyen por los propios de esa pestaña.
@@ -1879,14 +1932,17 @@ function switchTab(tab){
   // ocultan del todo para no dar a entender que están fallando si se usan.
   $('#filters').hidden = tab==='distancias';
 
-  // "Estudio de datos" necesita ver Activos y Bajas a la vez, así que al
-  // entrar se fuerza el filtro Estado a "Todos" (guardando lo que hubiera
-  // antes) y al salir se restaura tal cual estaba.
-  if(tab==='estudio' && prevTab!=='estudio'){
+  // "Estudio de datos" y "Comparativa" necesitan ver Activos y Bajas a la
+  // vez, así que al entrar en cualquiera de las dos se fuerza el filtro
+  // Estado a "Todos" (guardando lo que hubiera antes) y al salir de ambas
+  // se restaura tal cual estaba.
+  const wasEstadoTodos = ESTADO_TODOS_TABS.includes(prevTab);
+  const isEstadoTodos = ESTADO_TODOS_TABS.includes(tab);
+  if(isEstadoTodos && !wasEstadoTodos){
     ESTUDIO_PREV_ESTADO = $('#f-estado').value;
     $('#f-estado').value = 'all';
     applyFilters();
-  } else if(prevTab==='estudio' && tab!=='estudio'){
+  } else if(wasEstadoTodos && !isEstadoTodos){
     if(ESTUDIO_PREV_ESTADO!==null) $('#f-estado').value = ESTUDIO_PREV_ESTADO;
     ESTUDIO_PREV_ESTADO = null;
     applyFilters();
@@ -1895,6 +1951,7 @@ function switchTab(tab){
   if(tab==='territorial') renderTerritorial();
   if(tab==='distancias') renderDistancias();
   if(tab==='estudio') renderEstudioDatos();
+  if(tab==='comparativa') renderComparativa();
   if(tab==='contacto') renderContacto();
 }
 
@@ -2243,11 +2300,33 @@ function renderPeorAbastecidos(){
 // objeto {title, getAOA} para aparecer también en "Exportar todas".
 const ESTUDIO_TABLES = [];
 
+/* Colorea una celda como mapa de calor a partir de un rango [min,max]:
+   cuanto más alto el valor, más intenso el color. Reutilizable para
+   cualquier columna numérica de cualquier tabla. rgb es una cadena tipo
+   "34,197,94" (formato para rgba()). Nombre distinto de heatColor()
+   (más arriba, usada por los mapas de calor de "Análisis territorial" y
+   "Contacto") para no pisarla: dos funciones con el mismo nombre en el
+   mismo ámbito se sobrescriben entre sí en JavaScript. */
+function heatRangeColor(value, min, max, rgb){
+  if(value===null || value===undefined || Number.isNaN(value) || max===min) return '';
+  const t = Math.max(0, Math.min(1, (value-min)/(max-min)));
+  const alpha = 0.10 + t*0.55;
+  return `background:rgba(${rgb},${alpha.toFixed(3)});`;
+}
+
 function renderEstudioProvincias(){
   const { stats, totalRow } = estudioProvinciasStats();
   const fmtNum = (v,dec)=> fmtDec(v,dec);
   const pct = (v,total)=> total? (v/total*100).toLocaleString('es-ES',{maximumFractionDigits:2})+'%' : '—';
   const provNameCell = 'font-weight:700; font-size:14px; background:var(--blue-soft);';
+
+  // Mapa de calor sobre Densidad comercial y Habitantes por comercio,
+  // calculado solo sobre las 9 provincias (la fila de Castilla y León
+  // queda al margen, ya tiene su propio resaltado).
+  const densVals = stats.map(s=>s.densidad).filter(v=>v!==null);
+  const habComVals = stats.map(s=>s.habPorComercio).filter(v=>v!==null);
+  const densMin = densVals.length? Math.min(...densVals) : 0, densMax = densVals.length? Math.max(...densVals) : 0;
+  const habComMin = habComVals.length? Math.min(...habComVals) : 0, habComMax = habComVals.length? Math.max(...habComVals) : 0;
 
   const body = $('#estudio-provincias-body');
   const rowsHtml = stats.map(s=>`
@@ -2259,8 +2338,8 @@ function renderEstudioProvincias(){
       <td>${fmt(s.bajas)}</td>
       <td>${fmt(s.hab)}</td>
       <td>${pct(s.hab, totalRow.hab)}</td>
-      <td>${fmtNum(s.densidad,1)}</td>
-      <td>${fmtNum(s.habPorComercio,0)}</td>
+      <td style="${heatRangeColor(s.densidad, densMin, densMax, '34,197,94')}">${fmtNum(s.densidad,1)}</td>
+      <td style="${heatRangeColor(s.habPorComercio, habComMin, habComMax, '245,158,11')}">${fmtNum(s.habPorComercio,0)}</td>
       <td>${fmt(s.conTelefono)}</td>
       <td>${pct(s.conTelefono, s.total)}</td>
       <td>${fmt(s.conEmail)}</td>
@@ -2460,6 +2539,99 @@ ESTUDIO_TABLES.push({ title:'Establecimientos por sector y provincia', getAOA: e
 function renderEstudioDatos(){
   renderEstudioProvincias();
   renderEstudioSectores();
+}
+
+/* ============ Pestaña "Comparativa" ============ */
+
+// Se rellenan solo la primera vez que hace falta (o si cambian las
+// provincias del dataset); evita reconstruir los <select> en cada render.
+let COMP_OPTIONS_BUILT = false;
+
+function ensureComparativaOptions(){
+  if(COMP_OPTIONS_BUILT) return;
+  const { stats } = estudioProvinciasStats();
+  const provOptsHtml = stats.map(s=>`<option value="${s.pi}">${escapeHtml(s.nombre)}</option>`).join('');
+  const selA = $('#comp-a'), selB = $('#comp-b');
+  selA.innerHTML = provOptsHtml;
+  selB.innerHTML = provOptsHtml + `<option value="cyl">Castilla y León</option>`;
+  // Por defecto: la primera provincia (alfabética) frente a Castilla y León,
+  // que es probablemente la comparación más habitual.
+  if(stats.length){ selA.value = String(stats[0].pi); }
+  selB.value = 'cyl';
+  COMP_OPTIONS_BUILT = true;
+}
+
+/* Devuelve los datos de comparación de una opción del selector ('cyl' o
+   el índice de provincia como texto), a partir de las estadísticas ya
+   calculadas para "Establecimientos por provincia". */
+function getComparativaEntry(sel, stats, totalRow){
+  if(sel==='cyl'){
+    return {
+      nombre: 'Castilla y León',
+      densidad: totalRow.densidad,
+      habPorComercio: totalRow.habPorComercio,
+      comerciosPor10k: totalRow.densidad!==null? totalRow.densidad*10 : null,
+      pctEstTotal: 100, pctEstActivos: 100, pctHab: 100
+    };
+  }
+  const pi = Number(sel);
+  const s = stats.find(x=>x.pi===pi);
+  if(!s) return null;
+  return {
+    nombre: s.nombre,
+    densidad: s.densidad,
+    habPorComercio: s.habPorComercio,
+    comerciosPor10k: s.densidad!==null? s.densidad*10 : null,
+    pctEstTotal: totalRow.total? s.total/totalRow.total*100 : null,
+    pctEstActivos: totalRow.activos? s.activos/totalRow.activos*100 : null,
+    pctHab: totalRow.hab? s.hab/totalRow.hab*100 : null
+  };
+}
+
+const COMPARATIVA_METRICS = [
+  { key:'densidad',        label:'Densidad comercial',                          fmt:(v)=> fmtDec(v,1)+' ‰' },
+  { key:'habPorComercio',  label:'Habitantes por comercio',                     fmt:(v)=> fmtDec(v,0) },
+  { key:'comerciosPor10k', label:'Comercios por cada 10.000 hab.',              fmt:(v)=> fmtDec(v,1) },
+  { key:'pctEstTotal',     label:'% establecimientos (total) sobre CyL',        fmt:(v)=> fmtDec(v,2)+'%' },
+  { key:'pctEstActivos',   label:'% establecimientos activos sobre CyL',        fmt:(v)=> fmtDec(v,2)+'%' },
+  { key:'pctHab',          label:'% habitantes sobre CyL',                      fmt:(v)=> fmtDec(v,2)+'%' },
+];
+
+function renderComparativa(){
+  ensureComparativaOptions();
+  const { stats, totalRow } = estudioProvinciasStats();
+  const a = getComparativaEntry($('#comp-a').value, stats, totalRow);
+  const b = getComparativaEntry($('#comp-b').value, stats, totalRow);
+
+  if(!a || !b){
+    $('#comp-rows').innerHTML = '<p class="hab-note">Selecciona dos opciones para comparar.</p>';
+    return;
+  }
+
+  $('#comp-head-a').textContent = a.nombre;
+  $('#comp-head-b').textContent = b.nombre;
+  $('#comp-head-a').style.color = 'var(--blue)';
+  $('#comp-head-b').style.color = 'var(--pink)';
+
+  $('#comp-rows').innerHTML = COMPARATIVA_METRICS.map(m=>{
+    const va = a[m.key], vb = b[m.key];
+    const maxV = Math.max(va||0, vb||0);
+    const wa = (va!==null && maxV>0) ? Math.max(6, va/maxV*100) : 0;
+    const wb = (vb!==null && maxV>0) ? Math.max(6, vb/maxV*100) : 0;
+    const barA = va!==null
+      ? `<div class="comp-bar" style="width:${wa}%">${m.fmt(va)}</div>`
+      : `<span class="comp-bar-empty">—</span>`;
+    const barB = vb!==null
+      ? `<div class="comp-bar" style="width:${wb}%">${m.fmt(vb)}</div>`
+      : `<span class="comp-bar-empty">—</span>`;
+    return `
+      <div class="comp-row">
+        <div class="comp-bar-wrap a">${barA}</div>
+        <div class="comp-row-label">${escapeHtml(m.label)}</div>
+        <div class="comp-bar-wrap b">${barB}</div>
+      </div>
+    `;
+  }).join('');
 }
 
 function estudioProvinciasStats(){
@@ -3035,6 +3207,7 @@ function onDataLoaded(newData, statusMsg){
   DIST_PAGE = 0;
   DIST_HIGHLIGHT_IDX = null;
   MUN_INDEX_BY_CODE = null; MUN_INDEX_BY_NAME = null; // se reconstruye con los nuevos datos, ver findMunicipioIndex
+  COMP_OPTIONS_BUILT = false; // los <select> de "Comparativa" se rellenan de nuevo con este dataset
   // Importante: se muestra #app-content ANTES de pintar los gráficos. Si se
   // dibujan con el contenedor todavía oculto (hidden), los <canvas> tienen
   // ancho/alto 0 y Chart.js puede lanzar un error a mitad de render; como ese
@@ -3111,7 +3284,7 @@ function resetFilterInputs(){
   ['provincia','municipio','sector','sexo','categoria'].forEach(resetMultiSelect);
   // En "Estudio de datos" el estado por defecto es "Todos" (ver switchTab);
   // limpiar filtros ahí no debe volver a "Activos" y romper esa vista.
-  $('#f-estado').value = CURRENT_TAB==='estudio' ? 'all' : '1';
+  $('#f-estado').value = ESTADO_TODOS_TABS.includes(CURRENT_TAB) ? 'all' : '1';
   $('#f-hab-min').value=''; $('#f-hab-max').value='';
   $('#table-search').value='';
 }
@@ -3180,6 +3353,9 @@ function bindEvents(){
   $('#btn-fullscreen').addEventListener('click', toggleFullscreen);
 
   $$('.tab-btn').forEach(btn=> btn.addEventListener('click', ()=> switchTab(btn.dataset.tab)));
+
+  $('#comp-a').addEventListener('change', renderComparativa);
+  $('#comp-b').addEventListener('change', renderComparativa);
 
   $('#export-estudio-provincias').addEventListener('click', ()=>{
     downloadExcelWorkbook([{ title:'Establecimientos por provincia', getAOA: estudioProvinciasGetAOA }], 'Establecimientos_por_provincia.xlsx');
