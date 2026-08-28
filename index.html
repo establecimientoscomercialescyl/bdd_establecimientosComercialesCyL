@@ -1792,6 +1792,34 @@ function escapeHtml(s){
 
 /* ============ Modal de ubicación ============ */
 /* Construye un bloque de la ficha de detalle: etiqueta + valor (o un email/web/tel como enlace). */
+/* Contenido de la ventanita (popup) que se abre al hacer clic en un punto
+   de los mapas de "Estudio de datos" (mapa de provincia y mapa de sector):
+   Titular, Nombre comercial, Dirección, Teléfono y Página web. */
+function popupEstablecimiento(i){
+  const r = DATA.rows;
+  const nombre = strOr(r.nombre[i]) || 'Establecimiento';
+  const titular = strOr(r.titular[i]);
+  const mun = DATA.municipios[r.mun[i]];
+  const dirBase = strOr(r.dir ? r.dir[i] : '');
+  const direccion = [dirBase, mun ? titleCase(mun.n) : ''].filter(Boolean).join(', ');
+  const tel = [strOr(r.tel[i]), strOr(r.mov[i])].filter(Boolean).join(' / ');
+  const web = strOr(r.web[i]);
+  const webHref = web ? (/^https?:\/\//i.test(web) ? web : 'https://'+web) : null;
+  const isActivo = r.estado[i]===1;
+
+  const row = (label, html)=> `<div style="margin-bottom:2px;"><b>${escapeHtml(label)}:</b> ${html}</div>`;
+  return `
+    <div style="min-width:210px; max-width:260px; font-size:12.5px; line-height:1.5;">
+      ${row('Titular', titular ? escapeHtml(titular) : '—')}
+      ${row('Nombre comercial', escapeHtml(nombre))}
+      ${row('Dirección', direccion ? escapeHtml(direccion) : '—')}
+      ${row('Teléfono', tel ? escapeHtml(tel) : '—')}
+      ${row('Página web', webHref ? `<a href="${escapeHtml(webHref)}" target="_blank" rel="noopener">${escapeHtml(web)}</a>` : '—')}
+      <div style="margin-top:4px; font-weight:700; color:${isActivo? '#16A34A' : '#DC2626'};">${isActivo? 'Activo' : 'De baja'}</div>
+    </div>
+  `;
+}
+
 function detailItem(label, value, opts){
   opts = opts || {};
   const has = value!==null && value!==undefined && String(value).trim()!=='';
@@ -2475,7 +2503,7 @@ function openProvinciaMapModal(pi){
         fillColor: isActivo? '#22C55E' : '#EF4444',
         fillOpacity:.85
       });
-      marker.bindPopup(`<b>${escapeHtml(strOr(r.nombre[i]) || 'Establecimiento')}</b><br>${escapeHtml(DATA.municipios[r.mun[i]].n)}<br>${isActivo? 'Activo' : 'De baja'}`);
+      marker.bindPopup(popupEstablecimiento(i));
       marker.addTo(PROV_MAP_LAYER);
       pts.push([lat,lng]);
     }
@@ -2562,7 +2590,7 @@ function openSectorMapModal(si){
         fillColor: isActivo? '#22C55E' : '#EF4444',
         fillOpacity:.85
       });
-      marker.bindPopup(`<b>${escapeHtml(strOr(r.nombre[i]) || 'Establecimiento')}</b><br>${escapeHtml(DATA.municipios[r.mun[i]].n)}, ${escapeHtml(titleCase(DATA.provs[r.prov[i]]))}<br>${isActivo? 'Activo' : 'De baja'}`);
+      marker.bindPopup(popupEstablecimiento(i));
       marker.addTo(SECTOR_MAP_LAYER);
       pts.push([lat,lng]);
     }
