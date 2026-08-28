@@ -338,6 +338,17 @@
   tbody tr{ cursor:pointer; }
   tbody tr:hover{ background:rgba(255,255,255,.045); }
   tbody tr:hover td:first-child{ color:#8FB8FF; }
+
+  /* Tabla más compacta y con más altura para caber más filas visibles sin
+     desplazarse tanto: usada en "Establecimientos por sector y provincia". */
+  .table-scroll-sectores{ max-height:720px; }
+  .table-scroll.table-scroll-sectores{ max-height:720px; }
+  .table-compact thead th{ padding:7px 14px; }
+  .table-compact tbody td{ padding:5px 14px; }
+  @media (max-width:900px){
+    .table-scroll-sectores{ max-height:520px; }
+    .table-scroll.table-scroll-sectores{ max-height:520px; }
+  }
   thead th.sortable{ cursor:pointer; user-select:none; }
   thead th.sortable:hover{ color:var(--text); }
   thead th.sortable .sort-arrow{ display:inline-block; width:12px; opacity:.6; }
@@ -895,8 +906,9 @@
       <h3>Establecimientos por sector y provincia</h3>
       <button class="btn btn-outline" id="export-estudio-sectores" type="button"><svg width="14" height="14" viewBox="0 0 24 24" style="vertical-align:-2px;margin-right:6px;" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="20" height="20" rx="4" fill="#21A366"/><rect x="6" y="6" width="4.5" height="4.5" fill="#fff"/><rect x="13.5" y="6" width="4.5" height="4.5" fill="#fff"/><rect x="6" y="13.5" width="4.5" height="4.5" fill="#fff"/><rect x="13.5" y="13.5" width="4.5" height="4.5" fill="#fff"/></svg>Exportar a Excel</button>
     </div>
-    <div class="table-scroll">
-      <table>
+    <p class="hab-note" style="margin:0; padding:10px 20px 0;">Mapa de calor sobre las celdas de datos: cuanto más intenso el verde, más establecimientos en ese cruce de sector y provincia. La fila y la columna de Total quedan sin colorear.</p>
+    <div class="table-scroll table-scroll-sectores">
+      <table class="table-compact">
         <thead><tr id="estudio-sectores-head"></tr></thead>
         <tbody id="estudio-sectores-body"></tbody>
       </table>
@@ -2506,6 +2518,13 @@ function renderEstudioSectores(){
   const { provNames, sectorNames, matrix, rowTotals, colTotals, grandTotal } = estudioSectorProvinciaStats();
   const highlightBg = 'background:var(--blue-soft);';
 
+  // Mapa de calor sobre las celdas de datos (sector × provincia), con una
+  // única escala para toda la tabla; la fila y la columna de "Total" quedan
+  // fuera, ya tienen su propio resaltado.
+  const allValues = matrix.flat();
+  const heatMin = allValues.length? Math.min(...allValues) : 0;
+  const heatMax = allValues.length? Math.max(...allValues) : 0;
+
   const head = $('#estudio-sectores-head');
   head.innerHTML = `<th>Sector comercial</th>${provNames.map(n=>`<th>${escapeHtml(n)}</th>`).join('')}<th style="${highlightBg}">Total</th>`;
 
@@ -2513,7 +2532,7 @@ function renderEstudioSectores(){
   const rowsHtml = sectorNames.map((name,ri)=>`
     <tr>
       <td style="font-weight:700; font-size:14px; ${highlightBg}">${escapeHtml(name)}</td>
-      ${matrix[ri].map(v=>`<td>${fmt(v)}</td>`).join('')}
+      ${matrix[ri].map(v=>`<td style="${heatRangeColor(v, heatMin, heatMax, '34,197,94')}">${fmt(v)}</td>`).join('')}
       <td style="font-weight:700; ${highlightBg}">${fmt(rowTotals[ri])}</td>
     </tr>
   `).join('');
@@ -2575,7 +2594,8 @@ function getComparativaEntry(sel, stats, totalRow){
       pctTelefono: totalRow.total? totalRow.conTelefono/totalRow.total*100 : null,
       pctEmail: totalRow.total? totalRow.conEmail/totalRow.total*100 : null,
       pctWeb: totalRow.total? totalRow.conWeb/totalRow.total*100 : null,
-      pctAlimCosm: totalRow.total? totalRow.alimCosm/totalRow.total*100 : null
+      pctAlimCosm: totalRow.total? totalRow.alimCosm/totalRow.total*100 : null,
+      pctRopaCalz: totalRow.total? totalRow.ropaCalz/totalRow.total*100 : null
     };
   }
   const pi = Number(sel);
@@ -2592,7 +2612,8 @@ function getComparativaEntry(sel, stats, totalRow){
     pctTelefono: s.total? s.conTelefono/s.total*100 : null,
     pctEmail: s.total? s.conEmail/s.total*100 : null,
     pctWeb: s.total? s.conWeb/s.total*100 : null,
-    pctAlimCosm: s.total? s.alimCosm/s.total*100 : null
+    pctAlimCosm: s.total? s.alimCosm/s.total*100 : null,
+    pctRopaCalz: s.total? s.ropaCalz/s.total*100 : null
   };
 }
 
@@ -2607,6 +2628,7 @@ const COMPARATIVA_METRICS = [
   { key:'pctEmail',        label:'% con email',                                 fmt:(v)=> fmtDec(v,1)+'%' },
   { key:'pctWeb',          label:'% con página web',                            fmt:(v)=> fmtDec(v,1)+'%' },
   { key:'pctAlimCosm',     label:'% Alimentación y Prod. Cosméticos sobre el total', fmt:(v)=> fmtDec(v,2)+'%' },
+  { key:'pctRopaCalz',     label:'% Prendas de vestir y calzado sobre el total', fmt:(v)=> fmtDec(v,2)+'%' },
 ];
 
 function renderComparativa(){
@@ -2666,13 +2688,22 @@ function getAlimCosmSectorSet(){
   return set;
 }
 
+/* Sectores que forman la medida agregada "Prendas de vestir y calzado". */
+const ROPA_CALZ_SECTORES_NORM = ['CALZADO Y CUERO', 'PRENDAS DE VESTIR Y TEXTILES'];
+function getRopaCalzSectorSet(){
+  const set = new Set();
+  DATA.sectors.forEach((name,i)=>{ if(ROPA_CALZ_SECTORES_NORM.includes(normalizeHeader(name))) set.add(i); });
+  return set;
+}
+
 function estudioProvinciasStats(){
   const r = DATA.rows;
   const provOrder = DATA.provs.map((p,i)=>i).sort((a,b)=>DATA.provs[a].localeCompare(DATA.provs[b],'es'));
   const alimCosmSet = getAlimCosmSectorSet();
+  const ropaCalzSet = getRopaCalzSectorSet();
 
   const stats = provOrder.map(pi=>{
-    let activos=0, bajas=0, conTelefono=0, conEmail=0, conWeb=0, alimCosm=0;
+    let activos=0, bajas=0, conTelefono=0, conEmail=0, conWeb=0, alimCosm=0, ropaCalz=0;
     const munSeen = new Set();
     for(const i of FILTERED){
       if(r.prov[i]!==pi) continue;
@@ -2681,6 +2712,7 @@ function estudioProvinciasStats(){
       if(r.email[i]) conEmail++;
       if(r.web[i]) conWeb++;
       if(alimCosmSet.has(r.sector[i])) alimCosm++;
+      if(ropaCalzSet.has(r.sector[i])) ropaCalz++;
       munSeen.add(r.mun[i]);
     }
     let hab = 0;
@@ -2689,7 +2721,7 @@ function estudioProvinciasStats(){
     return {
       pi,
       nombre: titleCase(DATA.provs[pi]),
-      total, activos, bajas, hab, conTelefono, conEmail, conWeb, alimCosm,
+      total, activos, bajas, hab, conTelefono, conEmail, conWeb, alimCosm, ropaCalz,
       densidad: hab? (total/(hab/1000)) : null,
       habPorComercio: total? (hab/total) : null
     };
@@ -2698,8 +2730,8 @@ function estudioProvinciasStats(){
   const totalRow = stats.reduce((acc,s)=>({
     total: acc.total+s.total, activos: acc.activos+s.activos, bajas: acc.bajas+s.bajas, hab: acc.hab+s.hab,
     conTelefono: acc.conTelefono+s.conTelefono, conEmail: acc.conEmail+s.conEmail,
-    conWeb: acc.conWeb+s.conWeb, alimCosm: acc.alimCosm+s.alimCosm
-  }), {total:0, activos:0, bajas:0, hab:0, conTelefono:0, conEmail:0, conWeb:0, alimCosm:0});
+    conWeb: acc.conWeb+s.conWeb, alimCosm: acc.alimCosm+s.alimCosm, ropaCalz: acc.ropaCalz+s.ropaCalz
+  }), {total:0, activos:0, bajas:0, hab:0, conTelefono:0, conEmail:0, conWeb:0, alimCosm:0, ropaCalz:0});
   totalRow.densidad = totalRow.hab? (totalRow.total/(totalRow.hab/1000)) : null;
   totalRow.habPorComercio = totalRow.total? (totalRow.hab/totalRow.total) : null;
 
