@@ -2486,7 +2486,7 @@ function openProvinciaMapModal(pi){
     if(geom){
       try{
         boundsLayer = L.geoJSON(geom, {
-          style: { color:'#3B82F6', weight:2, fill:true, fillColor:'#3B82F6', fillOpacity:.06 }
+          style: { color:'#3B82F6', weight:2, fill:true, fillColor:'#3B82F6', fillOpacity:.06, interactive:false }
         }).addTo(PROV_MAP);
       }catch(e){ console.error('No se pudo dibujar el límite de la provincia:', e); }
     }
@@ -2572,7 +2572,7 @@ function openSectorMapModal(si){
     PROV_GEO_RAW.forEach(item=>{
       try{
         const layer = L.geoJSON({ type:item.type, coordinates:item.coordinates }, {
-          style: { color:'#3B82F6', weight:1.5, fill:true, fillColor:'#3B82F6', fillOpacity:.04 }
+          style: { color:'#3B82F6', weight:1.5, fill:true, fillColor:'#3B82F6', fillOpacity:.04, interactive:false }
         }).addTo(SECTOR_MAP);
         boundaryLayers.push(layer);
       }catch(e){ console.error('No se pudo dibujar el límite de una provincia:', e); }
