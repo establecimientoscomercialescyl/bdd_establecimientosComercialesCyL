@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Servicios de proximidad · Castilla y León</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--bg:#eef2f1;--ink:#14302b;--mut:#5d7570;--card:#fff;--line:#dbe4e2;--pine:#0f766e;--ochre:#d08a1f;--brick:#b4432f;--sky:#3b82a6}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 Manrope,system-ui,sans-serif}
+header{background:linear-gradient(120deg,#0b3d38,#0f766e);color:#fff;padding:22px 28px;display:flex;justify-content:space-between;align-items:center;gap:16px}
+h1{margin:0;font-size:24px;font-weight:800}header p{margin:2px 0 0;opacity:.8}
+.btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:10px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer}
+header .btn{background:rgba(255,255,255,.14);color:#fff;border-color:rgba(255,255,255,.3)}
+.filters{position:sticky;top:0;z-index:800;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px 28px;background:rgba(238,242,241,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+select,input{border:1px solid var(--line);border-radius:10px;padding:8px 10px;font:inherit;background:#fff;color:var(--ink);min-width:0;max-width:190px}
+input[type=number]{width:105px}input[type=search]{width:210px}
+.seg{display:flex;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;background:none;padding:8px 14px;font:inherit;font-weight:600;color:var(--mut);cursor:pointer}
+.seg button.on{background:var(--pine);color:#fff}
+:focus-visible{outline:2px solid var(--sky);outline-offset:1px}
+main{padding:20px 28px 40px;max-width:1500px;margin:auto}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:16px}
+.kpi{background:var(--card);border-radius:14px;padding:16px 18px;border-left:5px solid var(--c,var(--pine))}
+.kpi span{color:var(--mut);font-weight:600}.kpi b{display:block;font-size:30px;font-weight:800;line-height:1.15;margin:4px 0 2px}.kpi small{color:var(--mut)}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
+.card{background:var(--card);border-radius:14px;padding:18px;min-width:0}
+.card h3{margin:0 0 12px;font-size:15px;font-weight:800;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.c4{grid-column:span 4}.c6{grid-column:span 6}.c8{grid-column:span 8}.c12{grid-column:span 12}
+.ch{position:relative;height:290px}
+#map{height:460px;border-radius:10px;z-index:0}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--mut);font-weight:600}td:not(:first-child),th:not(:first-child){}
+.num{text-align:right}
+.tag{padding:2px 9px;border-radius:99px;font-weight:600;font-size:12px}
+.on1{background:#d6efeb;color:#0b5c55}.on0{background:#f6dcd6;color:#8a2f1f}
+.pager{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:12px;color:var(--mut)}
+#banner{position:fixed;inset:auto 0 0 0;z-index:1500;text-align:center;padding:12px;background:var(--ink);color:#fff}
+#banner[hidden]{display:none}#banner button{margin-left:10px}
+@media(max-width:900px){.c4,.c6,.c8{grid-column:span 12}header,.filters,main{padding-left:14px;padding-right:14px}}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>Servicios de proximidad</h1><p>Castilla y León</p></div>
+  <button class="btn" id="reload">Actualizar datos</button>
+</header>
+<section class="filters">
+  <div class="seg" id="estSeg"><button data-v="1" class="on">Activos</button><button data-v="0">Cerrados</button><button data-v="all">Todos</button></div>
+  <select id="fProv" aria-label="Provincia"></select>
+  <select id="fMun" aria-label="Municipio"></select>
+  <select id="fSec" aria-label="Sector comercial"></select>
+  <select id="fGen" aria-label="Género del titular"></select>
+  <select id="fCn" aria-label="CNAE"></select>
+  <input id="fMin" type="number" min="0" placeholder="Hab. mín.">
+  <input id="fMax" type="number" min="0" placeholder="Hab. máx.">
+  <input id="fQ" type="search" placeholder="Buscar comercio o dirección">
+  <button class="btn" id="reset">Limpiar filtros</button>
+</section>
+<main>
+  <div class="kpis" id="kpis"></div>
+  <div class="grid">
+    <div class="card c6"><h3>Establecimientos por provincia</h3><div class="ch"><canvas id="cProv"></canvas></div></div>
+    <div class="card c6"><h3>Sector comercial</h3><div class="ch"><canvas id="cSec"></canvas></div></div>
+    <div class="card c8"><h3>Altas y bajas (últimos 25 años)</h3><div class="ch"><canvas id="cEvo"></canvas></div></div>
+    <div class="card c4"><h3>Género del titular</h3><div class="ch"><canvas id="cGen"></canvas></div></div>
+    <div class="card c6"><h3>Top 10 municipios</h3><div class="ch"><canvas id="cMun"></canvas></div></div>
+    <div class="card c6"><h3>Top 10 CNAE</h3><div class="ch"><canvas id="cCn"></canvas></div></div>
+    <div class="card c12"><h3>Resumen por provincia</h3><div class="tw"><table id="tProv"></table></div></div>
+    <div class="card c12"><h3>Mapa de establecimientos</h3><div id="map"></div></div>
+    <div class="card c12"><h3><span>Listado</span><button class="btn" id="csv">Exportar CSV</button></h3><div class="tw"><table id="tList"></table></div>
+      <div class="pager"><button class="btn" id="prev">Anterior</button><span id="pinfo"></span><button class="btn" id="next">Siguiente</button></div></div>
+  </div>
+</main>
+<div id="banner" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ====== CONFIGURACIÓN: URL de la Web App de Apps Script y token ======
+const SOURCE={url:'https://script.google.com/macros/s/AKfycbwWbYpkZPQoy4Uol7evbpvnP6VX-OLcA0TyfepgA15w6eh6pXYv8UF8DyKJko39zTa2tw/exec',token:'ActuacionesComercio26'};
+// =====================================================================
+const PAL=['#0f766e','#d08a1f','#3b82a6','#b4432f','#7c6bb0','#7a9a3a'];
+const $=id=>document.getElementById(id);
+const fmt=n=>Number(n).toLocaleString('es-ES');
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const nq=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+const sortCmp=(a,b)=>String(a).localeCompare(String(b),'es',{sensitivity:'base',numeric:true});
+let DATA=[],P=[],EST='1',LIST=[],PG=0,charts={},map,lay;const PS=15;
+
+function pd(v){if(!v)return null;const s=String(v).trim();let m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m)return new Date(+m[1],m[2]-1,+m[3]);m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/);return m?new Date(+m[3],m[2]-1,+m[1]):null}
+function prep(r){const o={...r},g=nq(r.genero);
+  o.act=Number(r.est)===1;o.prov=String(r.provincia||'').trim();o.mun=String(r.municipio||'').trim();
+  o.sec=String(r.sector_comercial||'').trim()||'Sin sector';o.cn=String(r.ncnae||'').trim();
+  o.gen=g.startsWith('mujer')?'Mujer':g.startsWith('hombre')?'Hombre':g?'No es persona física':'Sin dato';
+  o.hab=typeof r.habitantes==='number'?r.habitantes:(Number(String(r.habitantes||'').replace(/\./g,'').replace(',','.'))||0);
+  o.fa=pd(r.fecha_alta);o.fb=pd(r.fecha_baja);
+  const n=String(r.localizacion||'').match(/-?\d+(?:[.,]\d+)?/g);
+  if(n&&n.length>=2){const a=+n[0].replace(',','.'),b=+n[1].replace(',','.');if(a>39.5&&a<44&&b>-7.5&&b<-1){o.lat=a;o.lng=b}}
+  o.txt=nq([r.nombre_comercial,r.direccion,r.municipio].join(' '));return o}
+
+// ---- carga ----
+function banner(t,retry){const b=$('banner');b.hidden=!t;b.innerHTML=esc(t)+(retry?'<button class="btn" id="rt">Reintentar</button>':'');if(retry)$('rt').onclick=()=>load()}
+async function load(n=0){banner('Cargando datos…');
+  try{const r=await fetch(SOURCE.url+'?token='+encodeURIComponent(SOURCE.token));const j=await r.json();if(j.error)throw Error(j.error);
+    DATA=j.data.map(prep);banner('');init()}
+  catch(e){if(n<2){setTimeout(()=>load(n+1),1000*(n+1))}else banner('No se han podido cargar los datos ('+e.message+').',true)}}
+
+// ---- filtros ----
+function fill(id,label,vals){const s=$(id),c=s.value;s.innerHTML=`<option value="">${label}</option>`+vals.map(v=>`<option>${esc(v)}</option>`).join('');if(vals.includes(c))s.value=c}
+const uniq=f=>[...new Set(DATA.map(f))].filter(Boolean).sort(sortCmp);
+function fillMun(){fill('fMun','Todos los municipios',[...new Set(DATA.filter(r=>!$('fProv').value||r.prov===$('fProv').value).map(r=>r.mun))].filter(Boolean).sort(sortCmp))}
+function init(){P=uniq(r=>r.prov);fill('fProv','Todas las provincias',P);fillMun();fill('fSec','Todos los sectores',uniq(r=>r.sec));
+  fill('fGen','Todos los géneros',uniq(r=>r.gen));fill('fCn','Todos los CNAE',uniq(r=>r.cn));render()}
+function get(){const g=id=>$(id).value,p=g('fProv'),m=g('fMun'),s=g('fSec'),ge=g('fGen'),c=g('fCn'),mn=+g('fMin')||0,mx=+g('fMax')||1e12,q=nq(g('fQ'));
+  return DATA.filter(r=>(EST==='all'||(EST==='1')===r.act)&&(!p||r.prov===p)&&(!m||r.mun===m)&&(!s||r.sec===s)&&(!ge||r.gen===ge)&&(!c||r.cn===c)&&r.hab>=mn&&r.hab<=mx&&(!q||r.txt.includes(q)))}
+
+// ---- render ----
+const by=(d,f)=>{const m=new Map();d.forEach(r=>{const k=f(r);m.set(k,(m.get(k)||0)+1)});return m};
+const top=(m,n)=>[...m].sort((a,b)=>b[1]-a[1]).slice(0,n);
+function ch(id,cfg){if(charts[id]){charts[id].data=cfg.data;charts[id].options=cfg.options;charts[id].update()}else charts[id]=new Chart($(id),cfg)}
+const O=(x={})=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},...x});
+function render(){const d=get();kpis(d);charts_(d);tprov(d);mapR(d);LIST=d.slice().sort((a,b)=>sortCmp(a.prov,b.prov)||sortCmp(a.mun,b.mun)||sortCmp(a.nombre_comercial,b.nombre_comercial));PG=0;list()}
+
+function kpis(d){const a=d.filter(r=>r.act).length,y=new Date().getFullYear(),pf=d.filter(r=>r.gen==='Mujer'||r.gen==='Hombre'),
+  mu=pf.filter(r=>r.gen==='Mujer').length,mun=new Set(d.map(r=>r.prov+'|'+r.mun)).size,
+  al=d.filter(r=>r.fa&&r.fa.getFullYear()===y).length,ba=d.filter(r=>r.fb&&r.fb.getFullYear()===y).length,pc=(x,t)=>t?(x/t*100).toFixed(1).replace('.',',')+'%':'–';
+  const k=(t,v,s,c)=>`<div class="kpi" style="--c:${c}"><span>${t}</span><b>${v}</b><small>${s}</small></div>`;
+  $('kpis').innerHTML=k('Establecimientos',fmt(d.length),'según filtros','#0f766e')+k('Activos',fmt(a),pc(a,d.length)+' del total','#3b82a6')+
+   k('Cerrados',fmt(d.length-a),pc(d.length-a,d.length)+' del total','#b4432f')+k('Municipios con servicio',fmt(mun),'con al menos un establecimiento','#d08a1f')+
+   k('Titulares mujer',pc(mu,pf.length),fmt(mu)+' de '+fmt(pf.length)+' personas físicas','#7c6bb0')+k('Altas en '+y,fmt(al),fmt(ba)+' bajas en '+y,'#7a9a3a')}
+
+function charts_(d){
+  const g={};d.forEach(r=>{(g[r.prov]??={a:0,c:0})[r.act?'a':'c']++});
+  ch('cProv',{type:'bar',data:{labels:P,datasets:[{label:'Activos',data:P.map(p=>g[p]?.a||0),backgroundColor:PAL[0]},{label:'Cerrados',data:P.map(p=>g[p]?.c||0),backgroundColor:'#c9d6d3'}]},
+    options:O({scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true}},plugins:{legend:{position:'bottom'}}})});
+  const dn=(id,m)=>ch(id,{type:'doughnut',data:{labels:[...m.keys()],datasets:[{data:[...m.values()],backgroundColor:PAL,borderWidth:2}]},options:O({cutout:'62%',plugins:{legend:{position:'bottom'}}})});
+  dn('cSec',by(d,r=>r.sec));dn('cGen',by(d,r=>r.gen));
+  const al=by(d.filter(r=>r.fa),r=>r.fa.getFullYear()),ba=by(d.filter(r=>r.fb),r=>r.fb.getFullYear()),ys=[...new Set([...al.keys(),...ba.keys()])].sort();
+  const y1=ys.length?ys[ys.length-1]:0,yl=ys.filter(y=>y>=y1-24);
+  ch('cEvo',{type:'line',data:{labels:yl,datasets:[{label:'Altas',data:yl.map(y=>al.get(y)||0),borderColor:PAL[0],backgroundColor:PAL[0],tension:.3},{label:'Bajas',data:yl.map(y=>ba.get(y)||0),borderColor:PAL[3],backgroundColor:PAL[3],tension:.3}]},
+    options:O({plugins:{legend:{position:'bottom'}},scales:{x:{grid:{display:false}}}})});
+  const hb=(id,m,c)=>{const t=top(m,10);ch(id,{type:'bar',data:{labels:t.map(x=>x[0]),datasets:[{data:t.map(x=>x[1]),backgroundColor:c,borderRadius:5}]},options:O({indexAxis:'y',scales:{y:{grid:{display:false}}}})})};
+  hb('cMun',by(d,r=>r.mun),PAL[0]);hb('cCn',by(d,r=>r.cn||'Sin CNAE'),PAL[1])}
+
+function tprov(d){const g={};d.forEach(r=>{const o=g[r.prov]??={t:0,a:0,m:new Map()};o.t++;if(r.act)o.a++;o.m.set(r.mun,r.hab)});
+  $('tProv').innerHTML='<tr><th>Provincia</th><th class="num">Establecimientos</th><th class="num">Activos</th><th class="num">Cerrados</th><th class="num">Municipios</th><th class="num">Habitantes</th><th class="num">Activos por 1.000 hab.</th></tr>'+
+  P.filter(p=>g[p]).map(p=>{const o=g[p],h=[...o.m.values()].reduce((a,b)=>a+b,0);
+    return `<tr><td>${esc(p)}</td><td class="num">${fmt(o.t)}</td><td class="num">${fmt(o.a)}</td><td class="num">${fmt(o.t-o.a)}</td><td class="num">${fmt(o.m.size)}</td><td class="num">${fmt(h)}</td><td class="num">${h?(o.a/h*1000).toFixed(1).replace('.',','):'–'}</td></tr>`}).join('')}
+
+function mapR(d){if(!map){map=L.map('map',{preferCanvas:true}).setView([41.65,-4.7],7);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(map);lay=L.layerGroup().addTo(map)}
+  lay.clearLayers();const pts=d.filter(r=>r.lat);
+  pts.forEach(r=>L.circleMarker([r.lat,r.lng],{radius:4,weight:.6,color:'#fff',fillColor:r.act?PAL[0]:PAL[3],fillOpacity:.85})
+    .bindPopup(`<b>${esc(r.nombre_comercial)}</b><br>${esc(r.mun)} · ${esc(r.sec)}`).addTo(lay));
+  if(pts.length)map.fitBounds(pts.map(r=>[r.lat,r.lng]),{padding:[20,20],maxZoom:12})}
+
+function list(){const n=LIST.length,pages=Math.max(1,Math.ceil(n/PS));PG=Math.min(PG,pages-1);const s=LIST.slice(PG*PS,PG*PS+PS);
+  $('tList').innerHTML='<tr><th>Nombre comercial</th><th>Sector</th><th>CNAE</th><th>Municipio</th><th>Provincia</th><th>Estado</th><th>Alta</th></tr>'+
+  s.map(r=>`<tr><td>${esc(r.nombre_comercial)}</td><td>${esc(r.sec)}</td><td>${esc(r.cn)}</td><td>${esc(r.mun)}</td><td>${esc(r.prov)}</td><td><span class="tag on${r.act?1:0}">${r.act?'Activo':'Cerrado'}</span></td><td>${r.fa?r.fa.toLocaleDateString('es-ES'):''}</td></tr>`).join('')||'<tr><td>Ningún establecimiento coincide con los filtros.</td></tr>';
+  $('pinfo').textContent=n?`${PG*PS+1}–${Math.min(n,PG*PS+PS)} de ${fmt(n)}`:'0 resultados';$('prev').disabled=PG===0;$('next').disabled=PG>=pages-1}
+
+// ---- eventos ----
+let tm;const later=()=>{clearTimeout(tm);tm=setTimeout(render,250)};
+['fMun','fSec','fGen','fCn'].forEach(id=>$(id).onchange=render);
+$('fProv').onchange=()=>{$('fMun').value='';fillMun();render()};
+['fMin','fMax','fQ'].forEach(id=>$(id).oninput=later);
+$('estSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;EST=b.dataset.v;[...$('estSeg').children].forEach(x=>x.classList.toggle('on',x===b));render()};
+$('reset').onclick=()=>{['fProv','fMun','fSec','fGen','fCn','fMin','fMax','fQ'].forEach(id=>$(id).value='');EST='1';[...$('estSeg').children].forEach((x,i)=>x.classList.toggle('on',i===0));fillMun();render()};
+$('reload').onclick=()=>load();
+$('prev').onclick=()=>{PG--;list()};$('next').onclick=()=>{PG++;list()};
+$('csv').onclick=()=>{const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"',h=['nombre_comercial','sector_comercial','cnae','direccion','c_p','municipio','provincia','estado','fecha_alta','fecha_baja'];
+  const rows=LIST.map(r=>[r.nombre_comercial,r.sec,r.cn,r.direccion,r.c_p,r.mun,r.prov,r.act?'Activo':'Cerrado',r.fecha_alta,r.fecha_baja].map(q).join(';'));
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+h.join(';')+'\n'+rows.join('\n')],{type:'text/csv'}));a.download='servicios_proximidad.csv';a.click()};
+load();
+</script>
+</body>
+</html>
