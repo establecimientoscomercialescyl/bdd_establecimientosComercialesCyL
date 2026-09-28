@@ -122,7 +122,7 @@ function get(){const g=id=>$(id).value,p=g('fProv'),m=g('fMun'),s=g('fSec'),ge=g
 
 // ---- render ----
 const by=(d,f)=>{const m=new Map();d.forEach(r=>{const k=f(r);m.set(k,(m.get(k)||0)+1)});return m};
-const top=(m,n)=>[...m].sort((a,b)=>b[1]-a[1]).slice(0,n);
+const topN=(m,n)=>[...m].sort((a,b)=>b[1]-a[1]).slice(0,n);
 function ch(id,cfg){if(charts[id]){charts[id].data=cfg.data;charts[id].options=cfg.options;charts[id].update()}else charts[id]=new Chart($(id),cfg)}
 const O=(x={})=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},...x});
 function render(){const d=get();kpis(d);charts_(d);tprov(d);mapR(d);LIST=d.slice().sort((a,b)=>sortCmp(a.prov,b.prov)||sortCmp(a.mun,b.mun)||sortCmp(a.nombre_comercial,b.nombre_comercial));PG=0;list()}
@@ -145,7 +145,7 @@ function charts_(d){
   const y1=ys.length?ys[ys.length-1]:0,yl=ys.filter(y=>y>=y1-24);
   ch('cEvo',{type:'line',data:{labels:yl,datasets:[{label:'Altas',data:yl.map(y=>al.get(y)||0),borderColor:PAL[0],backgroundColor:PAL[0],tension:.3},{label:'Bajas',data:yl.map(y=>ba.get(y)||0),borderColor:PAL[3],backgroundColor:PAL[3],tension:.3}]},
     options:O({plugins:{legend:{position:'bottom'}},scales:{x:{grid:{display:false}}}})});
-  const hb=(id,m,c)=>{const t=top(m,10);ch(id,{type:'bar',data:{labels:t.map(x=>x[0]),datasets:[{data:t.map(x=>x[1]),backgroundColor:c,borderRadius:5}]},options:O({indexAxis:'y',scales:{y:{grid:{display:false}}}})})};
+  const hb=(id,m,c)=>{const t=topN(m,10);ch(id,{type:'bar',data:{labels:t.map(x=>x[0]),datasets:[{data:t.map(x=>x[1]),backgroundColor:c,borderRadius:5}]},options:O({indexAxis:'y',scales:{y:{grid:{display:false}}}})})};
   hb('cMun',by(d,r=>r.mun),PAL[0]);hb('cCn',by(d,r=>r.cn||'Sin CNAE'),PAL[1])}
 
 function tprov(d){const g={};d.forEach(r=>{const o=g[r.prov]??={t:0,a:0,m:new Map()};o.t++;if(r.act)o.a++;o.m.set(r.mun,r.hab)});
