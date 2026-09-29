@@ -1112,7 +1112,7 @@
  * tuyos. jsDelivr sirve los archivos de GitHub con CDN y compresión.
  * ========================================================================== */
 const DEFAULT_SOURCE = {
-  url: 'https://cdn.jsdelivr.net/gh/establecimientoscomercialescyl/bdd_establecimientosComercialesCyL/data/comercio.json'
+  url: 'https://cdn.jsdelivr.net/gh/OWNER/REPO@main/data/comercio.json'
 };
 const CACHE_KEY = 'minorista_cache_v1';
 
@@ -1809,7 +1809,7 @@ function popupEstablecimiento(i){
   const mun = DATA.municipios[r.mun[i]];
   const dirBase = strOr(r.dir ? r.dir[i] : '');
   const direccion = [dirBase, mun ? titleCase(mun.n) : ''].filter(Boolean).join(', ');
-  const tel = [strOr(r.tel[i]), strOr(r.mov[i])].filter(Boolean).join(' / ');
+  const tienePhone = !!(r.tel[i] || r.mov[i]); // el dato real ya no viaja en el JSON, solo si existe
   const web = strOr(r.web[i]);
   const webHref = web ? (/^https?:\/\//i.test(web) ? web : 'https://'+web) : null;
   const isActivo = r.estado[i]===1;
@@ -1820,7 +1820,7 @@ function popupEstablecimiento(i){
       ${row('Titular', titular ? escapeHtml(titular) : '—')}
       ${row('Nombre comercial', escapeHtml(nombre))}
       ${row('Dirección', direccion ? escapeHtml(direccion) : '—')}
-      ${row('Teléfono', tel ? escapeHtml(tel) : '—')}
+      ${row('Teléfono', tienePhone ? 'Disponible' : '—')}
       ${row('Página web', webHref ? `<a href="${escapeHtml(webHref)}" target="_blank" rel="noopener">${escapeHtml(web)}</a>` : '—')}
       <div style="margin-top:4px; font-weight:700; color:${isActivo? '#16A34A' : '#DC2626'};">${isActivo? 'Activo' : 'De baja'}</div>
     </div>
@@ -1847,7 +1847,7 @@ function renderMapModalDetails(i){
   const provincia = titleCase(DATA.provs[r.prov[i]] || '');
   const sector = titleCase(DATA.sectors[r.sector[i]] || '');
   const web = strOr(r.web[i]);
-  const tel = strOr(r.tel[i]);
+  const tienePhone = !!(r.tel[i] || r.mov[i]); // el dato real ya no viaja en el JSON, solo si existe
   const cp = strOr(r.cp ? r.cp[i] : '');
   const webHref = web ? (/^https?:\/\//i.test(web) ? web : 'https://'+web) : null;
 
@@ -1859,7 +1859,7 @@ function renderMapModalDetails(i){
     detailItem('Provincia', provincia),
     detailItem('Población del municipio', mun ? fmt(mun.h) : ''),
     detailItem('Sector comercial', sector),
-    detailItem('Teléfono', tel, tel ? {href:'tel:'+tel.replace(/\s+/g,'')} : {}),
+    detailItem('Teléfono', tienePhone ? 'Disponible' : ''),
     detailItem('Web', web, webHref ? {href:webHref} : {}),
     detailItem('Última modificación', strOr(r.fmodi[i]))
   ].join('');
