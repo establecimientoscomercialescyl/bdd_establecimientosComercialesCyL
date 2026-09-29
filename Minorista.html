@@ -1106,14 +1106,15 @@
 (function(){
 
 /* ==========================================================================
- * FUENTE DE DATOS — URL y token fijos de la app de Apps Script conectada a
- * Google Sheets, única fuente de datos del dashboard (no se pide nunca la
- * URL ni el token al usuario: el panel se conecta solo al arrancar).
+ * FUENTE DE DATOS — archivo JSON estático publicado en GitHub (ya no se
+ * pasa por Apps Script en cada visita; Apps Script solo escribe este
+ * archivo cuando cambia la hoja). Sustituye OWNER/REPO/RAMA/RUTA por los
+ * tuyos. jsDelivr sirve los archivos de GitHub con CDN y compresión.
  * ========================================================================== */
 const DEFAULT_SOURCE = {
-  url: 'https://script.google.com/macros/s/AKfycbzIDSnSb4C0J2fO5AKLHdllWVexLMSKZ1Gxyp4Hs5IqNsMJAhzzxaPSG5YIB_RGNu1m/exec',
-  token: '64d1a9a2-fcfc-4932-bb4a-4698982eb1ef'
+  url: 'https://cdn.jsdelivr.net/gh/establecimientoscomercialescyl/bdd_establecimientosComercialesCyL/data/comercio.json'
 };
+const CACHE_KEY = 'minorista_cache_v1';
 
 /* ==========================================================================
  * LÍMITES DE PROVINCIA (Castilla y León) — para el contorno que se pinta en
@@ -3361,24 +3362,25 @@ function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
  * veces si falla (HTTP 404/errores de red intermitentes: bastante habituales
  * en redes corporativas con proxy), antes de dar el error por definitivo.
  */
-async function fetchFromApi(url, token, {silent, retries=2}={}){
-  const sep = url.includes('?') ? '&' : '?';
-  let fetchUrl = token ? `${url}${sep}token=${encodeURIComponent(token)}` : url;
-  fetchUrl += (fetchUrl.includes('?')?'&':'?') + '_=' + Date.now(); // evita respuestas cacheadas por proxies intermedios
+async function fetchFromApi(url, {silent, retries=3, bust=false}={}){
+  // bust=true fuerza pasar por delante de la caché de jsDelivr/el navegador
+  // (recarga manual); en la carga normal se deja cachear, que es lo rápido.
+  const fetchUrl = bust ? url + (url.includes('?')?'&':'?') + '_=' + Date.now() : url;
 
   let lastErr;
   for(let attempt=0; attempt<=retries; attempt++){
     try{
-      const res = await fetch(fetchUrl, { cache:'no-store' });
+      const res = await fetch(fetchUrl, bust ? { cache:'no-store' } : {});
       if(!res.ok) throw new Error('Error HTTP '+res.status);
       const json = await res.json();
       if(json.error) throw new Error(json.error);
+      try{ localStorage.setItem(CACHE_KEY, JSON.stringify(json)); }catch(e){}
       return parseApiPayload(json);
     }catch(err){
       lastErr = err;
       if(attempt<retries){
         if(!silent) setStatus(`Fallo de conexión, reintentando… (${attempt+1}/${retries})`);
-        await sleep(900*(attempt+1));
+        await sleep(1200*(attempt+1));
       }
     }
   }
@@ -3427,11 +3429,10 @@ function onDataLoaded(newData, statusMsg){
    datos ya visibles en pantalla: no hace falta tapar el panel con la
    pantalla de carga grande, basta con el texto de estado de arriba. */
 async function reloadSource(){
-  const src = DEFAULT_SOURCE;
   setStatus('Actualizando datos…');
   try{
-    const newData = await fetchFromApi(src.url, src.token);
-    onDataLoaded(newData, `Conectado a Google Sheets · ${newData.meta.n} registros · ${new Date().toLocaleString('es-ES')}`);
+    const newData = await fetchFromApi(DEFAULT_SOURCE.url, {bust:true});
+    onDataLoaded(newData, `${newData.meta.n} registros · ${new Date().toLocaleString('es-ES')}`);
   }catch(err){
     console.error(err);
     setStatus('Error al actualizar: '+err.message);
@@ -3444,14 +3445,20 @@ async function reloadSource(){
  * nada visible en el panel que se pueda tapar.
  */
 async function initialLoad(){
-  showLoadingState();
-  const src = DEFAULT_SOURCE;
+  // Si hay una copia guardada en este navegador, se pinta al instante y la
+  // petición de red se hace igualmente por detrás para refrescarla.
+  let painted = false;
   try{
-    const newData = await fetchFromApi(src.url, src.token, {silent:true});
-    onDataLoaded(newData, `Conectado a Google Sheets · ${newData.meta.n} registros · ${new Date().toLocaleString('es-ES')}`);
+    const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+    if(cached){ onDataLoaded(parseApiPayload(cached), `${cached.n||''} registros`); painted = true; }
+  }catch(e){}
+  if(!painted) showLoadingState();
+  try{
+    const newData = await fetchFromApi(DEFAULT_SOURCE.url, {silent:painted});
+    onDataLoaded(newData, `${newData.meta.n} registros · ${new Date().toLocaleString('es-ES')}`);
   }catch(err){
     console.error(err);
-    showNoDataState('No se pudo conectar con Google Sheets: '+err.message);
+    if(!painted) showNoDataState('No se pudieron cargar los datos: '+err.message);
   }
 }
 
