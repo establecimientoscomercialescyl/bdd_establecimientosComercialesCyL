@@ -35,61 +35,106 @@ footer{color:var(--mut);font-size:13px}
 
 <div class="cards">
   <a class="card" href="Minorista.html" style="--c:#0f766e">
-    <svg class="art" viewBox="0 0 320 200" role="img" aria-label="Ilustración de tiendas de alimentación y bricolaje">
-      <rect width="320" height="200" fill="#d6efeb"/>
-      <rect x="0" y="168" width="320" height="32" fill="#a9d3cc"/>
+    <svg class="art" viewBox="0 0 320 200" role="img" aria-label="Ilustración de una calle con tiendas de alimentación y bricolaje">
+      <defs>
+        <linearGradient id="skyM" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eaf6f3"/><stop offset="1" stop-color="#cdeae4"/></linearGradient>
+        <linearGradient id="wallA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffdf9"/><stop offset="1" stop-color="#f1ece0"/></linearGradient>
+        <linearGradient id="wallB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbfbfb"/><stop offset="1" stop-color="#e9ecea"/></linearGradient>
+        <linearGradient id="glassM" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#bfe3ea"/><stop offset=".55" stop-color="#8fc7d4"/><stop offset="1" stop-color="#6fb0c0"/></linearGradient>
+        <radialGradient id="sunM" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff4d6"/><stop offset="1" stop-color="#fff4d6" stop-opacity="0"/></radialGradient>
+      </defs>
+      <rect width="320" height="200" fill="url(#skyM)"/>
+      <circle cx="272" cy="34" r="30" fill="url(#sunM)"/><circle cx="272" cy="34" r="10" fill="#ffe9a8"/>
+      <rect x="0" y="164" width="320" height="36" fill="#b9cfc9"/>
+      <rect x="0" y="164" width="320" height="4" fill="#a4bdb6"/>
+      <g opacity=".5" stroke="#9fb8b1" stroke-width="2"><path d="M14 178h20M50 182h22M92 178h18M270 180h24M198 178h20"/></g>
       <!-- panadería -->
-      <rect x="10" y="70" width="84" height="98" fill="#fff"/>
-      <path d="M4 70h96l-10-26H14z" fill="#b4432f"/>
-      <path d="M14 44h20l-3 26H11zM40 44h22l0 26H40zM70 44h20l4 26H68z" fill="#8f2f1f"/>
-      <rect x="20" y="92" width="64" height="30" rx="3" fill="#f6e6c8"/>
-      <circle cx="36" cy="107" r="8" fill="#d08a1f"/><circle cx="52" cy="107" r="8" fill="#e8a94a"/><circle cx="68" cy="107" r="8" fill="#d08a1f"/>
-      <rect x="20" y="130" width="26" height="38" fill="#14302b"/><rect x="52" y="130" width="32" height="20" fill="#3b82a6"/>
-      <!-- carnicería -->
-      <rect x="118" y="58" width="88" height="110" fill="#fff"/>
-      <path d="M112 58h100l-11-28H123z" fill="#0f766e"/>
-      <path d="M123 30h22l-3 28h-22zM152 30h24l1 28h-24zM183 30h22l6 28h-24z" fill="#0b5c55"/>
-      <rect x="130" y="80" width="72" height="54" rx="3" fill="#14302b"/>
-      <path d="M144 100c6-10 18-10 24 0s2 20-12 24c-14-4-18-14-12-24z" fill="#b4432f"/>
-      <rect x="138" y="142" width="24" height="26" fill="#5d7570"/><rect x="170" y="142" width="30" height="26" fill="#5d7570"/>
+      <g filter="url(#shM)">
+      <rect x="8" y="68" width="88" height="100" fill="url(#wallA)"/>
+      <path d="M2 68h100l-11-27H13z" fill="#b4432f"/>
+      <path d="M13 41h21l-3 27H10zM40 41h23l0 27H40zM73 41h21l4 27H71z" fill="#8f2f1f"/>
+      <rect x="18" y="90" width="66" height="32" rx="3" fill="url(#glassM)"/>
+      <circle cx="34" cy="106" r="8" fill="#e0a13f"/><circle cx="51" cy="106" r="8" fill="#efc074"/><circle cx="68" cy="106" r="8" fill="#e0a13f"/>
+      <rect x="18" y="132" width="27" height="36" fill="#122824"/><rect x="52" y="132" width="32" height="20" fill="#3b82a6"/>
+      <rect x="21" y="135" width="21" height="30" fill="#0d211d"/><circle cx="39" cy="150" r="1.6" fill="#e0a13f"/>
+      <rect x="8" y="68" width="88" height="4" fill="#000" opacity=".05"/>
+      </g>
+      <!-- carnicería (centro, más alta) -->
+      <g filter="url(#shM)">
+      <rect x="116" y="54" width="90" height="114" fill="url(#wallB)"/>
+      <path d="M110 54h102l-12-29H122z" fill="#0f766e"/>
+      <path d="M122 25h22l-3 29h-22zM151 25h25l1 29h-25zM185 25h22l7 29h-25z" fill="#0a5a52"/>
+      <rect x="128" y="76" width="74" height="56" rx="3" fill="#132a25"/>
+      <path d="M143 96c6-11 19-11 25 0s2 21-12 25c-15-4-19-14-13-25z" fill="#b4432f"/>
+      <path d="M148 100c4-6 11-6 15 0" stroke="#8f2f1f" stroke-width="2" fill="none"/>
+      <rect x="136" y="144" width="26" height="24" fill="#5d7570"/><rect x="170" y="144" width="32" height="24" fill="#4d635e"/>
+      <rect x="139" y="148" width="20" height="16" fill="#485f5a"/>
+      </g>
       <!-- bricolaje -->
-      <rect x="224" y="80" width="86" height="88" fill="#fff"/>
-      <path d="M218 80h98l-10-24h-78z" fill="#d08a1f"/>
-      <path d="M228 56h20l-2 24h-20zM256 56h22l2 24h-22zM286 56h16l6 24h-22z" fill="#b8741a"/>
-      <rect x="236" y="100" width="62" height="40" fill="#eef2f1"/>
-      <path d="M246 118l10-10 6 6-10 10zM272 130l14-24" stroke="#14302b" stroke-width="4" stroke-linecap="round" fill="none"/>
-      <circle cx="286" cy="112" r="5" fill="#3b82a6"/><rect x="248" y="150" width="46" height="10" rx="2" fill="#5d7570"/>
+      <g filter="url(#shM)">
+      <rect x="222" y="78" width="88" height="90" fill="url(#wallA)"/>
+      <path d="M216 78h100l-11-25h-78z" fill="#d08a1f"/>
+      <path d="M226 53h21l-2 25h-21zM255 53h22l2 25h-22zM286 53h16l7 25h-22z" fill="#a86315"/>
+      <rect x="234" y="98" width="64" height="42" fill="url(#glassM)"/>
+      <path d="M244 116l10-10 6 6-10 10zM272 132l14-25" stroke="#132a25" stroke-width="4" stroke-linecap="round" fill="none"/>
+      <circle cx="286" cy="110" r="5" fill="#3b82a6"/>
+      <rect x="246" y="150" width="48" height="18" fill="#5d7570"/><rect x="246" y="150" width="48" height="4" fill="#748f89"/>
+      </g>
+      <!-- figura caminando, para dar escala y vida -->
+      <g fill="#14302b" opacity=".75"><circle cx="108" cy="150" r="4"/><path d="M104 155h8l3 13-4 1-3-10-3 10-4-1z"/></g>
+      <filter id="shM" x="-20%" y="-10%" width="140%" height="130%"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#14302b" flood-opacity=".18"/></filter>
     </svg>
     <div class="txt"><h2>Comercio Minorista</h2><p>Alimentación, bricolaje y comercio de barrio por territorio y sector.</p><span class="go">Abrir visualizador</span></div>
   </a>
 
   <a class="card" href="Proximidad.html" style="--c:#d08a1f">
-    <svg class="art" viewBox="0 0 320 200" role="img" aria-label="Ilustración de peluquería, fotografía y lavandería">
-      <rect width="320" height="200" fill="#f6e6c8"/>
-      <rect x="0" y="168" width="320" height="32" fill="#e6c98d"/>
+    <svg class="art" viewBox="0 0 320 200" role="img" aria-label="Ilustración de una calle de pueblo con peluquería, fotografía y lavandería">
+      <defs>
+        <linearGradient id="skyP" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fdf3de"/><stop offset="1" stop-color="#f7e2b6"/></linearGradient>
+        <linearGradient id="wallC" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffdfa"/><stop offset="1" stop-color="#f0e7d3"/></linearGradient>
+        <linearGradient id="glassP" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c9dfd9"/><stop offset=".55" stop-color="#9cc3ba"/><stop offset="1" stop-color="#7fb0a6"/></linearGradient>
+        <radialGradient id="sunP" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff0c4"/><stop offset="1" stop-color="#fff0c4" stop-opacity="0"/></radialGradient>
+      </defs>
+      <rect width="320" height="200" fill="url(#skyP)"/>
+      <circle cx="46" cy="32" r="28" fill="url(#sunP)"/><circle cx="46" cy="32" r="9" fill="#ffe08a"/>
+      <rect x="0" y="164" width="320" height="36" fill="#dcc188"/><rect x="0" y="164" width="320" height="4" fill="#c9ac6c"/>
+      <g opacity=".5" stroke="#c9ac6c" stroke-width="2"><path d="M20 178h22M58 182h20M150 178h20M230 182h22M270 178h18"/></g>
+      <!-- arbolito -->
+      <path d="M300 168V138" stroke="#8a6a3a" stroke-width="5" stroke-linecap="round"/>
+      <circle cx="300" cy="126" r="18" fill="#5f8f4e"/><circle cx="290" cy="134" r="12" fill="#6b9c58"/><circle cx="311" cy="132" r="13" fill="#557f46"/>
       <!-- peluquería -->
-      <rect x="10" y="66" width="88" height="102" fill="#fff"/>
-      <path d="M4 66h100l-11-26H15z" fill="#7c6bb0"/>
-      <path d="M15 40h22l-3 26H12zM43 40h24l1 26H43zM75 40h20l8 26H80z" fill="#5f4fa0"/>
-      <rect x="24" y="86" width="60" height="50" rx="6" fill="#14302b"/>
-      <path d="M34 96c8 6 8 14 0 20M74 96c-8 6-8 14 0 20" stroke="#d08a1f" stroke-width="4" fill="none" stroke-linecap="round"/>
-      <circle cx="54" cy="110" r="10" fill="#f6e6c8"/>
-      <rect x="30" y="142" width="16" height="26" fill="#3b82a6"/><rect x="60" y="142" width="16" height="26" fill="#b4432f"/>
-      <!-- fotografía -->
-      <rect x="116" y="80" width="88" height="88" fill="#fff"/>
-      <path d="M110 80h100l-10-24h-80z" fill="#3b82a6"/>
-      <path d="M121 56h20l-2 24h-20zM149 56h22l2 24h-22zM179 56h20l6 24h-22z" fill="#2c6482"/>
-      <rect x="126" y="100" width="68" height="48" rx="6" fill="#14302b"/>
-      <circle cx="160" cy="124" r="16" fill="#5d7570"/><circle cx="160" cy="124" r="9" fill="#eef2f1"/>
-      <rect x="178" y="104" width="10" height="6" fill="#d08a1f"/>
+      <g filter="url(#shP)">
+      <rect x="10" y="64" width="90" height="104" fill="url(#wallC)"/>
+      <path d="M4 64h102l-11-25H16z" fill="#7c6bb0"/>
+      <path d="M16 39h22l-3 25H13zM44 39h24l1 25H44zM77 39h20l8 25H82z" fill="#5f4fa0"/>
+      <rect x="24" y="84" width="62" height="52" rx="6" fill="#132a25"/>
+      <path d="M34 94c8 6 8 15 0 21M76 94c-8 6-8 15 0 21" stroke="#e0a13f" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <circle cx="55" cy="109" r="11" fill="url(#glassP)"/>
+      <rect x="30" y="140" width="17" height="28" fill="#3b82a6"/><rect x="61" y="140" width="17" height="28" fill="#b4432f"/>
+      <rect x="33" y="143" width="11" height="22" fill="#2c6482"/>
+      </g>
+      <!-- fotografía (centro, algo más baja) -->
+      <g filter="url(#shP)">
+      <rect x="118" y="82" width="88" height="86" fill="url(#wallC)"/>
+      <path d="M112 82h100l-10-23h-80z" fill="#3b82a6"/>
+      <path d="M123 61h20l-2 21h-20zM151 61h22l2 21h-22zM181 61h20l6 21h-22z" fill="#2c6482"/>
+      <rect x="128" y="100" width="68" height="48" rx="6" fill="#132a25"/>
+      <circle cx="162" cy="124" r="17" fill="#4d635e"/><circle cx="162" cy="124" r="10" fill="#dce6e2"/><circle cx="162" cy="124" r="4" fill="#132a25"/>
+      <rect x="180" y="104" width="10" height="6" rx="1" fill="#e0a13f"/>
+      </g>
       <!-- lavandería -->
-      <rect x="222" y="72" width="88" height="96" fill="#fff"/>
-      <path d="M216 72h100l-10-24h-80z" fill="#0f766e"/>
-      <path d="M227 48h20l-2 24h-20zM255 48h22l2 24h-22zM285 48h18l6 24h-20z" fill="#0b5c55"/>
-      <rect x="234" y="92" width="64" height="60" rx="6" fill="#14302b"/>
-      <circle cx="266" cy="122" r="20" fill="#eef2f1"/><circle cx="266" cy="122" r="13" fill="#3b82a6"/>
-      <path d="M259 118c3 6 11 6 14 0M259 126c3 6 11 6 14 0" stroke="#eef2f1" stroke-width="2" fill="none"/>
-      <circle cx="244" cy="100" r="3" fill="#d08a1f"/><circle cx="254" cy="100" r="3" fill="#b4432f"/>
+      <g filter="url(#shP)">
+      <rect x="224" y="70" width="88" height="98" fill="url(#wallC)"/>
+      <path d="M218 70h100l-10-23h-80z" fill="#0f766e"/>
+      <path d="M229 47h20l-2 23h-20zM257 47h22l2 23h-22zM287 47h18l6 23h-20z" fill="#0a5a52"/>
+      <rect x="236" y="90" width="64" height="62" rx="6" fill="#132a25"/>
+      <circle cx="268" cy="121" r="21" fill="#dce6e2"/><circle cx="268" cy="121" r="14" fill="#3b82a6"/>
+      <path d="M261 117c3 6 11 6 14 0M261 125c3 6 11 6 14 0" stroke="#dce6e2" stroke-width="2" fill="none"/>
+      <circle cx="246" cy="98" r="3" fill="#e0a13f"/><circle cx="256" cy="98" r="3" fill="#b4432f"/>
+      </g>
+      <!-- figura caminando -->
+      <g fill="#5d3d1f" opacity=".75"><circle cx="108" cy="150" r="4"/><path d="M104 155h8l3 13-4 1-3-10-3 10-4-1z"/></g>
+      <filter id="shP" x="-20%" y="-10%" width="140%" height="130%"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#5d3d1f" flood-opacity=".18"/></filter>
     </svg>
     <div class="txt"><h2>Servicios de proximidad</h2><p>Peluquerías, fotografía, lavanderías y otros servicios de cercanía.</p><span class="go">Abrir visualizador</span></div>
   </a>
