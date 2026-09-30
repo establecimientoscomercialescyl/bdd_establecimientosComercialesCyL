@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ferias Comerciales · Castilla y León</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#14302b;--mut:#5d7570;--pine:#0f766e;--card:#fff;--line:#dbe4e2}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font:16px/1.5 Manrope,system-ui,sans-serif;color:var(--ink);
+  background:radial-gradient(1100px 550px at 15% -10%,#d6efeb 0,transparent 60%),radial-gradient(900px 480px at 100% 110%,#f6e6c8 0,transparent 55%),#eef2f1;
+  display:flex;align-items:center;justify-content:center;padding:24px}
+.box{background:var(--card);border-radius:22px;box-shadow:0 10px 30px rgba(20,48,43,.10);padding:44px 40px;max-width:480px;text-align:center}
+.ico{width:78px;height:78px;margin:0 auto 18px}
+h1{margin:0 0 10px;font-size:24px;font-weight:800}
+p{margin:0 0 26px;color:var(--mut);font-size:15.5px}
+a.btn{display:inline-flex;align-items:center;gap:8px;background:var(--pine);color:#fff;text-decoration:none;font-weight:600;padding:11px 20px;border-radius:12px}
+a.btn:hover{filter:brightness(1.08)}
+a.btn svg{width:16px;height:16px}
+</style>
+</head>
+<body>
+<div class="box">
+  <svg class="ico" viewBox="0 0 80 80" role="img" aria-label="Icono de feria comercial">
+    <defs><linearGradient id="t1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d08a1f"/><stop offset="1" stop-color="#b4432f"/></linearGradient>
+    <linearGradient id="t2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0f766e"/><stop offset="1" stop-color="#0b5c55"/></linearGradient></defs>
+    <path d="M8 34 24 12l16 22z" fill="url(#t1)"/><path d="M40 34 56 12l16 22z" fill="url(#t2)"/>
+    <rect x="12" y="34" width="24" height="30" rx="2" fill="#fff" stroke="#dbe4e2" stroke-width="2"/>
+    <rect x="44" y="34" width="24" height="30" rx="2" fill="#fff" stroke="#dbe4e2" stroke-width="2"/>
+    <rect x="18" y="46" width="12" height="18" fill="#d6efeb"/><rect x="50" y="46" width="12" height="18" fill="#f6e6c8"/>
+    <circle cx="24" cy="26" r="2" fill="#fff"/><circle cx="56" cy="26" r="2" fill="#fff"/>
+  </svg>
+  <h1>Ferias Comerciales</h1>
+  <p>Estamos trabajando en el proyecto. Muy pronto podrás consultar aquí el visualizador de ferias comerciales de Castilla y León.</p>
+  <a class="btn" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>Volver al inicio</a>
+</div>
+</body>
+</html>
