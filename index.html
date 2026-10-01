@@ -14,8 +14,8 @@ body{margin:0;font:16px/1.5 Manrope,system-ui,sans-serif;color:var(--ink);backgr
 .intro{text-align:center;max-width:640px}
 h1{margin:0 0 8px;font-size:clamp(28px,4.5vw,44px);font-weight:800;line-height:1.1}
 .intro p{margin:0;color:var(--mut);font-size:17px}
-.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;width:100%;max-width:920px}
-a.card{display:flex;flex-direction:column;background:#fff;border-radius:16px;overflow:hidden;text-decoration:none;color:inherit;box-shadow:0 6px 18px rgba(20,48,43,.10);transition:transform .2s,box-shadow .2s}
+.cards{display:flex;flex-wrap:wrap;justify-content:center;gap:16px;width:100%;max-width:920px}
+a.card{display:flex;flex-direction:column;background:#fff;border-radius:16px;overflow:hidden;text-decoration:none;color:inherit;box-shadow:0 6px 18px rgba(20,48,43,.10);transition:transform .2s,box-shadow .2s;flex:1 1 210px;max-width:280px}
 a.card:hover,a.card:focus-visible{transform:translateY(-4px);box-shadow:0 12px 26px rgba(20,48,43,.16);outline:none}
 a.card:focus-visible{outline:3px solid var(--sky);outline-offset:3px}
 .art{aspect-ratio:16/10;display:block;width:100%}
@@ -24,8 +24,8 @@ a.card:focus-visible{outline:3px solid var(--sky);outline-offset:3px}
 .txt p{margin:0 0 12px;color:var(--mut);font-size:12.5px;line-height:1.4}
 .go{display:inline-block;background:var(--c);color:#fff;font-weight:600;padding:7px 13px;border-radius:9px;font-size:12.5px}
 footer{color:var(--mut);font-size:13px}
-@media(max-width:760px){.cards{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:420px){.cards{grid-template-columns:1fr}}
+@media(max-width:760px){.cards{justify-content:center}}
+@media(max-width:420px){a.card{max-width:100%}}
 </style>
 </head>
 <body>
@@ -175,33 +175,7 @@ footer{color:var(--mut);font-size:13px}
     </svg>
     <div class="txt"><h2>Ferias Comerciales</h2><p>Próximamente: ferias y eventos comerciales de Castilla y León.</p><span class="go">Abrir visualizador</span></div>
   </a>
-
-  <a class="card" href="GestionMinorista.html" style="--c:#3b82a6">
-    <svg class="art" viewBox="0 0 320 200" role="img" aria-label="Ilustración de gestión de base de datos">
-      <defs>
-        <linearGradient id="skyG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e7f1f6"/><stop offset="1" stop-color="#cfe4ee"/></linearGradient>
-        <linearGradient id="disk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5fa3bf"/><stop offset="1" stop-color="#3b82a6"/></linearGradient>
-      </defs>
-      <rect width="320" height="200" fill="url(#skyG)"/>
-      <rect x="0" y="166" width="320" height="34" fill="#c3d8e1"/><rect x="0" y="166" width="320" height="4" fill="#aecad7"/>
-      <g filter="url(#shG)">
-        <ellipse cx="160" cy="66" rx="70" ry="20" fill="url(#disk)"/>
-        <path d="M90 66v34c0 11 32 20 70 20s70-9 70-20V66" fill="#8fc3d6"/>
-        <ellipse cx="160" cy="100" rx="70" ry="20" fill="url(#disk)"/>
-        <path d="M90 100v34c0 11 32 20 70 20s70-9 70-20v-34" fill="#8fc3d6"/>
-        <ellipse cx="160" cy="134" rx="70" ry="20" fill="url(#disk)"/>
-      </g>
-      <g filter="url(#shG)">
-        <circle cx="236" cy="150" r="26" fill="#fff"/>
-        <circle cx="236" cy="150" r="26" fill="#0f766e" opacity=".92"/>
-        <path d="M223 150l9 9 17-19" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-      </g>
-      <g stroke="#3b82a6" stroke-width="2.5" fill="none" opacity=".55"><path d="M62 62c-14 6-14 22 0 28M258 62c14 6 14 22 0 28"/></g>
-      <circle cx="52" cy="54" r="3" fill="#d08a1f"/><circle cx="46" cy="76" r="3" fill="#b4432f"/><circle cx="60" cy="96" r="3" fill="#0f766e"/>
-      <filter id="shG" x="-20%" y="-10%" width="140%" height="130%"><feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#14302b" flood-opacity=".16"/></filter>
-    </svg>
-    <div class="txt"><h2>Gestión BDD Minorista</h2><p>Próximamente: gestión de la base de datos del comercio minorista.</p><span class="go">Abrir visualizador</span></div>
-  </a>
+  
 </div>
 
 <footer>Castilla y León</footer>
