@@ -128,7 +128,9 @@ async function doLogin(){
   $('li-btn').disabled=true; $('li-btn').textContent='Entrando…';
   $('login-err').style.color='var(--mut)'; $('login-err').textContent='Comprobando usuario, puede tardar unos segundos…';
   try{
+    const tl = performance.now();
     const j = await api({action:'login', usuario, password});
+    console.log('login: '+Math.round(performance.now()-tl)+' ms en total, '+j._ms+' ms dentro del servidor');
     localStorage.setItem(TOKEN_KEY, JSON.stringify(j));
     await start(j);
   }catch(e){
@@ -168,7 +170,7 @@ async function start(sesion){
   try{
     const data = await api({action:'listar', token: sesion.token});
     if(id!==LOAD_ID) return; // se cerró sesión (o se entró con otro usuario) mientras cargaba
-    console.log('listar: '+Math.round(performance.now()-t0)+' ms en total, '+data._ms+' ms dentro del servidor');
+    console.log('listar: '+Math.round(performance.now()-t0)+' ms en total, '+data._ms+' ms dentro del servidor | '+data._det);
     COLS = data.columnas; ROWS = data.filas;
     iMun = COLS.map(nq).indexOf('MUNICIPIO');
     iSec = COLS.map(nq).indexOf('SECTOR COMERCIAL');
