@@ -114,7 +114,7 @@ let COLS=[], ROWS=[], VIEW=[], PAGE=0, SORT={col:-1, dir:1};
 let LOAD_ID=0; // identifica cada carga; si cambia, la respuesta que llega es de una sesión anterior y se descarta
 let iMun=-1, iSec=-1;
 
-async function api(payload){
+async function apiUna(payload){
   let txt;
   try{
     const r = await fetch(API_URL, { method:'POST', body: JSON.stringify(payload) });
@@ -129,8 +129,28 @@ async function api(payload){
     const err = new Error('Google no devolvió una respuesta válida (a veces ocurre con Apps Script). Inténtalo de nuevo.');
     err.noJson = true; throw err;
   }
-  if(j.error) throw new Error(j.error);
+  if(j.error){
+    const err = new Error(j.error);
+    // Si Google reenvía como GET, responde nuestro doGet: es un fallo de entrega, se reintenta
+    if(/solo acepta peticiones POST/i.test(j.error)) err.noJson = true;
+    throw err;
+  }
   return j;
+}
+
+// Hasta 3 intentos cuando Google no entrega bien la respuesta. Los errores reales
+// (contraseña incorrecta, sesión caducada…) no se reintentan.
+async function api(payload, intentos=3){
+  for(let i=1;;i++){
+    try{ return await apiUna(payload); }
+    catch(e){
+      if(!e.noJson || i>=intentos) throw e;
+      const aviso='Google no respondió bien, reintentando ('+(i+1)+'/'+intentos+')…';
+      const sp=document.querySelector('.loading span'); if(sp) sp.textContent=aviso;
+      if(!$('login-screen').hidden){ $('login-err').style.color='var(--mut)'; $('login-err').textContent=aviso; }
+      await new Promise(r=>setTimeout(r,1500*i));
+    }
+  }
 }
 
 async function doLogin(){
@@ -177,16 +197,11 @@ async function start(sesion){
   const id = LOAD_ID;
   $('who').textContent = sesion.usuario + ' · ' + (sesion.esAdmin ? 'todas las provincias' : sesion.provincia);
   $('login-screen').hidden=true; $('app-screen').hidden=false;
+  document.querySelector('.loading span').textContent='Cargando datos… puede tardar unos segundos';
   document.querySelector('main').classList.add('is-loading');
   const t0 = performance.now();
   try{
-    let data;
-    try{ data = await api({action:'listar', token: sesion.token}); }
-    catch(e){
-      if(!e.noJson || id!==LOAD_ID) throw e;
-      // Un reintento automático: si el servidor sí llegó a terminar, ahora responde desde la caché
-      data = await api({action:'listar', token: sesion.token});
-    }
+    const data = await api({action:'listar', token: sesion.token});
     if(id!==LOAD_ID) return; // se cerró sesión (o se entró con otro usuario) mientras cargaba
     console.log('listar: '+Math.round(performance.now()-t0)+' ms en total, '+data._ms+' ms dentro del servidor | '+data._det);
     COLS = data.columnas; ROWS = data.filas;
