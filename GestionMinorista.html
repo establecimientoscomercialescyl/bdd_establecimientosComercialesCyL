@@ -48,6 +48,11 @@ tbody tr:hover td{background:#f6faf9}
 .pager button:disabled{opacity:.4;cursor:default}
 .empty{padding:40px;text-align:center;color:var(--mut)}
 .badge{display:inline-block;background:rgba(255,255,255,.16);border-radius:99px;padding:3px 10px;font-size:11.5px}
+.loading{display:none;align-items:center;justify-content:center;gap:12px;padding:70px 20px;color:var(--mut);font-weight:600}
+main.is-loading .loading{display:flex}
+main.is-loading .filters,main.is-loading .table-card{display:none}
+.spinner{width:22px;height:22px;border:3px solid var(--line);border-top-color:var(--pine);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -75,6 +80,7 @@ tbody tr:hover td{background:#f6faf9}
     </div>
   </header>
   <main>
+    <div class="loading"><div class="spinner"></div><span>Cargando datos… puede tardar unos segundos</span></div>
     <div class="filters">
       <select id="f-mun"><option value="">Todos los municipios</option></select>
       <select id="f-sec"><option value="">Todos los sectores</option></select>
@@ -89,7 +95,7 @@ tbody tr:hover td{background:#f6faf9}
 
 <script>
 // ====== URL de la Web App de Apps Script (ApiGestionMinorista.gs) ======
-const API_URL = 'https://script.google.com/macros/s/AKfycbzk91HU5laBM8D6pGW73meFpGs3mvHQFV5uHjhdcdpACSq8jlPUiQV-BsuxOgVkpzeE/exec';
+const API_URL = 'PEGA_AQUI_LA_URL_DE_LA_WEB_APP';
 // =========================================================================
 const TOKEN_KEY = 'gestion_minorista_token';
 const $=id=>document.getElementById(id);
@@ -105,6 +111,7 @@ const NO_EDITABLES = ['ID','NRE','OT','N.C.N.','EST','NRA','ID_PROVINCIA','ID_MU
   'HABITANTES_SIN_DUPLICAR'].map(nq);
 
 let COLS=[], ROWS=[], VIEW=[], PAGE=0, SORT={col:-1, dir:1};
+let LOAD_ID=0; // identifica cada carga; si cambia, la respuesta que llega es de una sesión anterior y se descarta
 let iMun=-1, iSec=-1;
 
 async function api(payload){
@@ -119,12 +126,13 @@ async function doLogin(){
   const usuario=$('li-user').value.trim(), password=$('li-pass').value;
   if(!usuario || !password){ $('login-err').textContent='Escribe usuario y contraseña.'; return; }
   $('li-btn').disabled=true; $('li-btn').textContent='Entrando…';
+  $('login-err').style.color='var(--mut)'; $('login-err').textContent='Comprobando usuario, puede tardar unos segundos…';
   try{
     const j = await api({action:'login', usuario, password});
     localStorage.setItem(TOKEN_KEY, JSON.stringify(j));
     await start(j);
   }catch(e){
-    $('login-err').textContent = e.message;
+    $('login-err').style.color=''; $('login-err').textContent = e.message;
   }finally{
     $('li-btn').disabled=false; $('li-btn').textContent='Entrar';
   }
@@ -132,7 +140,18 @@ async function doLogin(){
 $('li-btn').onclick=doLogin;
 $('li-pass').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
 
+// Vacía TODO lo que quedó en memoria y en pantalla de la sesión anterior
+function resetState(){
+  LOAD_ID++;
+  COLS=[]; ROWS=[]; VIEW=[]; PAGE=0; SORT={col:-1, dir:1}; iMun=-1; iSec=-1;
+  $('tbl').innerHTML=''; $('count').textContent=''; $('pinfo').textContent='';
+  ['f-mun','f-sec'].forEach(id=>{ const s=$(id); s.style.display=''; s.innerHTML=s.options[0].outerHTML; s.value=''; });
+  document.querySelector('main').classList.remove('is-loading');
+}
+
 function logout(){
+  resetState();
+  $('login-err').style.color='';
   localStorage.removeItem(TOKEN_KEY);
   $('app-screen').hidden=true; $('login-screen').hidden=false;
   $('li-user').value=''; $('li-pass').value=''; $('login-err').textContent='';
@@ -140,18 +159,27 @@ function logout(){
 $('logout-btn').onclick=logout;
 
 async function start(sesion){
+  resetState();
+  const id = LOAD_ID;
   $('who').textContent = sesion.usuario + ' · ' + (sesion.esAdmin ? 'todas las provincias' : sesion.provincia);
   $('login-screen').hidden=true; $('app-screen').hidden=false;
+  document.querySelector('main').classList.add('is-loading');
+  const t0 = performance.now();
   try{
     const data = await api({action:'listar', token: sesion.token});
+    if(id!==LOAD_ID) return; // se cerró sesión (o se entró con otro usuario) mientras cargaba
+    console.log('listar: '+Math.round(performance.now()-t0)+' ms en total, '+data._ms+' ms dentro del servidor');
     COLS = data.columnas; ROWS = data.filas;
     iMun = COLS.map(nq).indexOf('MUNICIPIO');
     iSec = COLS.map(nq).indexOf('SECTOR COMERCIAL');
     fillFilter('f-mun', iMun); fillFilter('f-sec', iSec);
     render();
   }catch(e){
+    if(id!==LOAD_ID) return;
     if(/sesión caducada/i.test(e.message)){ logout(); $('login-err').textContent='Tu sesión caducó, vuelve a entrar.'; }
     else alert('No se pudieron cargar los datos: '+e.message);
+  }finally{
+    if(id===LOAD_ID) document.querySelector('main').classList.remove('is-loading');
   }
 }
 
