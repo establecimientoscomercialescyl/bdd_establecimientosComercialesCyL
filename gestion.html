@@ -36,6 +36,13 @@ th.s::after{content:" \25B2"}th.s.d::after{content:" \25BC"}
 tbody tr:hover{background:var(--head)}
 .pag{display:flex;gap:10px;align-items:center;padding:12px 16px}
 .pag span{color:var(--mute)}
+#ld{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;background:color-mix(in srgb,var(--bg) 94%,transparent)}
+#ld .sp{width:84px;height:84px;border:9px solid var(--line);border-top-color:var(--acc);border-radius:50%;animation:giro 1s linear infinite}
+#ld h3{margin:8px 0 0;font-size:26px}
+#ld p{margin:0;color:var(--mute);font-size:16px;max-width:420px}
+#ld .t{font-variant-numeric:tabular-nums;color:var(--ink)}
+@keyframes giro{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){#ld .sp{animation-duration:3s}}
 </style>
 </head>
 <body>
@@ -67,6 +74,13 @@ tbody tr:hover{background:var(--head)}
   </div>
 </main>
 
+<div id="ld" role="status" aria-live="polite" hidden>
+  <div class="sp"></div>
+  <h3>Cargando datos…</h3>
+  <p>Este proceso puede tardar entre 20 y 30 segundos. No cierres ni recargues la página.</p>
+  <p class="t" id="ldt"></p>
+</div>
+
 <script>
 // Pega aquí la URL de la aplicación web (termina en /exec)
 const API_URL = 'https://script.google.com/macros/s/AKfycbywcJXtUPfuBJbbPzNYOqz10G4tyFGvHKN-PrENIPYy8R8amdFb_bOdnlwMeSXwZjGA/exec';
@@ -97,6 +111,14 @@ $('f').onsubmit = async e => {
   } catch (x) { showLogin('No se pudo conectar con el servidor'); }
 };
 
+let ldTimer;
+function showLoad(on) {
+  clearInterval(ldTimer); $('ld').hidden = !on;
+  if (!on) return;
+  const t0 = Date.now(), tick = () => $('ldt').textContent = 'Transcurridos ' + Math.floor((Date.now() - t0) / 1000) + ' s';
+  tick(); ldTimer = setInterval(tick, 1000);
+}
+
 $('out').onclick = () => showLogin();
 
 async function load() {
@@ -105,7 +127,7 @@ async function load() {
   $('login').hidden = true; $('app').hidden = false;
   $('who').textContent = usr.u + ' · ' + usr.p;
   $('info').textContent = 'Cargando datos…'; $('tb').innerHTML = ''; $('th').innerHTML = '';
-  tLoad = performance.now();
+  tLoad = performance.now(); showLoad(true);
   try {
     const r = await api({ action: 'list', token: tk });
     if (!r.ok) return showLogin(r.expired ? 'La sesión ha caducado. Vuelve a entrar.' : r.error);
@@ -113,6 +135,7 @@ async function load() {
     sortCol = -1; page = 0; $('q').value = '';
     buildHead(); filter();
   } catch (x) { $('info').textContent = 'Error de conexión. Recarga la página.'; }
+  finally { showLoad(false); }
 }
 
 function buildHead() {
