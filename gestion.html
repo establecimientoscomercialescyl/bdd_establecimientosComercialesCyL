@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Gestión de establecimientos comerciales</title>
 <style>
-:root{--bg:#f4f5f7;--card:#fff;--ink:#1c2230;--mute:#667085;--line:#dde1e8;--acc:#1f5fbf;--accT:#fff;--err:#b42318;--head:#e9edf3}
-@media(prefers-color-scheme:dark){:root{--bg:#14171d;--card:#1d222b;--ink:#e8ebf0;--mute:#98a2b3;--line:#323946;--acc:#6ea0f0;--accT:#10151c;--err:#f97066;--head:#262c37}}
+:root{--bg:#f4f5f7;--card:#fff;--ink:#1c2230;--mute:#667085;--line:#dde1e8;--acc:#1f5fbf;--accT:#fff;--err:#b42318;--head:#e9edf3;--c-alta:#e3f4e6;--c-modi:#e1ecfa;--c-baja:#fbe4e2;--ok:#2e9e5b;--off:#d64545}
+@media(prefers-color-scheme:dark){:root{--bg:#14171d;--card:#1d222b;--ink:#e8ebf0;--mute:#98a2b3;--line:#323946;--acc:#6ea0f0;--accT:#10151c;--err:#f97066;--head:#262c37;--c-alta:#1f3a2a;--c-modi:#1f2f47;--c-baja:#472524;--ok:#4cc27e;--off:#f06a6a}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
 [hidden]{display:none!important}
@@ -33,7 +33,17 @@ table{border-collapse:collapse;width:max-content;min-width:100%}
 th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;max-width:320px;overflow:hidden;text-overflow:ellipsis}
 th{position:sticky;top:0;background:var(--head);cursor:pointer;user-select:none;z-index:1}
 th.s::after{content:" \25B2"}th.s.d::after{content:" \25BC"}
-tbody tr:hover{background:var(--head)}
+tbody tr.r-alta{background:var(--c-alta)}
+tbody tr.r-modi{background:var(--c-modi)}
+tbody tr.r-baja{background:var(--c-baja)}
+tbody tr:hover td{background-image:linear-gradient(rgba(127,127,127,.14),rgba(127,127,127,.14))}
+th.pt,td.pt{width:34px;min-width:34px;padding:7px 6px 7px 12px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;vertical-align:middle}
+.dot.ok{background:var(--ok)}.dot.off{background:var(--off)}
+.sr{position:absolute;left:-9999px}
+.ley{display:flex;flex-wrap:wrap;gap:6px 18px;padding:0 16px 10px;color:var(--mute);font-size:13px}
+.ley span{display:inline-flex;align-items:center;gap:6px}
+.ley i{width:14px;height:14px;border-radius:3px;border:1px solid var(--line)}
 .pag{display:flex;gap:10px;align-items:center;padding:12px 16px}
 .pag span{color:var(--mute)}
 #ld{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;background:color-mix(in srgb,var(--bg) 94%,transparent)}
@@ -78,6 +88,7 @@ select:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
     <span class="act" id="act" hidden role="status"><i></i><span id="actt"></span><button class="sec" id="rf" hidden>Actualizar ahora</button></span>
     <span class="info" id="info"></span>
   </div>
+  <div class="ley" id="ley"></div>
   <div class="wrap"><table><thead id="th"></thead><tbody id="tb"></tbody></table></div>
   <div class="pag">
     <button class="sec" id="pv">Anterior</button><span id="pg"></span><button class="sec" id="nx">Siguiente</button>
@@ -99,12 +110,11 @@ const PAGE = 50;
 const OCULTAS = ['id','nre','ot','ncn','est','idprovincia','idmunicipio','idlocalidad','habitantes','idsc','codiae','codcnae','grupodeaccionlocal'];
 // Un registro cuenta como "revisado" si su fecha de alta, modificación o baja es posterior a esta fecha
 const FECHA_REVISION = new Date(2026, 6, 1);   // 01/07/2026
-const COL_FECHAS = ['fechaalta', 'fechamodi', 'fechabaja'];
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fold = s => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const clave = s => fold(s).replace(/[^a-z0-9]/g, '');
-let iMun = -1, iLoc = -1, head = [], vis = [], all = [], view = [], page = 0, sortCol = -1, sortDesc = false, info = {}, gen = 0, ldTimer;
+let iMun = -1, iLoc = -1, iEst = -1, iAlta = -1, iModi = -1, iBaja = -1, head = [], vis = [], all = [], view = [], page = 0, sortCol = -1, sortDesc = false, info = {}, gen = 0, ldTimer;
 
 const espera = ms => new Promise(r => setTimeout(r, ms));
 // Petición con reintentos automáticos (Apps Script falla a veces en el primer intento)
@@ -207,10 +217,15 @@ function setData(r, keep, primera) {
   info = { fuente: r.fuente, gen: r.gen, primera };
   iMun = head.findIndex(h => clave(h) === 'municipio');
   iLoc = head.findIndex(h => clave(h) === 'localidad');
-  const iF = COL_FECHAS.map(c => head.findIndex(h => clave(h) === c)).filter(i => i >= 0);
+  const col = c => head.findIndex(h => clave(h) === c);
+  iEst = col('est'); iAlta = col('fechaalta'); iModi = col('fechamodi'); iBaja = col('fechabaja');
+  const post = (row, i) => { const d = i >= 0 ? parseFecha(row[i]) : null; return !!d && d > FECHA_REVISION; };
   let nRev = 0;
   all.forEach(row => {
-    row.rev = iF.some(i => { const d = parseFecha(row[i]); return d && d > FECHA_REVISION; });
+    const a = post(row, iAlta), m = post(row, iModi), b = post(row, iBaja);
+    row.rev = a || m || b;
+    // prioridad: baja reciente (rojo) > alta nueva (verde) > modificado (azul)
+    row.cls = b ? 'r-baja' : a ? 'r-alta' : m ? 'r-modi' : '';
     if (row.rev) nRev++;
   });
   if (!keep) {
@@ -245,7 +260,7 @@ function rellenar(sel, vals, ph, actual) {
 function rellenarLoc(actual) { rellenar($('fl'), valores(iLoc, $('fm').value), 'Todas las localidades', actual); }
 
 function buildHead() {
-  $('th').innerHTML = '<tr>' + vis.map(i => `<th tabindex="0" data-i="${i}">${esc(head[i])}</th>`).join('') + '</tr>';
+  $('th').innerHTML = '<tr>' + (iEst >= 0 ? `<th class="pt" tabindex="0" data-i="${iEst}" title="Estado (ordenar)" aria-label="Estado"></th>` : '') + vis.map(i => `<th tabindex="0" data-i="${i}">${esc(head[i])}</th>`).join('') + '</tr>';
   $('th').querySelectorAll('th').forEach(t => {
     const go = () => sortBy(+t.dataset.i);
     t.onclick = go; t.onkeydown = e => { if (e.key === 'Enter') go(); };
@@ -274,7 +289,9 @@ function render() {
   const pages = Math.max(1, Math.ceil(view.length / PAGE));
   page = Math.min(page, pages - 1);
   $('tb').innerHTML = view.slice(page * PAGE, page * PAGE + PAGE)
-    .map(r => '<tr>' + vis.map(i => `<td title="${esc(r[i])}">${esc(r[i])}</td>`).join('') + '</tr>').join('');
+    .map(r => `<tr class="${r.cls}">` + (iEst >= 0 ? (String(r[iEst]).trim() === '0'
+      ? '<td class="pt" title="Cerrado"><i class="dot off"></i><span class="sr">Cerrado</span></td>'
+      : '<td class="pt" title="Activo"><i class="dot ok"></i><span class="sr">Activo</span></td>') : '') + vis.map(i => `<td title="${esc(r[i])}">${esc(r[i])}</td>`).join('') + '</tr>').join('');
   $('th').querySelectorAll('th').forEach(t => {
     const on = +t.dataset.i === sortCol; t.classList.toggle('s', on); t.classList.toggle('d', on && sortDesc);
   });
@@ -284,6 +301,12 @@ function render() {
     (info.fuente === 'json' ? `archivo diario (${info.gen})` : 'datos en directo de la hoja');
 }
 
+const fc = FECHA_REVISION.toLocaleDateString('es', { day: '2-digit', month: '2-digit', year: 'numeric' });
+$('ley').innerHTML = `<span><i class="dot ok" style="width:10px;height:10px;border:0;border-radius:50%"></i> Activo</span>
+  <span><i class="dot off" style="width:10px;height:10px;border:0;border-radius:50%"></i> Cerrado</span>
+  <span><i style="background:var(--c-alta)"></i> Alta posterior al ${fc}</span>
+  <span><i style="background:var(--c-modi)"></i> Modificado después del ${fc}</span>
+  <span><i style="background:var(--c-baja)"></i> Baja posterior al ${fc}</span>`;
 $('q').oninput = $('fl').onchange = $('fr').onchange = filter;
 $('fm').onchange = () => { rellenarLoc(''); filter(); };
 $('lf').onclick = () => { $('q').value = ''; $('fm').value = ''; $('fr').value = ''; rellenarLoc(''); filter(); };
