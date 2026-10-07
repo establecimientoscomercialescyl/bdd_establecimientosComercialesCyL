@@ -103,6 +103,9 @@ textarea{width:100%;min-height:70px;padding:9px 10px;border:1px solid var(--line
 .mapa iframe{width:100%;height:230px;border:1px solid var(--line);border-radius:8px;display:block}
 #toast{position:fixed;left:16px;bottom:16px;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;z-index:20;opacity:0;transition:opacity .25s;pointer-events:none}
 #toast.on{opacity:1}
+.aviso{background:var(--head);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:12px 0 4px;font-size:13px;line-height:1.45}
+label i{color:var(--err);font-style:normal}
+select{width:100%}
 </style>
 </head>
 <body>
@@ -144,8 +147,8 @@ textarea{width:100%;min-height:70px;padding:9px 10px;border:1px solid var(--line
   <div class="pnh">
     <div class="pnt"><div><h3 id="pnt"></h3><small id="pns"></small></div><button class="sec x" id="pnx" type="button" aria-label="Cerrar panel">&#10005;</button></div>
     <div class="ibs" role="toolbar" aria-label="Acciones">
-      <button type="button" class="ib on" aria-pressed="true" title="Modificar" aria-label="Modificar"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg></button>
-      <button type="button" class="ib" disabled title="Cambio de titular (próximamente)" aria-label="Cambio de titular"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></button>
+      <button type="button" class="ib on" id="ibm" aria-pressed="true" title="Modificar" aria-label="Modificar"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg></button>
+      <button type="button" class="ib" id="ibt" aria-pressed="false" title="Cambio de titular" aria-label="Cambio de titular"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></button>
       <button type="button" class="ib" disabled title="Cambio de actividad (próximamente)" aria-label="Cambio de actividad"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2M3 13h18"/></svg></button>
       <button type="button" class="ib" disabled title="Dar de baja (próximamente)" aria-label="Dar de baja"><svg viewBox="0 0 24 24"><path d="M3 9l1.5-5h15L21 9v1a3 3 0 01-6 0 3 3 0 01-6 0 3 3 0 01-6 0V9z"/><path d="M5 13v7h14v-7"/><path d="M9.5 15.5l5 3.5m0-3.5l-5 3.5"/></svg></button>
     </div>
@@ -176,7 +179,7 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fold = s => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const clave = s => fold(s).replace(/[^a-z0-9]/g, '');
-let iMun = -1, iLoc = -1, iEst = -1, iAlta = -1, iModi = -1, iBaja = -1, head = [], vis = [], all = [], view = [], page = 0, sortCol = -1, sortDesc = false, info = {}, gen = 0, ldTimer, iId = -1, iNC = -1, sel = null, cat = null, catP = null;
+let iMun = -1, iLoc = -1, iEst = -1, iAlta = -1, iModi = -1, iBaja = -1, head = [], vis = [], all = [], view = [], page = 0, sortCol = -1, sortDesc = false, info = {}, gen = 0, ldTimer, iId = -1, iNC = -1, sel = null, cat = null, catP = null, modo = 'mod', snap = '';
 
 const espera = ms => new Promise(r => setTimeout(r, ms));
 // Petición con reintentos automáticos (Apps Script falla a veces en el primer intento)
@@ -400,17 +403,18 @@ function msg(t, tipo) { $('pnm').textContent = t || ''; $('pnm').className = tip
 
 function abrir(row) {
   if (sel && sel !== row && hayCambios() && !confirm('Hay cambios sin guardar. ¿Descartarlos?')) return;
-  sel = row; document.body.classList.add('pn-open'); $('pn').hidden = false;
+  sel = row; modo = 'mod'; document.body.classList.add('pn-open'); $('pn').hidden = false;
   pintaPanel(); render();
   cargarCat()
     .catch(e => { if (e.message !== 'expired' && sel === row) msg('No se pudieron cargar las listas de sector, CNAE e IAE. Cierra y abre el registro.', 'e'); });
 }
 function cerrar(force) {
   if (!force && sel && hayCambios() && !confirm('Hay cambios sin guardar. ¿Descartarlos?')) return;
-  sel = null; $('pn').hidden = true; document.body.classList.remove('pn-open'); msg('');
+  sel = null; modo = 'mod'; $('pn').hidden = true; document.body.classList.remove('pn-open'); msg('');
   if (!force) render();
 }
 function pintaPanel() {
+  if (modo === 'tit') return pintaTitular();
   const r = sel, f = i => {
     const k = clave(head[i]), ed = EDITABLES.includes(k), w = ANCHOS.includes(k) ? ' w' : '', id = 'c_' + i, v = esc(r[i]);
     const ctl = k === 'observaciones'
@@ -426,6 +430,7 @@ function pintaPanel() {
     '</div><h4>Ubicación</h4><div id="pnmap" class="mapa"></div><h4>Datos no modificables</h4><div class="g2">' + vis.filter(i => !EDITABLES.includes(clave(head[i]))).map(f).join('') + '</div>';
   $('pnf').scrollTop = 0; msg('La fecha de modificación se actualiza sola al guardar.');
   mapKey = ''; actualizaMapa();
+  snap = formVals(); toolbar();
 }
 function cambios() {
   const cam = {};
@@ -435,10 +440,12 @@ function cambios() {
   });
   return cam;
 }
-const hayCambios = () => !!sel && Object.keys(cambios()).length > 0;
+const formVals = () => [...$('pnf').querySelectorAll('[data-i]:not(:disabled)')].map(e => e.value.trim()).join('\u0001');
+const hayCambios = () => !!sel && formVals() !== snap;
 
 $('pnform').onsubmit = async e => {
   e.preventDefault(); if (!sel) return;
+  if (modo === 'tit') return guardaTitular();
   const cam = cambios(), row = sel, ks = Object.keys(cam);
   if (!ks.length) return msg('No has cambiado ningún dato.');
   if (cam.cp && !/^\d{5}$/.test(cam.cp)) return msg('El C.P. debe tener 5 dígitos.', 'e');
@@ -553,6 +560,74 @@ function actualizaMapa() {
 }
 let toastT;
 function toast(t) { const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove('on'), 3000); }
+
+
+// ===== Cambio de titular =====
+const TIT_EDIT = ['titular', 'nif', 'sexo', 'ncomercial', 'tfn', 'movil', 'email', 'web', 'observaciones'];
+const TIT_VACIOS = ['titular', 'nif', 'sexo'];
+const TIT_FECHAS = ['fechaalta', 'fechamodi', 'fechabaja'];
+const colIdx = k => head.findIndex(x => clave(x) === k);
+const cerrado = () => !!sel && iEst >= 0 && String(sel[iEst]).trim() === '0';
+
+function toolbar() {
+  const t = modo === 'tit';
+  $('ibm').classList.toggle('on', !t); $('ibm').setAttribute('aria-pressed', String(!t));
+  $('ibt').classList.toggle('on', t);  $('ibt').setAttribute('aria-pressed', String(t));
+  $('ibt').disabled = cerrado();
+  $('ibt').title = cerrado() ? 'Cambio de titular (el registro ya está de baja)' : 'Cambio de titular';
+  $('pnsv').textContent = t ? 'Crear nuevo titular' : 'Guardar';
+}
+function cambiaModo(m) {
+  if (!sel || modo === m) return;
+  if (hayCambios() && !confirm('Hay cambios sin guardar. ¿Descartarlos?')) return;
+  modo = m; pintaPanel();
+}
+$('ibm').onclick = () => cambiaModo('mod');
+$('ibt').onclick = () => { if (!cerrado()) cambiaModo('tit'); };
+
+function pintaTitular() {
+  const r = sel, iO = colIdx('ot'), ot = String(iO >= 0 ? r[iO] : '').trim().toUpperCase();
+  const sig = /^[A-Y]$/.test(ot) ? String.fromCharCode(ot.charCodeAt(0) + 1) : '?';
+  const iS = colIdx('sexo'), sexos = [...new Set(all.map(x => String(x[iS] || '').trim()).filter(Boolean))].sort();
+  const f = i => {
+    const k = clave(head[i]), ed = TIT_EDIT.includes(k), id = 'c_' + i;
+    const v = esc(TIT_VACIOS.includes(k) ? '' : r[i]), w = ANCHOS.includes(k) ? 'w' : '';
+    const req = k === 'titular' || k === 'nif' ? ' <i aria-hidden="true">*</i>' : '';
+    const ctl = k === 'observaciones' ? `<textarea id="${id}" data-i="${i}" maxlength="2000">${v}</textarea>`
+      : k === 'sexo' ? `<select id="${id}" data-i="${i}"><option value=""></option>${sexos.map(x => `<option>${esc(x)}</option>`).join('')}</select>`
+      : `<input id="${id}" data-i="${i}" value="${v}" ${ed ? '' : 'disabled'}>`;
+    return `<div class="${w}"><label for="${id}">${esc(head[i])}${req}</label>${ctl}</div>`;
+  };
+  const lista = vis.filter(i => !TIT_FECHAS.includes(clave(head[i])));
+  $('pnt').textContent = 'Cambio de titular';
+  $('pns').textContent = (iNC >= 0 && r[iNC]) || '';
+  $('pnf').innerHTML = `<div class="aviso">Al guardar, el registro actual (<b>${esc(r[colIdx('titular')])}</b>, OT <b>${esc(ot)}</b>) pasará a <b>baja</b> con la fecha de hoy y se creará un registro nuevo con OT <b>${sig}</b>, EST 1 y fecha de alta de hoy. Los campos con * son obligatorios.</div>` +
+    '<h4>Nuevo titular</h4><div class="g2">' + lista.filter(i => TIT_EDIT.includes(clave(head[i]))).map(f).join('') +
+    '</div><h4>Datos que se mantienen (mismo local y actividad)</h4><div class="g2">' + lista.filter(i => !TIT_EDIT.includes(clave(head[i]))).map(f).join('') + '</div>';
+  $('pnf').scrollTop = 0; msg('');
+  snap = formVals(); toolbar();
+}
+async function guardaTitular() {
+  const row = sel, d = {};
+  $('pnf').querySelectorAll('[data-i]:not(:disabled)').forEach(el => { d[clave(head[+el.dataset.i])] = el.value.trim(); });
+  if (!d.titular) return msg('Introduce el titular.', 'e');
+  if (!d.nif) return msg('Introduce el NIF.', 'e');
+  if (!/^[A-Za-z0-9]{8,12}$/.test(d.nif.replace(/[\s.\-]/g, ''))) return msg('El NIF no es válido.', 'e');
+  if (d.email && !/^\S+@\S+\.\S+$/.test(d.email)) return msg('El email no es válido.', 'e');
+  if (!confirm('Se dará de baja el registro actual y se creará uno nuevo a nombre de ' + d.titular + '. ¿Continuar?')) return;
+  $('pnsv').disabled = $('pnd').disabled = true; msg('Guardando…');
+  try {
+    const r = await api({ action: 'titular', token: localStorage.getItem('tk'), id: row[iId], datos: d }, 1, 60000);
+    if (r.expired) return caducada();
+    if (!r.ok) return msg(r.error, 'e');
+    r.viejo.forEach((v, i) => { row[i] = v; });
+    const nu = r.nuevo, hh = x => fold(vis.map(i => x[i]).join(' '));
+    row.h = hh(row); nu.h = hh(nu); marcar(row); marcar(nu);
+    all.splice(all.indexOf(row) + 1, 0, nu);
+    contRev(); filter(true); cerrar(true); render(); toast('Cambio de titular realizado');
+  } catch (x) { msg('No se pudo confirmar la operación. Actualiza los datos y comprueba si se hizo antes de repetirla.', 'e'); }
+  finally { $('pnsv').disabled = $('pnd').disabled = false; }
+}
 
 if (localStorage.getItem('tk')) load();
 </script>
