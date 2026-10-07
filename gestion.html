@@ -58,6 +58,36 @@ th.pt,td.pt{width:34px;min-width:34px;padding:7px 6px 7px 12px}
 .act.busy i{display:inline-block}
 select{padding:9px 10px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink);font:inherit;max-width:230px}
 select:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+
+/* Panel lateral de edición */
+:root{--pw:clamp(460px,48vw,760px)}
+tbody tr{cursor:pointer}
+tbody tr.sel td{box-shadow:inset 0 2px 0 var(--acc),inset 0 -2px 0 var(--acc)}
+#pn{position:fixed;top:0;right:0;bottom:0;width:var(--pw);max-width:100%;background:var(--card);border-left:1px solid var(--line);box-shadow:-8px 0 24px rgba(0,0,0,.15);display:flex;flex-direction:column;z-index:5}
+@media(min-width:900px){body.pn-open #app{margin-right:var(--pw)}}
+.pnh{padding:14px 16px 0;border-bottom:1px solid var(--line)}
+.pnt{display:flex;gap:10px;align-items:flex-start}
+.pnt div{flex:1;min-width:0}
+.pnt h3{margin:0;font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pnt small{color:var(--mute)}
+.x{padding:4px 10px}
+.ibs{display:flex;gap:6px;padding:12px 0}
+.ib{width:42px;height:38px;padding:0;display:grid;place-items:center;background:transparent;color:var(--ink);border:1px solid var(--line)}
+.ib.on{background:var(--acc);color:var(--accT);border-color:var(--acc)}
+.ib:disabled{opacity:.4;cursor:not-allowed}
+.ib svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#pnform{display:flex;flex-direction:column;flex:1;min-height:0}
+.pnb{flex:1;overflow:auto;padding:4px 16px 16px}
+.pnb h4{margin:16px 0 2px;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--mute)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+.g2 .w{grid-column:1/-1}
+.g2 label{margin:10px 0 3px;font-size:13px}
+.g2 input:disabled,.g2 textarea:disabled{background:var(--head);color:var(--mute);border-style:dashed}
+textarea{width:100%;min-height:70px;padding:9px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit;resize:vertical}
+.pnbt{display:flex;gap:10px;align-items:center;padding:12px 16px;border-top:1px solid var(--line)}
+#pnm{flex:1;color:var(--mute);min-height:20px}
+#pnm.e{color:var(--err)}#pnm.o{color:var(--ok)}
+@media(max-width:600px){.g2{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -95,6 +125,23 @@ select:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
   </div>
 </main>
 
+<aside id="pn" hidden aria-label="Detalle del registro">
+  <div class="pnh">
+    <div class="pnt"><div><h3 id="pnt"></h3><small id="pns"></small></div><button class="sec x" id="pnx" type="button" aria-label="Cerrar panel">&#10005;</button></div>
+    <div class="ibs" role="toolbar" aria-label="Acciones">
+      <button type="button" class="ib on" aria-pressed="true" title="Modificar" aria-label="Modificar"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg></button>
+      <button type="button" class="ib" disabled title="Cambio de titular (próximamente)" aria-label="Cambio de titular"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></button>
+      <button type="button" class="ib" disabled title="Cambio de actividad (próximamente)" aria-label="Cambio de actividad"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2M3 13h18"/></svg></button>
+      <button type="button" class="ib" disabled title="Dar de baja (próximamente)" aria-label="Dar de baja"><svg viewBox="0 0 24 24"><path d="M3 9l1.5-5h15L21 9v1a3 3 0 01-6 0 3 3 0 01-6 0 3 3 0 01-6 0V9z"/><path d="M5 13v7h14v-7"/><path d="M9.5 15.5l5 3.5m0-3.5l-5 3.5"/></svg></button>
+    </div>
+  </div>
+  <form id="pnform" novalidate>
+    <div class="pnb" id="pnf"></div>
+    <div class="pnbt"><span id="pnm" role="status"></span><button type="button" class="sec" id="pnd">Descartar</button><button id="pnsv">Guardar</button></div>
+  </form>
+  <datalist id="dl_sectorcomercial"></datalist><datalist id="dl_cnae"></datalist><datalist id="dl_iae"></datalist>
+</aside>
+
 <div id="ld" role="status" aria-live="polite" hidden>
   <div class="sp"></div>
   <h3>Cargando datos…</h3>
@@ -114,7 +161,7 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fold = s => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const clave = s => fold(s).replace(/[^a-z0-9]/g, '');
-let iMun = -1, iLoc = -1, iEst = -1, iAlta = -1, iModi = -1, iBaja = -1, head = [], vis = [], all = [], view = [], page = 0, sortCol = -1, sortDesc = false, info = {}, gen = 0, ldTimer;
+let iMun = -1, iLoc = -1, iEst = -1, iAlta = -1, iModi = -1, iBaja = -1, head = [], vis = [], all = [], view = [], page = 0, sortCol = -1, sortDesc = false, info = {}, gen = 0, ldTimer, iId = -1, iNC = -1, sel = null, cat = null, catP = null;
 
 const espera = ms => new Promise(r => setTimeout(r, ms));
 // Petición con reintentos automáticos (Apps Script falla a veces en el primer intento)
@@ -130,7 +177,7 @@ async function api(body, intentos = 3, ms = 40000) {
 }
 
 function showLogin(msg) {
-  gen++; showLoad(false); setAct('');
+  gen++; showLoad(false); setAct(''); cerrar(true); cat = null; catP = null;
   localStorage.removeItem('tk'); localStorage.removeItem('usr');
   $('app').hidden = true; $('login').hidden = false; $('le').textContent = msg || ''; $('bl').disabled = false;
 }
@@ -211,6 +258,7 @@ async function refrescar(tk, id) {
 }
 
 function setData(r, keep, primera) {
+  const selId = sel && iId >= 0 ? sel[iId] : null;
   head = r.head; all = r.rows;
   vis = head.map((h, i) => i).filter(i => !OCULTAS.includes(clave(head[i])));
   all.forEach(row => { row.h = fold(vis.map(i => row[i]).join(' ')); });
@@ -218,16 +266,9 @@ function setData(r, keep, primera) {
   iMun = head.findIndex(h => clave(h) === 'municipio');
   iLoc = head.findIndex(h => clave(h) === 'localidad');
   const col = c => head.findIndex(h => clave(h) === c);
-  iEst = col('est'); iAlta = col('fechaalta'); iModi = col('fechamodi'); iBaja = col('fechabaja');
-  const post = (row, i) => { const d = i >= 0 ? parseFecha(row[i]) : null; return !!d && d > FECHA_REVISION; };
-  let nRev = 0;
-  all.forEach(row => {
-    const a = post(row, iAlta), m = post(row, iModi), b = post(row, iBaja);
-    row.rev = a || m || b;
-    // prioridad: baja reciente (rojo) > alta nueva (verde) > modificado (azul)
-    row.cls = b ? 'r-baja' : a ? 'r-alta' : m ? 'r-modi' : '';
-    if (row.rev) nRev++;
-  });
+  iId = col('id'); iNC = col('ncomercial'); iEst = col('est'); iAlta = col('fechaalta'); iModi = col('fechamodi'); iBaja = col('fechabaja');
+  all.forEach(marcar);
+  if (selId != null) { sel = all.find(x => x[iId] === selId) || null; if (!sel) cerrar(true); }
   if (!keep) {
     sortCol = -1; sortDesc = false; page = 0; $('q').value = '';
     $('fm').value = ''; $('fl').value = ''; $('fr').value = '';
@@ -235,8 +276,7 @@ function setData(r, keep, primera) {
   const m = $('fm').value, l = $('fl').value, v = $('fr').value;
   rellenar($('fm'), valores(iMun), 'Todos los municipios', m);
   rellenarLoc(l);
-  $('fr').innerHTML = `<option value="">Revisados: todos</option><option value="si">Revisados (${nRev.toLocaleString('es')})</option><option value="no">Sin revisar (${(all.length - nRev).toLocaleString('es')})</option>`;
-  $('fr').value = v;
+  contRev();
   buildHead(); filter(true);
 }
 
@@ -289,7 +329,7 @@ function render() {
   const pages = Math.max(1, Math.ceil(view.length / PAGE));
   page = Math.min(page, pages - 1);
   $('tb').innerHTML = view.slice(page * PAGE, page * PAGE + PAGE)
-    .map(r => `<tr class="${r.cls}">` + (iEst >= 0 ? (String(r[iEst]).trim() === '0'
+    .map((r, n) => `<tr tabindex="0" data-k="${page * PAGE + n}" class="${r.cls}${r === sel ? ' sel' : ''}">` + (iEst >= 0 ? (String(r[iEst]).trim() === '0'
       ? '<td class="pt" title="Cerrado"><i class="dot off"></i><span class="sr">Cerrado</span></td>'
       : '<td class="pt" title="Activo"><i class="dot ok"></i><span class="sr">Activo</span></td>') : '') + vis.map(i => `<td title="${esc(r[i])}">${esc(r[i])}</td>`).join('') + '</tr>').join('');
   $('th').querySelectorAll('th').forEach(t => {
@@ -312,6 +352,106 @@ $('fm').onchange = () => { rellenarLoc(''); filter(); };
 $('lf').onclick = () => { $('q').value = ''; $('fm').value = ''; $('fr').value = ''; rellenarLoc(''); filter(); };
 $('pv').onclick = () => { page--; render(); };
 $('nx').onclick = () => { page++; render(); };
+
+
+// ===== Revisados: clasificación de una fila y contadores =====
+function marcar(row) {
+  const post = i => { const d = i >= 0 ? parseFecha(row[i]) : null; return !!d && d > FECHA_REVISION; };
+  const a = post(iAlta), m = post(iModi), b = post(iBaja);
+  row.rev = a || m || b;
+  // prioridad: baja reciente (rojo) > alta nueva (verde) > modificado (azul)
+  row.cls = b ? 'r-baja' : a ? 'r-alta' : m ? 'r-modi' : '';
+}
+function contRev() {
+  const v = $('fr').value, n = all.filter(r => r.rev).length;
+  $('fr').innerHTML = `<option value="">Revisados: todos</option><option value="si">Revisados (${n.toLocaleString('es')})</option><option value="no">Sin revisar (${(all.length - n).toLocaleString('es')})</option>`;
+  $('fr').value = v;
+}
+
+// ===== Panel lateral: Modificar =====
+const EDITABLES = ['ncomercial','direccion','cp','tfn','movil','email','web','localizacion','observaciones','sectorcomercial','cnae','iae'];
+const CATS = { sectorcomercial: 'sc', cnae: 'cnae', iae: 'iae' };
+const ANCHOS = ['ncomercial','direccion','observaciones','sectorcomercial','cnae','iae','titular','email','web','localizacion'];
+
+function cargarCat() {
+  if (cat) return Promise.resolve(cat);
+  return catP || (catP = api({ action: 'catalogos', token: localStorage.getItem('tk') }, 2, 40000).then(r => {
+    if (r.expired) { caducada(); throw new Error('expired'); }
+    if (!r.ok) throw new Error(r.error);
+    cat = r; return r;
+  }).catch(e => { catP = null; throw e; }));
+}
+function llenaListas() {
+  Object.keys(CATS).forEach(k => {
+    $('dl_' + k).innerHTML = cat[CATS[k]].map(n => `<option value="${esc(n)}"></option>`).join('');
+  });
+}
+function msg(t, tipo) { $('pnm').textContent = t || ''; $('pnm').className = tipo || ''; }
+
+function abrir(row) {
+  if (sel && sel !== row && hayCambios() && !confirm('Hay cambios sin guardar. ¿Descartarlos?')) return;
+  sel = row; document.body.classList.add('pn-open'); $('pn').hidden = false;
+  pintaPanel(); render();
+  cargarCat().then(() => { if (sel === row) llenaListas(); })
+    .catch(e => { if (e.message !== 'expired' && sel === row) msg('No se pudieron cargar las listas de sector, CNAE e IAE. Cierra y abre el registro.', 'e'); });
+}
+function cerrar(force) {
+  if (!force && sel && hayCambios() && !confirm('Hay cambios sin guardar. ¿Descartarlos?')) return;
+  sel = null; $('pn').hidden = true; document.body.classList.remove('pn-open'); msg('');
+  if (!force) render();
+}
+function pintaPanel() {
+  const r = sel, f = i => {
+    const k = clave(head[i]), ed = EDITABLES.includes(k), w = ANCHOS.includes(k) ? ' w' : '', id = 'c_' + i, v = esc(r[i]);
+    const ctl = k === 'observaciones'
+      ? `<textarea id="${id}" data-i="${i}" maxlength="2000">${v}</textarea>`
+      : `<input id="${id}" data-i="${i}" value="${v}" ${CATS[k] ? `list="dl_${k}" ` : ''}${ed ? '' : 'disabled'} ${k === 'cp' ? 'inputmode="numeric" maxlength="5"' : ''}>`;
+    return `<div class="${w.trim()}"><label for="${id}">${esc(head[i])}</label>${ctl}</div>`;
+  };
+  $('pnt').textContent = (iNC >= 0 && r[iNC]) || 'Registro';
+  $('pns').textContent = [r[iMun], r[iLoc]].filter(Boolean).join(' · ');
+  $('pnf').innerHTML = '<h4>Datos modificables</h4><div class="g2">' + vis.filter(i => EDITABLES.includes(clave(head[i]))).map(f).join('') +
+    '</div><h4>Datos no modificables</h4><div class="g2">' + vis.filter(i => !EDITABLES.includes(clave(head[i]))).map(f).join('') + '</div>';
+  $('pnf').scrollTop = 0; msg('La fecha de modificación se actualiza sola al guardar.');
+  if (cat) llenaListas();
+}
+function cambios() {
+  const cam = {};
+  $('pnf').querySelectorAll('[data-i]:not(:disabled)').forEach(el => {
+    const i = +el.dataset.i, v = el.value.trim();
+    if (v !== String(sel[i]).trim()) cam[clave(head[i])] = v;
+  });
+  return cam;
+}
+const hayCambios = () => !!sel && Object.keys(cambios()).length > 0;
+
+$('pnform').onsubmit = async e => {
+  e.preventDefault(); if (!sel) return;
+  const cam = cambios(), row = sel, ks = Object.keys(cam);
+  if (!ks.length) return msg('No has cambiado ningún dato.');
+  if (cam.cp && !/^\d{5}$/.test(cam.cp)) return msg('El C.P. debe tener 5 dígitos.', 'e');
+  if (cam.email && !/^\S+@\S+\.\S+$/.test(cam.email)) return msg('El email no es válido.', 'e');
+  for (const k of Object.keys(CATS)) {
+    if (!(k in cam)) continue;
+    if (!cam[k]) return msg('El campo ' + k.toUpperCase() + ' no puede quedar vacío.', 'e');
+    if (cat && !cat[CATS[k]].some(n => fold(n) === fold(cam[k]))) return msg('Elige un valor de la lista en ' + k.toUpperCase() + '.', 'e');
+  }
+  $('pnsv').disabled = $('pnd').disabled = true; msg('Guardando…');
+  try {
+    const r = await api({ action: 'update', token: localStorage.getItem('tk'), id: row[iId], cambios: cam }, 2, 60000);
+    if (r.expired) return caducada();
+    if (!r.ok) return msg(r.error, 'e');
+    r.row.forEach((v, i) => { row[i] = v; });
+    row.h = fold(vis.map(i => row[i]).join(' ')); marcar(row); contRev(); filter(true);
+    if (sel === row) { pintaPanel(); msg('Cambios guardados.', 'o'); }
+  } catch (x) { msg('No se pudo guardar. Revisa la conexión e inténtalo de nuevo.', 'e'); }
+  finally { $('pnsv').disabled = $('pnd').disabled = false; }
+};
+$('pnd').onclick = () => { if (sel) pintaPanel(); };
+$('pnx').onclick = () => cerrar();
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && sel && !$('ld').offsetParent) cerrar(); });
+$('tb').onclick = e => { const tr = e.target.closest('tr'); if (tr && view[+tr.dataset.k]) abrir(view[+tr.dataset.k]); };
+$('tb').onkeydown = e => { if (e.key === 'Enter') { const tr = e.target.closest('tr'); if (tr && view[+tr.dataset.k]) abrir(view[+tr.dataset.k]); } };
 
 if (localStorage.getItem('tk')) load();
 </script>
