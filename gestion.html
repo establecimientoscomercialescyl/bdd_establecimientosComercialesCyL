@@ -475,15 +475,17 @@ $('tb').onkeydown = e => { if (e.key === 'Enter') { const tr = e.target.closest(
 
 
 // ===== Desplegable con todas las opciones (sector, CNAE, IAE) =====
+function opciones(k) { return k === 'localidad' ? locs : (cat ? cat[CATS[k]] : null); }
 function cbCerrar() {
   document.querySelectorAll('.cbl').forEach(u => { u.hidden = true; const i = u.parentNode.querySelector('input'); if (i) i.setAttribute('aria-expanded', 'false'); });
 }
 function cbAbrir(inp, todos) {
   cbCerrar();
   const k = clave(head[+inp.dataset.i]), ul = $('cbl_' + k), orig = fold(String(sel[+inp.dataset.i]).trim());
-  if (!cat) { ul.innerHTML = '<li class="vacio">Cargando listas…</li>'; ul.hidden = false; return; }
+  const ops = opciones(k);
+  if (!ops) { ul.innerHTML = '<li class="vacio">Cargando listas…</li>'; ul.hidden = false; return; }
   const q = todos ? [] : fold(inp.value.trim()).split(/\s+/).filter(Boolean);
-  const items = cat[CATS[k]].filter(n => { const f = fold(n); return q.every(w => f.includes(w)); });
+  const items = ops.filter(n => { const f = fold(n); return q.every(w => f.includes(w)); });
   ul.innerHTML = items.length ? items.map(n => {
     const cur = fold(n) === orig;
     return `<li role="option" data-v="${esc(n)}"${cur ? ' class="cur" aria-selected="true"' : ''}>${esc(n)}${cur ? ' <b>✓ actual</b>' : ''}</li>`;
@@ -530,7 +532,8 @@ pnf.addEventListener('focusout', e => {
   cb.querySelector('.cbl').hidden = true;
   const inp = cb.querySelector('input'), k = clave(head[+inp.dataset.i]);
   // si lo escrito no es una opción de la lista, se vuelve al último valor válido
-  if (cat && !cat[CATS[k]].some(n => fold(n) === fold(inp.value.trim()))) inp.value = inp.dataset.ok;
+  const ops = opciones(k);
+  if (ops && ops.length && !ops.some(n => fold(n) === fold(inp.value.trim()))) inp.value = inp.dataset.ok;
 });
 
 // ===== Mini mapa de la localización =====
@@ -563,9 +566,10 @@ function toast(t) { const e = $('toast'); e.textContent = t; e.classList.add('on
 
 
 // ===== Cambio de titular =====
-const TIT_EDIT = ['titular', 'nif', 'sexo', 'ncomercial', 'tfn', 'movil', 'email', 'web', 'observaciones'];
+const TIT_EDIT = ['titular', 'nif', 'sexo', 'ncomercial', 'direccion', 'cp', 'localidad', 'localizacion', 'tfn', 'movil', 'email', 'web', 'sectorcomercial', 'cnae', 'iae', 'observaciones'];
 const TIT_VACIOS = ['titular', 'nif', 'sexo'];
 const TIT_FECHAS = ['fechaalta', 'fechamodi', 'fechabaja'];
+let locs = null; const locCache = {};
 const colIdx = k => head.findIndex(x => clave(x) === k);
 const cerrado = () => !!sel && iEst >= 0 && String(sel[iEst]).trim() === '0';
 
@@ -585,7 +589,20 @@ function cambiaModo(m) {
 $('ibm').onclick = () => cambiaModo('mod');
 $('ibt').onclick = () => { if (!cerrado()) cambiaModo('tit'); };
 
+function cargarLocs() {
+  const iM = colIdx('municipio'), iP = colIdx('provincia'); if (iM < 0 || iP < 0) return;
+  const row = sel, prov = row[iP], mun = row[iM], key = fold(prov) + '|' + fold(mun);
+  if (locCache[key]) { locs = locCache[key]; return; }
+  locs = null;
+  api({ action: 'localidades', token: localStorage.getItem('tk'), provincia: prov, municipio: mun }, 2, 40000).then(r => {
+    if (r.expired) return caducada();
+    if (!r.ok) throw new Error(r.error);
+    locCache[key] = r.loc; if (sel === row) locs = r.loc;
+  }).catch(() => { if (sel === row && modo === 'tit') msg('No se pudo cargar la lista de localidades.', 'e'); });
+}
+
 function pintaTitular() {
+  cargarLocs();
   const r = sel, iO = colIdx('ot'), ot = String(iO >= 0 ? r[iO] : '').trim().toUpperCase();
   const sig = /^[A-Y]$/.test(ot) ? String.fromCharCode(ot.charCodeAt(0) + 1) : '?';
   const iS = colIdx('sexo'), sexos = [...new Set(all.map(x => String(x[iS] || '').trim()).filter(Boolean))].sort();
@@ -595,16 +612,19 @@ function pintaTitular() {
     const req = k === 'titular' || k === 'nif' ? ' <i aria-hidden="true">*</i>' : '';
     const ctl = k === 'observaciones' ? `<textarea id="${id}" data-i="${i}" maxlength="2000">${v}</textarea>`
       : k === 'sexo' ? `<select id="${id}" data-i="${i}"><option value=""></option>${sexos.map(x => `<option>${esc(x)}</option>`).join('')}</select>`
-      : `<input id="${id}" data-i="${i}" value="${v}" ${ed ? '' : 'disabled'}>`;
+      : ed && (CATS[k] || k === 'localidad')
+        ? `<div class="cb"><input id="${id}" data-i="${i}" value="${v}" data-ok="${v}" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="cbl_${k}"><button type="button" class="cbt" tabindex="-1" aria-label="Ver todas las opciones">&#9662;</button><ul class="cbl" id="cbl_${k}" role="listbox" hidden></ul></div>`
+        : `<input id="${id}" data-i="${i}" value="${v}" ${ed ? '' : 'disabled'} ${k === 'cp' ? 'inputmode="numeric" maxlength="5"' : ''}>`;
     return `<div class="${w}"><label for="${id}">${esc(head[i])}${req}</label>${ctl}</div>`;
   };
   const lista = vis.filter(i => !TIT_FECHAS.includes(clave(head[i])));
   $('pnt').textContent = 'Cambio de titular';
   $('pns').textContent = (iNC >= 0 && r[iNC]) || '';
-  $('pnf').innerHTML = `<div class="aviso">Al guardar, el registro actual (<b>${esc(r[colIdx('titular')])}</b>, OT <b>${esc(ot)}</b>) pasará a <b>baja</b> con la fecha de hoy y se creará un registro nuevo con OT <b>${sig}</b>, EST 1 y fecha de alta de hoy. Los campos con * son obligatorios.</div>` +
-    '<h4>Nuevo titular</h4><div class="g2">' + lista.filter(i => TIT_EDIT.includes(clave(head[i]))).map(f).join('') +
-    '</div><h4>Datos que se mantienen (mismo local y actividad)</h4><div class="g2">' + lista.filter(i => !TIT_EDIT.includes(clave(head[i]))).map(f).join('') + '</div>';
+  $('pnf').innerHTML = `<div class="aviso">Al guardar, el registro actual (<b>${esc(r[colIdx('titular')])}</b>, OT <b>${esc(ot)}</b>) pasará a <b>baja</b> con la fecha de hoy y se creará un registro nuevo con OT <b>${sig}</b>, EST 1 y fechas de alta y de modificación de hoy. Los campos con * son obligatorios.</div>` +
+    '<h4>Nuevo titular y datos del establecimiento</h4><div class="g2">' + lista.filter(i => TIT_EDIT.includes(clave(head[i]))).map(f).join('') +
+    '</div><h4>Ubicación</h4><div id="pnmap" class="mapa"></div><h4>Datos que se mantienen</h4><div class="g2">' + lista.filter(i => !TIT_EDIT.includes(clave(head[i]))).map(f).join('') + '</div>';
   $('pnf').scrollTop = 0; msg('');
+  mapKey = ''; actualizaMapa();
   snap = formVals(); toolbar();
 }
 async function guardaTitular() {
@@ -614,6 +634,13 @@ async function guardaTitular() {
   if (!d.nif) return msg('Introduce el NIF.', 'e');
   if (!/^[A-Za-z0-9]{8,12}$/.test(d.nif.replace(/[\s.\-]/g, ''))) return msg('El NIF no es válido.', 'e');
   if (d.email && !/^\S+@\S+\.\S+$/.test(d.email)) return msg('El email no es válido.', 'e');
+  if (d.cp && !/^\d{5}$/.test(d.cp)) return msg('El C.P. debe tener 5 dígitos.', 'e');
+  for (const k of [...Object.keys(CATS), 'localidad']) {
+    if (!(k in d)) continue;
+    if (!d[k]) return msg('El campo ' + k.toUpperCase() + ' no puede quedar vacío.', 'e');
+    const ops = opciones(k), ini = String(row[colIdx(k)]).trim();
+    if (ops && ops.length && fold(d[k]) !== fold(ini) && !ops.some(n => fold(n) === fold(d[k]))) return msg('Elige un valor de la lista en ' + k.toUpperCase() + '.', 'e');
+  }
   if (!confirm('Se dará de baja el registro actual y se creará uno nuevo a nombre de ' + d.titular + '. ¿Continuar?')) return;
   $('pnsv').disabled = $('pnd').disabled = true; msg('Guardando…');
   try {
