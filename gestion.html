@@ -69,7 +69,7 @@ tbody tr:hover{background:var(--head)}
   </header>
   <div class="bar">
     <input id="q" type="search" placeholder="Buscar en todos los campos" aria-label="Buscar">
-    <span class="act" id="act" hidden role="status"><i></i><span id="actt"></span></span>
+    <span class="act" id="act" hidden role="status"><i></i><span id="actt"></span><button class="sec" id="rf" hidden>Actualizar ahora</button></span>
     <span class="info" id="info"></span>
   </div>
   <div class="wrap"><table><thead id="th"></thead><tbody id="tb"></tbody></table></div>
@@ -83,6 +83,7 @@ tbody tr:hover{background:var(--head)}
   <h3>Cargando datos…</h3>
   <p id="ldm"></p>
   <p class="t" id="ldt"></p>
+  <button class="sec" id="cl" hidden>Cancelar y volver al acceso</button>
 </div>
 
 <script>
@@ -98,12 +99,14 @@ let head = [], vis = [], all = [], view = [], page = 0, sortCol = -1, sortDesc =
 
 const espera = ms => new Promise(r => setTimeout(r, ms));
 // Petición con reintentos automáticos (Apps Script falla a veces en el primer intento)
-async function api(body, intentos = 3) {
+async function api(body, intentos = 3, ms = 40000) {
   for (let n = 1; ; n++) {
+    const ac = new AbortController(), t = setTimeout(() => ac.abort(), ms);
     try {
-      const r = await fetch(API_URL, { method: 'POST', body: JSON.stringify(body) });
+      const r = await fetch(API_URL, { method: 'POST', body: JSON.stringify(body), signal: ac.signal });
       return await r.json();
     } catch (e) { if (n >= intentos) throw e; await espera(1500 * n); }
+    finally { clearTimeout(t); }
   }
 }
 
@@ -123,17 +126,22 @@ $('f').onsubmit = async e => {
     $('p').value = ''; load();
   } catch (x) { showLogin('No se pudo conectar con el servidor. Inténtalo de nuevo.'); }
 };
-$('out').onclick = () => showLogin();
+$('out').onclick = $('cl').onclick = () => showLogin();
+$('rf').onclick = () => refrescar(localStorage.getItem('tk'), gen);
 
 function showLoad(on, msg) {
   clearInterval(ldTimer); $('ld').hidden = !on;
   if (!on) return;
   $('ldm').textContent = msg || '';
-  const t0 = Date.now(), tick = () => $('ldt').textContent = 'Transcurridos ' + Math.floor((Date.now() - t0) / 1000) + ' s';
+  $('cl').hidden = true;
+  const t0 = Date.now(), tick = () => {
+    const n = Math.floor((Date.now() - t0) / 1000);
+    $('ldt').textContent = 'Transcurridos ' + n + ' s'; $('cl').hidden = n < 10;
+  };
   tick(); ldTimer = setInterval(tick, 1000);
 }
 function setAct(txt, busy) {
-  $('act').hidden = !txt; $('actt').textContent = txt || ''; $('act').classList.toggle('busy', !!busy);
+  $('act').hidden = !txt; $('actt').textContent = txt || ''; $('rf').hidden = !!busy; $('act').classList.toggle('busy', !!busy);
 }
 const seg = t0 => ((performance.now() - t0) / 1000).toFixed(1);
 const caducada = () => showLogin('La sesión ha caducado. Vuelve a entrar.');
@@ -148,18 +156,19 @@ async function load() {
 
   // 1) Carga rápida desde el archivo diario
   let r = null;
-  try { r = await api({ action: 'list', token: tk, fuente: 'json' }); } catch (e) {}
+  try { r = await api({ action: 'list', token: tk, fuente: 'json' }, 2, 25000); } catch (e) {}
   if (id !== gen) return;
   if (r && r.expired) return caducada();
   if (r && r.ok && !r.vacio) {
     setData(r, false, seg(t0)); showLoad(false);
+    if (r.vigente) return setAct('Datos al día (generados ' + r.gen + ')');
     return refrescar(tk, id);          // 2) y actualiza en segundo plano con la hoja real
   }
 
   // Si todavía no existe el archivo, carga directa desde la hoja
   showLoad(true, 'Este proceso puede tardar entre 20 y 30 segundos. No cierres ni recargues la página.');
   try {
-    r = await api({ action: 'list', token: tk, fuente: 'hoja' });
+    r = await api({ action: 'list', token: tk, fuente: 'hoja' }, 2, 150000);
     if (id !== gen) return;
     if (r.expired) return caducada();
     if (!r.ok) return showLogin(r.error);
@@ -171,7 +180,7 @@ async function load() {
 async function refrescar(tk, id) {
   const t0 = performance.now(); setAct('Actualizando datos…', true);
   try {
-    const r = await api({ action: 'list', token: tk, fuente: 'hoja' });
+    const r = await api({ action: 'list', token: tk, fuente: 'hoja' }, 1, 150000);
     if (id !== gen) return;
     if (r.expired) return caducada();
     if (!r.ok) throw new Error(r.error);
