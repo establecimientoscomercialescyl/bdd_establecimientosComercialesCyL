@@ -28,7 +28,7 @@ header .who{color:var(--mute)}
 .bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:12px 16px}
 .bar input{max-width:320px}
 .bar .info{color:var(--mute);margin-left:auto}
-.wrap{margin:0 16px;overflow:auto;max-height:calc(100vh - 190px);border:1px solid var(--line);border-radius:8px;background:var(--card)}
+.wrap{margin:0 16px;overflow:auto;max-height:calc(100vh - 240px);border:1px solid var(--line);border-radius:8px;background:var(--card)}
 table{border-collapse:collapse;width:max-content;min-width:100%}
 th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;max-width:320px;overflow:hidden;text-overflow:ellipsis}
 th{position:sticky;top:0;background:var(--head);cursor:pointer;user-select:none;z-index:1}
@@ -46,6 +46,8 @@ tbody tr:hover{background:var(--head)}
 .act{display:inline-flex;align-items:center;gap:8px;color:var(--mute)}
 .act i{display:none;width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--acc);border-radius:50%;animation:giro 1s linear infinite}
 .act.busy i{display:inline-block}
+select{padding:9px 10px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink);font:inherit;max-width:230px}
+select:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
 </style>
 </head>
 <body>
@@ -68,6 +70,10 @@ tbody tr:hover{background:var(--head)}
     <button class="sec" id="out">Salir</button>
   </header>
   <div class="bar">
+    <select id="fm" aria-label="Municipio"></select>
+    <select id="fl" aria-label="Localidad"></select>
+    <select id="fr" aria-label="Revisados"></select>
+    <button class="sec" id="lf">Limpiar filtros</button>
     <input id="q" type="search" placeholder="Buscar en todos los campos" aria-label="Buscar">
     <span class="act" id="act" hidden role="status"><i></i><span id="actt"></span><button class="sec" id="rf" hidden>Actualizar ahora</button></span>
     <span class="info" id="info"></span>
@@ -91,11 +97,14 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbywcJXtUPfuBJbbPzNYOqz1
 const PAGE = 50;
 // Columnas que se reciben (para uso interno) pero no se muestran en la tabla
 const OCULTAS = ['id','nre','ot','ncn','est','idprovincia','idmunicipio','idlocalidad','habitantes','idsc','codiae','codcnae','grupodeaccionlocal'];
+// Un registro cuenta como "revisado" si su fecha de alta, modificación o baja es posterior a esta fecha
+const FECHA_REVISION = new Date(2026, 6, 1);   // 01/07/2026
+const COL_FECHAS = ['fechaalta', 'fechamodi', 'fechabaja'];
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fold = s => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const clave = s => fold(s).replace(/[^a-z0-9]/g, '');
-let head = [], vis = [], all = [], view = [], page = 0, sortCol = -1, sortDesc = false, info = {}, gen = 0, ldTimer;
+let iMun = -1, iLoc = -1, head = [], vis = [], all = [], view = [], page = 0, sortCol = -1, sortDesc = false, info = {}, gen = 0, ldTimer;
 
 const espera = ms => new Promise(r => setTimeout(r, ms));
 // Petición con reintentos automáticos (Apps Script falla a veces en el primer intento)
@@ -196,9 +205,44 @@ function setData(r, keep, primera) {
   vis = head.map((h, i) => i).filter(i => !OCULTAS.includes(clave(head[i])));
   all.forEach(row => { row.h = fold(vis.map(i => row[i]).join(' ')); });
   info = { fuente: r.fuente, gen: r.gen, primera };
-  if (!keep) { sortCol = -1; sortDesc = false; page = 0; $('q').value = ''; }
+  iMun = head.findIndex(h => clave(h) === 'municipio');
+  iLoc = head.findIndex(h => clave(h) === 'localidad');
+  const iF = COL_FECHAS.map(c => head.findIndex(h => clave(h) === c)).filter(i => i >= 0);
+  let nRev = 0;
+  all.forEach(row => {
+    row.rev = iF.some(i => { const d = parseFecha(row[i]); return d && d > FECHA_REVISION; });
+    if (row.rev) nRev++;
+  });
+  if (!keep) {
+    sortCol = -1; sortDesc = false; page = 0; $('q').value = '';
+    $('fm').value = ''; $('fl').value = ''; $('fr').value = '';
+  }
+  const m = $('fm').value, l = $('fl').value, v = $('fr').value;
+  rellenar($('fm'), valores(iMun), 'Todos los municipios', m);
+  rellenarLoc(l);
+  $('fr').innerHTML = `<option value="">Revisados: todos</option><option value="si">Revisados (${nRev.toLocaleString('es')})</option><option value="no">Sin revisar (${(all.length - nRev).toLocaleString('es')})</option>`;
+  $('fr').value = v;
   buildHead(); filter(true);
 }
+
+function parseFecha(s) {
+  const t = String(s).trim();
+  let m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m) return new Date(+m[3], +m[2] - 1, +m[1]);
+  m = t.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
+}
+const ord = (a, b) => a.localeCompare(b, 'es', { sensitivity: 'base', numeric: true });
+function valores(i, mun) {
+  const set = new Set();
+  all.forEach(r => { if (r[i] !== '' && (!mun || r[iMun] === mun)) set.add(r[i]); });
+  return [...set].sort(ord);
+}
+function rellenar(sel, vals, ph, actual) {
+  sel.innerHTML = `<option value="">${ph}</option>` + vals.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
+  sel.value = vals.includes(actual) ? actual : '';
+}
+function rellenarLoc(actual) { rellenar($('fl'), valores(iLoc, $('fm').value), 'Todas las localidades', actual); }
 
 function buildHead() {
   $('th').innerHTML = '<tr>' + vis.map(i => `<th tabindex="0" data-i="${i}">${esc(head[i])}</th>`).join('') + '</tr>';
@@ -210,7 +254,9 @@ function buildHead() {
 
 function filter(keep) {
   const q = fold($('q').value.trim());
-  view = q ? all.filter(r => r.h.includes(q)) : all.slice();
+  const m = $('fm').value, l = $('fl').value, v = $('fr').value;
+  view = all.filter(r => (!m || r[iMun] === m) && (!l || r[iLoc] === l) &&
+    (v === '' || (v === 'si') === r.rev) && (!q || r.h.includes(q)));
   if (sortCol >= 0) doSort();
   if (keep !== true) page = 0;
   render();
@@ -238,7 +284,9 @@ function render() {
     (info.fuente === 'json' ? `archivo diario (${info.gen})` : 'datos en directo de la hoja');
 }
 
-$('q').oninput = filter;
+$('q').oninput = $('fl').onchange = $('fr').onchange = filter;
+$('fm').onchange = () => { rellenarLoc(''); filter(); };
+$('lf').onclick = () => { $('q').value = ''; $('fm').value = ''; $('fr').value = ''; rellenarLoc(''); filter(); };
 $('pv').onclick = () => { page--; render(); };
 $('nx').onclick = () => { page++; render(); };
 
