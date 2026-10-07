@@ -82,11 +82,13 @@ tbody tr:hover{background:var(--head)}
 </div>
 
 <script>
-// Pega aquí la URL de la aplicación web (termina en /exec)
 const API_URL = 'https://script.google.com/macros/s/AKfycbywcJXtUPfuBJbbPzNYOqz10G4tyFGvHKN-PrENIPYy8R8amdFb_bOdnlwMeSXwZjGA/exec';
 const PAGE = 50;
+// Columnas que se reciben (para uso interno) pero no se muestran en la tabla
+const OCULTAS = ['id','nre','ot','ncn','est','idprovincia','idmunicipio','idlocalidad','habitantes','idsc','codiae','codcnae','grupodeaccionlocal'];
+const clave = s => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
 const $ = id => document.getElementById(id);
-let head = [], all = [], view = [], page = 0, sortCol = -1, sortDesc = false, lastMs = 0, tLoad = 0, loadSecs = 0;
+let head = [], vis = [], all = [], view = [], page = 0, sortCol = -1, sortDesc = false, lastMs = 0, tLoad = 0, loadSecs = 0;
 
 async function api(body) {
   const r = await fetch(API_URL, { method: 'POST', body: JSON.stringify(body) });
@@ -131,7 +133,9 @@ async function load() {
   try {
     const r = await api({ action: 'list', token: tk });
     if (!r.ok) return showLogin(r.expired ? 'La sesión ha caducado. Vuelve a entrar.' : r.error);
-    head = r.head; all = r.rows; lastMs = r.ms; loadSecs = ((performance.now() - tLoad) / 1000).toFixed(1);
+    head = r.head; all = r.rows;
+    vis = head.map((h, i) => i).filter(i => !OCULTAS.includes(clave(head[i])));
+    all.forEach(row => { row.h = fold(vis.map(i => row[i]).join(' ')); }); lastMs = r.ms; loadSecs = ((performance.now() - tLoad) / 1000).toFixed(1);
     sortCol = -1; page = 0; $('q').value = '';
     buildHead(); filter();
   } catch (x) { $('info').textContent = 'Error de conexión. Recarga la página.'; }
@@ -139,7 +143,7 @@ async function load() {
 }
 
 function buildHead() {
-  $('th').innerHTML = '<tr>' + head.map((h, i) => `<th tabindex="0" data-i="${i}">${esc(h)}</th>`).join('') + '</tr>';
+  $('th').innerHTML = '<tr>' + vis.map(i => `<th tabindex="0" data-i="${i}">${esc(head[i])}</th>`).join('') + '</tr>';
   $('th').querySelectorAll('th').forEach(t => {
     const go = () => sortBy(+t.dataset.i);
     t.onclick = go; t.onkeydown = e => { if (e.key === 'Enter') go(); };
@@ -148,7 +152,7 @@ function buildHead() {
 
 function filter() {
   const q = fold($('q').value.trim());
-  view = q ? all.filter(r => fold(r.join(' ')).includes(q)) : all.slice();
+  view = q ? all.filter(r => r.h.includes(q)) : all.slice();
   if (sortCol >= 0) doSort();
   page = 0; render();
 }
@@ -166,9 +170,9 @@ function render() {
   const pages = Math.max(1, Math.ceil(view.length / PAGE));
   page = Math.min(page, pages - 1);
   $('tb').innerHTML = view.slice(page * PAGE, page * PAGE + PAGE)
-    .map(r => '<tr>' + r.map(c => `<td title="${esc(c)}">${esc(c)}</td>`).join('') + '</tr>').join('');
-  $('th').querySelectorAll('th').forEach((t, i) => {
-    t.classList.toggle('s', i === sortCol); t.classList.toggle('d', i === sortCol && sortDesc);
+    .map(r => '<tr>' + vis.map(i => `<td title="${esc(r[i])}">${esc(r[i])}</td>`).join('') + '</tr>').join('');
+  $('th').querySelectorAll('th').forEach(t => {
+    const on = +t.dataset.i === sortCol; t.classList.toggle('s', on); t.classList.toggle('d', on && sortDesc);
   });
   $('pg').textContent = `Página ${page + 1} de ${pages}`;
   $('pv').disabled = page === 0; $('nx').disabled = page >= pages - 1;
