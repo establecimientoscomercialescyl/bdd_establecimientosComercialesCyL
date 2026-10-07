@@ -416,7 +416,7 @@ function pintaPanel() {
     const ctl = k === 'observaciones'
       ? `<textarea id="${id}" data-i="${i}" maxlength="2000">${v}</textarea>`
       : (CATS[k] && ed)
-        ? `<div class="cb"><input id="${id}" data-i="${i}" value="${v}" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="cbl_${k}"><button type="button" class="cbt" tabindex="-1" aria-label="Ver todas las opciones">&#9662;</button><ul class="cbl" id="cbl_${k}" role="listbox" hidden></ul></div>`
+        ? `<div class="cb"><input id="${id}" data-i="${i}" value="${v}" data-ok="${v}" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="cbl_${k}"><button type="button" class="cbt" tabindex="-1" aria-label="Ver todas las opciones">&#9662;</button><ul class="cbl" id="cbl_${k}" role="listbox" hidden></ul></div>`
         : `<input id="${id}" data-i="${i}" value="${v}" ${ed ? '' : 'disabled'} ${k === 'cp' ? 'inputmode="numeric" maxlength="5"' : ''}>`;
     return `<div class="${w.trim()}"><label for="${id}">${esc(head[i])}</label>${ctl}</div>`;
   };
@@ -475,8 +475,8 @@ function cbAbrir(inp, todos) {
   cbCerrar();
   const k = clave(head[+inp.dataset.i]), ul = $('cbl_' + k), orig = fold(String(sel[+inp.dataset.i]).trim());
   if (!cat) { ul.innerHTML = '<li class="vacio">Cargando listas…</li>'; ul.hidden = false; return; }
-  const q = todos ? '' : fold(inp.value.trim());
-  const items = cat[CATS[k]].filter(n => !q || fold(n).includes(q));
+  const q = todos ? [] : fold(inp.value.trim()).split(/\s+/).filter(Boolean);
+  const items = cat[CATS[k]].filter(n => { const f = fold(n); return q.every(w => f.includes(w)); });
   ul.innerHTML = items.length ? items.map(n => {
     const cur = fold(n) === orig;
     return `<li role="option" data-v="${esc(n)}"${cur ? ' class="cur" aria-selected="true"' : ''}>${esc(n)}${cur ? ' <b>✓ actual</b>' : ''}</li>`;
@@ -492,7 +492,7 @@ function cbMover(ul, d) {
 }
 function cbElegir(li) {
   const cb = li.closest('.cb'), inp = cb.querySelector('input');
-  inp.value = li.dataset.v; cbCerrar(); inp.focus();
+  inp.value = inp.dataset.ok = li.dataset.v; cbCerrar(); inp.focus();
 }
 const pnf = $('pnf');
 pnf.addEventListener('mousedown', e => {
@@ -501,8 +501,8 @@ pnf.addEventListener('mousedown', e => {
 pnf.addEventListener('click', e => {
   const cb = e.target.closest('.cb'); if (!cb) return;
   const inp = cb.querySelector('input'), ul = cb.querySelector('.cbl');
-  if (e.target.closest('.cbt')) { inp.focus(); ul.hidden ? cbAbrir(inp, true) : cbCerrar(); }
-  else if (e.target === inp && ul.hidden) cbAbrir(inp, true);
+  if (e.target.closest('.cbt')) { inp.focus(); if (ul.hidden) { cbAbrir(inp, true); inp.select(); } else cbCerrar(); }
+  else if (e.target === inp && ul.hidden) { cbAbrir(inp, true); inp.select(); }
 });
 pnf.addEventListener('input', e => {
   if (e.target.closest('.cb')) cbAbrir(e.target, false);
@@ -517,7 +517,14 @@ pnf.addEventListener('keydown', e => {
     e.preventDefault(); const a = ul.querySelector('li.act'); if (a) cbElegir(a); else cbCerrar();
   } else if (e.key === 'Escape' && !ul.hidden) { e.stopPropagation(); cbCerrar(); }
 });
-pnf.addEventListener('focusout', e => { const cb = e.target.closest('.cb'); if (cb && !cb.contains(e.relatedTarget)) cb.querySelector('.cbl').hidden = true; });
+pnf.addEventListener('focusout', e => {
+  const cb = e.target.closest('.cb');
+  if (!cb || cb.contains(e.relatedTarget)) return;
+  cb.querySelector('.cbl').hidden = true;
+  const inp = cb.querySelector('input'), k = clave(head[+inp.dataset.i]);
+  // si lo escrito no es una opción de la lista, se vuelve al último valor válido
+  if (cat && !cat[CATS[k]].some(n => fold(n) === fold(inp.value.trim()))) inp.value = inp.dataset.ok;
+});
 
 // ===== Mini mapa de la localización =====
 let mapKey = '', mapT;
