@@ -105,6 +105,18 @@ textarea{width:100%;min-height:70px;padding:9px 10px;border:1px solid var(--line
 #toast.on{opacity:1}
 .aviso{background:var(--head);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:12px 0 4px;font-size:13px;line-height:1.45}
 label i{color:var(--err);font-style:normal}
+button.verde{background:#1f7a3a;color:#fff}
+dialog#dalta{border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);padding:18px 20px;width:min(940px,95vw)}
+dialog#dalta::backdrop{background:rgba(0,0,0,.45)}
+dialog#dalta h3{margin:0 0 6px}
+#da1{max-width:460px}
+dialog#dalta .bt{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px;align-items:center}
+dialog#dalta .bt .m{margin-right:auto;color:var(--err);font-size:13px}
+dialog#dalta .tw{max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:8px;margin-top:10px}
+#dat2{width:100%;border-collapse:collapse;font-size:13px}
+#dat2 th,#dat2 td{padding:7px 9px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+#dat2 tbody tr{cursor:pointer}
+#dat2 tbody tr.on td{background:var(--head);box-shadow:inset 0 2px 0 var(--acc),inset 0 -2px 0 var(--acc)}
 dialog#dbaja{border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);padding:18px 20px;width:min(460px,92vw)}
 dialog#dbaja::backdrop{background:rgba(0,0,0,.45)}
 dialog#dbaja h3{margin:0 0 6px}
@@ -131,6 +143,7 @@ select{width:100%}
   <header>
     <h2>Establecimientos comerciales</h2>
     <span class="who" id="who"></span>
+    <button class="verde" id="alta" type="button">+ Nueva alta</button>
     <button class="sec" id="out">Salir</button>
   </header>
   <div class="bar">
@@ -164,6 +177,22 @@ select{width:100%}
     <div class="pnbt"><span id="pnm" role="status"></span><button type="button" class="sec" id="pnd">Descartar</button><button id="pnsv">Guardar</button></div>
   </form>
 </aside>
+
+<dialog id="dalta" aria-labelledby="dat">
+  <h3 id="dat">Nueva alta</h3>
+  <div id="da1">
+    <div class="aviso">Indica dónde está el establecimiento. Se buscarán comercios de baja en esa localidad que se puedan recuperar.</div>
+    <div id="dapw"><label for="dap">Provincia</label><select id="dap"></select></div>
+    <label for="dam">Municipio</label><input id="dam" list="dlm" autocomplete="off"><datalist id="dlm"></datalist>
+    <label for="dal">Localidad</label><input id="dal" list="dll" autocomplete="off"><datalist id="dll"></datalist>
+    <div class="bt"><span class="m" id="dam1" role="status"></span><button type="button" class="sec" id="dax">Cancelar</button><button type="button" id="dac">Continuar</button></div>
+  </div>
+  <div id="da2" hidden>
+    <div class="aviso" id="dai"></div>
+    <div class="tw"><table id="dat2"><thead></thead><tbody></tbody></table></div>
+    <div class="bt"><button type="button" class="sec" id="dab">Atrás</button><button type="button" class="sec" id="dan">Ninguno me sirve: alta nueva</button><button type="button" id="dar" disabled>Recuperar el seleccionado</button></div>
+  </div>
+</dialog>
 
 <dialog id="dbaja" aria-labelledby="dbt">
   <h3 id="dbt">Dar de baja el establecimiento</h3>
@@ -290,7 +319,7 @@ async function refrescar(tk, id) {
 }
 
 function setData(r, keep, primera) {
-  const selId = sel && iId >= 0 ? sel[iId] : null;
+  const selId = sel && !sel.alta && iId >= 0 ? sel[iId] : null;
   head = r.head; all = r.rows;
   vis = head.map((h, i) => i).filter(i => !OCULTAS.includes(clave(head[i])));
   all.forEach(row => { row.h = fold(vis.map(i => row[i]).join(' ')); });
@@ -459,6 +488,7 @@ const hayCambios = () => !!sel && formVals() !== snap;
 
 $('pnform').onsubmit = async e => {
   e.preventDefault(); if (!sel) return;
+  if (modo === 'alta') return guardaAlta();
   if (modo !== 'mod') return guardaTitular();
   const cam = cambios(), row = sel, ks = Object.keys(cam);
   if (!ks.length) return msg('No has cambiado ningún dato.');
@@ -483,7 +513,7 @@ $('pnform').onsubmit = async e => {
 };
 $('pnd').onclick = () => { if (sel) pintaPanel(); };
 $('pnx').onclick = () => cerrar();
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && sel && !$('ld').offsetParent) cerrar(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && sel && !$('ld').offsetParent && !document.querySelector('dialog[open]')) cerrar(); });
 $('tb').onclick = e => { const tr = e.target.closest('tr'); if (tr && view[+tr.dataset.k]) abrir(view[+tr.dataset.k]); };
 $('tb').onkeydown = e => { if (e.key === 'Enter') { const tr = e.target.closest('tr'); if (tr && view[+tr.dataset.k]) abrir(view[+tr.dataset.k]); } };
 
@@ -582,6 +612,7 @@ function toast(t) { const e = $('toast'); e.textContent = t; e.classList.add('on
 // ===== Cambio de titular =====
 const TIT_EDIT = ['titular', 'nif', 'sexo', 'ncomercial', 'direccion', 'cp', 'localidad', 'localizacion', 'tfn', 'movil', 'email', 'web', 'sectorcomercial', 'cnae', 'iae', 'observaciones'];
 const TIT_VACIOS = ['titular', 'nif', 'sexo'];
+const ALTA_EDIT = TIT_EDIT.filter(k => k !== 'localidad');   // alta: municipio y localidad quedan fijados por la ventana previa
 const ACT_EDIT = TIT_EDIT.filter(k => !TIT_VACIOS.includes(k));   // cambio de actividad: titular, NIF y SEXO no se tocan
 const TIT_FECHAS = ['fechaalta', 'fechamodi', 'fechabaja'];
 let locs = null; const locCache = {};
@@ -589,18 +620,19 @@ const colIdx = k => head.findIndex(x => clave(x) === k);
 const cerrado = () => !!sel && iEst >= 0 && String(sel[iEst]).trim() === '0';
 
 function toolbar() {
-  const t = modo === 'tit', a = modo === 'act';
-  $('ibm').classList.toggle('on', !t && !a); $('ibm').setAttribute('aria-pressed', String(!t && !a));
+  const t = modo === 'tit', a = modo === 'act', al = modo === 'alta';
+  $('ibm').classList.toggle('on', !t && !a && !al); $('ibm').setAttribute('aria-pressed', String(!t && !a && !al));
+  $('ibm').disabled = al;
   $('ibt').classList.toggle('on', t);  $('ibt').setAttribute('aria-pressed', String(t));
   $('iba').classList.toggle('on', a);  $('iba').setAttribute('aria-pressed', String(a));
-  $('ibt').disabled = $('iba').disabled = $('ibb').disabled = cerrado();
+  $('ibt').disabled = $('iba').disabled = $('ibb').disabled = al || cerrado();
   $('ibb').title = cerrado() ? 'Dar de baja (el registro ya está de baja)' : 'Dar de baja';
   $('ibt').title = cerrado() ? 'Cambio de titular (el registro ya está de baja)' : 'Cambio de titular';
   $('iba').title = cerrado() ? 'Cambio de actividad (el registro ya está de baja)' : 'Cambio de actividad';
-  $('pnsv').textContent = t ? 'Crear nuevo titular' : a ? 'Crear nuevo registro' : 'Guardar';
+  $('pnsv').textContent = t ? 'Crear nuevo titular' : a ? 'Crear nuevo registro' : al ? 'Crear alta' : 'Guardar';
 }
 function cambiaModo(m) {
-  if (!sel || modo === m) return;
+  if (!sel || sel.alta || modo === m) return;
   if (hayCambios() && !confirm('Hay cambios sin guardar. ¿Descartarlos?')) return;
   modo = m; pintaPanel();
 }
@@ -621,28 +653,41 @@ function cargarLocs() {
 }
 
 function pintaTitular() {
-  cargarLocs();
-  const act = modo === 'act', EDIT = act ? ACT_EDIT : TIT_EDIT;
+  const al = modo === 'alta', act = modo === 'act', EDIT = act ? ACT_EDIT : (al ? ALTA_EDIT : TIT_EDIT), vacia = modo === 'tit';
+  if (!al) cargarLocs();
   const r = sel, iO = colIdx('ot'), ot = String(iO >= 0 ? r[iO] : '').trim().toUpperCase();
   const sig = /^[A-Y]$/.test(ot) ? String.fromCharCode(ot.charCodeAt(0) + 1) : '?';
   const iS = colIdx('sexo'), sexos = [...new Set(all.map(x => String(x[iS] || '').trim()).filter(Boolean))].sort();
   const f = i => {
     const k = clave(head[i]), ed = EDIT.includes(k), id = 'c_' + i;
-    const v = esc(!act && TIT_VACIOS.includes(k) ? '' : r[i]), w = ANCHOS.includes(k) ? 'w' : '';
-    const req = !act && (k === 'titular' || k === 'nif') ? ' <i aria-hidden="true">*</i>' : '';
+    const v = esc(vacia && TIT_VACIOS.includes(k) ? '' : r[i]), w = ANCHOS.includes(k) ? 'w' : '';
+    const req = (!act && (k === 'titular' || k === 'nif')) || (al && CATS[k]) ? ' <i aria-hidden="true">*</i>' : '';
     const ctl = k === 'observaciones' ? `<textarea id="${id}" data-i="${i}" maxlength="2000">${v}</textarea>`
-      : k === 'sexo' && !act ? `<select id="${id}" data-i="${i}"><option value=""></option>${sexos.map(x => `<option>${esc(x)}</option>`).join('')}</select>`
+      : k === 'sexo' && !act ? `<select id="${id}" data-i="${i}"><option value=""></option>${sexos.map(x => `<option${esc(x) === v ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>`
       : ed && (CATS[k] || k === 'localidad')
         ? `<div class="cb"><input id="${id}" data-i="${i}" value="${v}" data-ok="${v}" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="cbl_${k}"><button type="button" class="cbt" tabindex="-1" aria-label="Ver todas las opciones">&#9662;</button><ul class="cbl" id="cbl_${k}" role="listbox" hidden></ul></div>`
         : `<input id="${id}" data-i="${i}" value="${v}" ${ed ? '' : 'disabled'} ${k === 'cp' ? 'inputmode="numeric" maxlength="5"' : ''}>`;
     return `<div class="${w}"><label for="${id}">${esc(head[i])}${req}</label>${ctl}</div>`;
   };
   const lista = vis.filter(i => !TIT_FECHAS.includes(clave(head[i])));
-  $('pnt').textContent = act ? 'Cambio de actividad' : 'Cambio de titular';
-  $('pns').textContent = (iNC >= 0 && r[iNC]) || '';
-  const avisoAct = `<div class="aviso">Al guardar, el registro actual (<b>${esc(r[colIdx('titular')])}</b>, OT <b>${esc(ot)}</b>) pasará a <b>baja</b> con la fecha de hoy y se creará un registro nuevo con el mismo titular, el mismo OT <b>${esc(ot)}</b>, EST 1 y fechas de alta y de modificación de hoy. El titular, el NIF y el sexo no se pueden cambiar.</div>`;
-  $('pnf').innerHTML = (act ? avisoAct : `<div class="aviso">Al guardar, el registro actual (<b>${esc(r[colIdx('titular')])}</b>, OT <b>${esc(ot)}</b>) pasará a <b>baja</b> con la fecha de hoy y se creará un registro nuevo con OT <b>${sig}</b>, EST 1 y fechas de alta y de modificación de hoy. Los campos con * son obligatorios.</div>`) +
-    (act ? '<h4>Datos del establecimiento y de la actividad</h4>' : '<h4>Nuevo titular y datos del establecimiento</h4>') + '<div class="g2">' + lista.filter(i => EDIT.includes(clave(head[i]))).map(f).join('') +
+  let aviso, h4;
+  if (al) {
+    const A = r.alta, iN = colIdx('nre'), nre = String(iN >= 0 ? r[iN] : '').trim();
+    aviso = A.base
+      ? `<div class="aviso">Recuperas un establecimiento de baja (<b>${esc(r[colIdx('titular')])}</b>, NRE <b>${esc(nre)}</b>, OT <b>${esc(ot)}</b>). Al guardar se creará un registro nuevo con el mismo NRE, EST 1 y fechas de alta y de modificación de hoy; el registro de baja se queda como está. Si cambias el NIF, el OT pasará a <b>${sig}</b>; si no, se mantiene. Los campos con * son obligatorios.</div>`
+      : `<div class="aviso">Alta nueva en <b>${esc(A.loc)}</b> (${esc(A.mun)}). Al guardar se creará un registro con OT <b>A</b>, EST 1, fechas de alta y de modificación de hoy y un NRE nuevo (el siguiente número libre de la provincia). Los campos con * son obligatorios.</div>`;
+    h4 = A.base ? 'Datos del establecimiento (puedes modificarlos)' : 'Datos del establecimiento';
+    $('pnt').textContent = A.base ? 'Recuperar establecimiento' : 'Nueva alta';
+    $('pns').textContent = [A.mun, A.loc].filter(Boolean).join(' · ');
+  } else {
+    aviso = act
+      ? `<div class="aviso">Al guardar, el registro actual (<b>${esc(r[colIdx('titular')])}</b>, OT <b>${esc(ot)}</b>) pasará a <b>baja</b> con la fecha de hoy y se creará un registro nuevo con el mismo titular, el mismo OT <b>${esc(ot)}</b>, EST 1 y fechas de alta y de modificación de hoy. El titular, el NIF y el sexo no se pueden cambiar.</div>`
+      : `<div class="aviso">Al guardar, el registro actual (<b>${esc(r[colIdx('titular')])}</b>, OT <b>${esc(ot)}</b>) pasará a <b>baja</b> con la fecha de hoy y se creará un registro nuevo con OT <b>${sig}</b>, EST 1 y fechas de alta y de modificación de hoy. Los campos con * son obligatorios.</div>`;
+    h4 = act ? 'Datos del establecimiento y de la actividad' : 'Nuevo titular y datos del establecimiento';
+    $('pnt').textContent = act ? 'Cambio de actividad' : 'Cambio de titular';
+    $('pns').textContent = (iNC >= 0 && r[iNC]) || '';
+  }
+  $('pnf').innerHTML = aviso + '<h4>' + h4 + '</h4><div class="g2">' + lista.filter(i => EDIT.includes(clave(head[i]))).map(f).join('') +
     '</div><h4>Ubicación</h4><div id="pnmap" class="mapa"></div><h4>Datos que se mantienen</h4><div class="g2">' + lista.filter(i => !EDIT.includes(clave(head[i]))).map(f).join('') + '</div>';
   $('pnf').scrollTop = 0; msg('');
   mapKey = ''; actualizaMapa();
@@ -676,6 +721,161 @@ async function guardaTitular() {
     row.h = hh(row); nu.h = hh(nu); marcar(row); marcar(nu);
     all.splice(all.indexOf(row) + 1, 0, nu);
     contRev(); filter(true); cerrar(true); render(); toast(act ? 'Cambio de actividad realizado' : 'Cambio de titular realizado');
+  } catch (x) { msg('No se pudo confirmar la operación. Actualiza los datos y comprueba si se hizo antes de repetirla.', 'e'); }
+  finally { $('pnsv').disabled = $('pnd').disabled = false; }
+}
+
+// ===== Altas nuevas =====
+const ALTA_COLS = ['titular', 'ncomercial', 'direccion', 'cp', 'provincia', 'sectorcomercial', 'fechabaja'];
+let alta = { prov: '', mun: '', loc: '', muns: [], locs: [], cur: '', cands: [], pick: null, sort: -1, desc: false };
+const tok = () => localStorage.getItem('tk');
+const quitaBaja = t => String(t || '').split(' | ').filter(x => !/^BAJA(:| POR )/i.test(x.trim())).join(' | ');
+
+$('alta').onclick = () => {
+  $('da1').hidden = false; $('da2').hidden = true; $('dam').value = ''; $('dal').value = ''; $('dam1').textContent = '';
+  alta.cur = ''; $('dalta').showModal(); cargaMun('');
+};
+$('dax').onclick = () => $('dalta').close();
+async function cargaMun(prov) {
+  $('dam1').textContent = 'Cargando…'; $('dac').disabled = true;
+  try {
+    const r = await api({ action: 'municipios', token: tok(), provincia: prov }, 2, 40000);
+    if (r.expired) { $('dalta').close(); return caducada(); }
+    if (!r.ok) throw new Error(r.error);
+    alta.prov = r.provincia; alta.muns = r.municipios; alta.locs = []; alta.cur = '';
+    $('dap').innerHTML = (r.provincia ? '' : '<option value="">Elige provincia</option>') + r.provincias.map(p => `<option>${esc(p)}</option>`).join('');
+    $('dap').value = r.provincia; $('dapw').hidden = r.provincias.length < 2;
+    $('dlm').innerHTML = r.municipios.map(m => `<option value="${esc(m)}">`).join('');
+    $('dam').value = ''; $('dal').value = ''; $('dll').innerHTML = ''; $('dam1').textContent = '';
+  } catch (e) { $('dam1').textContent = 'No se pudo cargar la lista de municipios. Cierra y vuelve a intentarlo.'; }
+  finally { $('dac').disabled = false; }
+}
+$('dap').onchange = () => cargaMun($('dap').value);
+$('dam').oninput = async () => {
+  const m = alta.muns.find(x => fold(x) === fold($('dam').value.trim()));
+  if (!m) { alta.cur = ''; alta.locs = []; $('dll').innerHTML = ''; return; }
+  if (m === alta.cur) return;
+  alta.cur = m; alta.locs = []; $('dal').value = ''; $('dll').innerHTML = '';
+  const key = fold(alta.prov) + '|' + fold(m); let locs = locCache[key];
+  if (!locs) {
+    try {
+      const r = await api({ action: 'localidades', token: tok(), provincia: alta.prov, municipio: m }, 2, 40000);
+      if (r.expired) { $('dalta').close(); return caducada(); }
+      if (!r.ok) throw new Error(r.error);
+      locs = locCache[key] = r.loc;
+    } catch (e) { $('dam1').textContent = 'No se pudo cargar la lista de localidades.'; return; }
+  }
+  if (alta.cur !== m) return;
+  alta.locs = locs; $('dll').innerHTML = locs.map(l => `<option value="${esc(l)}">`).join('');
+  if (locs.length === 1) $('dal').value = locs[0];
+  $('dam1').textContent = '';
+};
+$('dac').onclick = () => {
+  const m = alta.muns.find(x => fold(x) === fold($('dam').value.trim())), l = alta.locs.find(x => fold(x) === fold($('dal').value.trim())), e = $('dam1');
+  if (!alta.prov) return e.textContent = 'Elige la provincia.';
+  if (!m) return e.textContent = 'Elige un municipio de la lista.';
+  if (!l) return e.textContent = 'Elige una localidad de la lista.';
+  alta.mun = m; alta.loc = l; e.textContent = '';
+  alta.cands = candidatos(alta.prov, m, l); alta.pick = null; alta.sort = -1; alta.desc = false;
+  if (!alta.cands.length) { $('dalta').close(); altaEnBlanco(); return toast('No hay comercios de baja recuperables en esta localidad: alta en blanco'); }
+  $('dai').innerHTML = `Comercios de baja en <b>${esc(l)}</b> (${esc(m)}) que no han tenido continuidad en la base: ${alta.cands.length}. Elige el que corresponda según la dirección (haz clic en una columna para ordenar), o pulsa «Ninguno me sirve».`;
+  $('da1').hidden = true; $('da2').hidden = false; pintaCands();
+};
+$('dab').onclick = () => { $('da2').hidden = true; $('da1').hidden = false; };
+$('dan').onclick = () => { $('dalta').close(); altaEnBlanco(); };
+$('dar').onclick = () => recuperar();
+
+// Bajas (EST=0) cuyo NRE no tiene ningún registro activo; de cada NRE solo la de OT más alto
+function candidatos(prov, mun, loc) {
+  const iN = colIdx('nre'), iO = colIdx('ot'), iP = colIdx('provincia');
+  if (iN < 0 || iO < 0) return [];
+  const act = new Set(), best = new Map(), ot = r => String(r[iO]).trim().toUpperCase();
+  all.forEach(r => { if (String(r[iEst]).trim() === '1') act.add(String(r[iN]).trim()); });
+  all.forEach(r => {
+    if (String(r[iEst]).trim() !== '0') return;
+    const n = String(r[iN]).trim(); if (!n || act.has(n)) return;
+    const b = best.get(n); if (!b || ot(r) > ot(b)) best.set(n, r);
+  });
+  return [...best.values()].filter(r => fold(r[iMun]) === fold(mun) && fold(r[iLoc]) === fold(loc) && (iP < 0 || fold(r[iP]) === fold(prov)));
+}
+function pintaCands() {
+  const cols = ALTA_COLS.map(colIdx).filter(i => i >= 0), iB = colIdx('fechabaja');
+  if (alta.sort >= 0) {
+    const c = cols[alta.sort], d = alta.desc ? -1 : 1;
+    alta.cands.sort((a, b) => {
+      if (c === iB) { const x = parseFecha(a[c]), y = parseFecha(b[c]); return d * ((x ? +x : 0) - (y ? +y : 0)); }
+      return d * ord(String(a[c]), String(b[c]));
+    });
+  }
+  $('dat2').tHead.innerHTML = '<tr>' + cols.map((c, n) => `<th tabindex="0" data-n="${n}" aria-sort="${alta.sort === n ? (alta.desc ? 'descending' : 'ascending') : 'none'}">${esc(head[c])}${alta.sort === n ? (alta.desc ? ' ▼' : ' ▲') : ''}</th>`).join('') + '</tr>';
+  $('dat2').tHead.querySelectorAll('th').forEach(t => {
+    const go = () => { const n = +t.dataset.n; alta.desc = alta.sort === n ? !alta.desc : false; alta.sort = n; pintaCands(); };
+    t.onclick = go; t.onkeydown = e => { if (e.key === 'Enter') go(); };
+  });
+  $('dat2').tBodies[0].innerHTML = alta.cands.map((r, k) => `<tr tabindex="0" data-k="${k}"${r === alta.pick ? ' class="on"' : ''}>` + cols.map(c => `<td>${esc(r[c])}</td>`).join('') + '</tr>').join('');
+  $('dar').disabled = !alta.pick;
+}
+const filaCand = e => { const tr = e.target.closest('tr'); return tr ? alta.cands[+tr.dataset.k] : null; };
+$('dat2').tBodies[0].onclick = e => { const r = filaCand(e); if (!r) return; alta.pick = r; pintaCands(); };
+$('dat2').tBodies[0].ondblclick = e => { const r = filaCand(e); if (r) { alta.pick = r; recuperar(); } };
+$('dat2').tBodies[0].onkeydown = e => {
+  if (e.key !== 'Enter') return; const r = filaCand(e); if (!r) return;
+  if (alta.pick === r) recuperar(); else { alta.pick = r; pintaCands(); const k = alta.cands.indexOf(r), tr = $('dat2').tBodies[0].rows[k]; if (tr) tr.focus(); }
+};
+
+function recuperar() {
+  const b = alta.pick; if (!b) return;
+  $('dalta').close();
+  const v = b.slice(), iObs = colIdx('observaciones');
+  if (iObs >= 0) v[iObs] = quitaBaja(v[iObs]);
+  v.alta = { base: String(b[iId]), prov: alta.prov, mun: alta.mun, loc: alta.loc };
+  abrirAlta(v);
+}
+function altaEnBlanco() {
+  const v = head.map(() => ''), iP = colIdx('provincia');
+  v[iMun] = alta.mun; v[iLoc] = alta.loc; if (iP >= 0) v[iP] = alta.prov;
+  v.alta = { base: '', prov: alta.prov, mun: alta.mun, loc: alta.loc };
+  abrirAlta(v);
+}
+function abrirAlta(v) {
+  if (sel && hayCambios() && !confirm('Hay cambios sin guardar en el panel. ¿Descartarlos?')) return;
+  sel = v; modo = 'alta'; document.body.classList.add('pn-open'); $('pn').hidden = false;
+  pintaTitular(); render();
+  cargarCat().catch(e => { if (e.message !== 'expired' && sel === v) msg('No se pudieron cargar las listas de sector, CNAE e IAE. Cierra y vuelve a empezar.', 'e'); });
+}
+async function guardaAlta() {
+  const row = sel, d = {}, A = row.alta, base = A.base;
+  $('pnf').querySelectorAll('[data-i]:not(:disabled)').forEach(el => { d[clave(head[+el.dataset.i])] = el.value.trim(); });
+  if (!d.titular) return msg('Introduce el titular.', 'e');
+  if (!d.nif) return msg('Introduce el NIF.', 'e');
+  if (!/^[A-Za-z0-9]{8,12}$/.test(d.nif.replace(/[\s.\-]/g, ''))) return msg('El NIF no es válido.', 'e');
+  if (d.email && !/^\S+@\S+\.\S+$/.test(d.email)) return msg('El email no es válido.', 'e');
+  if (d.cp && !/^\d{5}$/.test(d.cp)) return msg('El C.P. debe tener 5 dígitos.', 'e');
+  for (const k of Object.keys(CATS)) {
+    if (!d[k]) return msg('El campo ' + k.toUpperCase() + ' no puede quedar vacío.', 'e');
+    const ops = opciones(k), ini = String(row[colIdx(k)]).trim();
+    if (ops && ops.length && fold(d[k]) !== fold(ini) && !ops.some(n => fold(n) === fold(d[k]))) return msg('Elige un valor de la lista en ' + k.toUpperCase() + '.', 'e');
+  }
+  // Aviso (no bloquea): mismo NIF activo en esa misma dirección
+  const iN = colIdx('nif'), iD = colIdx('direccion'), limpia = x => String(x).toUpperCase().replace(/[\s.\-]/g, ''), dir = clave(d.direccion || '');
+  const dup = dir ? all.find(x => String(x[iEst]).trim() === '1' && limpia(x[iN]) === limpia(d.nif) && clave(x[iD]) === dir) : null;
+  if (dup && !confirm('Ya existe un registro ACTIVO con el mismo NIF en esa misma dirección (' + (dup[iNC] || dup[colIdx('titular')]) + ', ' + dup[iD] + '). ¿Crear el alta igualmente?')) return;
+  if (!confirm(base ? 'Se creará un registro nuevo recuperando el NRE del establecimiento de baja. ¿Continuar?' : 'Se creará una alta nueva en ' + A.loc + ' (' + A.mun + '). ¿Continuar?')) return;
+  $('pnsv').disabled = $('pnd').disabled = true; msg('Guardando…');
+  try {
+    const r = await api({ action: 'alta', token: tok(), base, provincia: A.prov, municipio: A.mun, localidad: A.loc, datos: d }, 1, 60000);
+    if (r.expired) return caducada();
+    if (!r.ok) return msg(r.error, 'e');
+    const nu = r.nuevo; nu.h = fold(vis.map(i => nu[i]).join(' ')); marcar(nu);
+    let pos = 0;
+    if (base) { const b = all.findIndex(x => String(x[iId]) === base); pos = b >= 0 ? b + 1 : 0; }
+    else {
+      const iP = colIdx('provincia'); let la = -1, lp = -1;
+      all.forEach((x, n) => { if (fold(x[iP]) === fold(A.prov)) { lp = n; if (String(x[iEst]).trim() === '1') la = n; } });
+      pos = (la >= 0 ? la : lp) + 1;
+    }
+    if (pos <= 0) all.push(nu); else all.splice(pos, 0, nu);
+    contRev(); filter(true); cerrar(true); render(); toast(base ? 'Establecimiento recuperado' : 'Alta creada');
   } catch (x) { msg('No se pudo confirmar la operación. Actualiza los datos y comprueba si se hizo antes de repetirla.', 'e'); }
   finally { $('pnsv').disabled = $('pnd').disabled = false; }
 }
