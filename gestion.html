@@ -105,6 +105,12 @@ textarea{width:100%;min-height:70px;padding:9px 10px;border:1px solid var(--line
 #toast.on{opacity:1}
 .aviso{background:var(--head);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:12px 0 4px;font-size:13px;line-height:1.45}
 label i{color:var(--err);font-style:normal}
+dialog#dbaja{border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);padding:18px 20px;width:min(460px,92vw)}
+dialog#dbaja::backdrop{background:rgba(0,0,0,.45)}
+dialog#dbaja h3{margin:0 0 6px}
+dialog#dbaja textarea{width:100%;min-height:90px;padding:9px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit;resize:vertical}
+dialog#dbaja .bt{display:flex;gap:10px;justify-content:flex-end;margin-top:14px;align-items:center}
+dialog#dbaja .bt .m{margin-right:auto;color:var(--err);font-size:13px}
 select{width:100%}
 </style>
 </head>
@@ -150,7 +156,7 @@ select{width:100%}
       <button type="button" class="ib on" id="ibm" aria-pressed="true" title="Modificar" aria-label="Modificar"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg></button>
       <button type="button" class="ib" id="ibt" aria-pressed="false" title="Cambio de titular" aria-label="Cambio de titular"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></button>
       <button type="button" class="ib" id="iba" aria-pressed="false" title="Cambio de actividad" aria-label="Cambio de actividad"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2M3 13h18"/></svg></button>
-      <button type="button" class="ib" disabled title="Dar de baja (próximamente)" aria-label="Dar de baja"><svg viewBox="0 0 24 24"><path d="M3 9l1.5-5h15L21 9v1a3 3 0 01-6 0 3 3 0 01-6 0 3 3 0 01-6 0V9z"/><path d="M5 13v7h14v-7"/><path d="M9.5 15.5l5 3.5m0-3.5l-5 3.5"/></svg></button>
+      <button type="button" class="ib" id="ibb" title="Dar de baja" aria-label="Dar de baja"><svg viewBox="0 0 24 24"><path d="M3 9l1.5-5h15L21 9v1a3 3 0 01-6 0 3 3 0 01-6 0 3 3 0 01-6 0V9z"/><path d="M5 13v7h14v-7"/><path d="M9.5 15.5l5 3.5m0-3.5l-5 3.5"/></svg></button>
     </div>
   </div>
   <form id="pnform" novalidate>
@@ -158,6 +164,14 @@ select{width:100%}
     <div class="pnbt"><span id="pnm" role="status"></span><button type="button" class="sec" id="pnd">Descartar</button><button id="pnsv">Guardar</button></div>
   </form>
 </aside>
+
+<dialog id="dbaja" aria-labelledby="dbt">
+  <h3 id="dbt">Dar de baja el establecimiento</h3>
+  <div class="aviso" id="dbi"></div>
+  <label for="dbc">Causa de la baja <i aria-hidden="true">*</i></label>
+  <textarea id="dbc" maxlength="500"></textarea>
+  <div class="bt"><span class="m" id="dbm" role="status"></span><button type="button" class="sec" id="dbx">Cancelar</button><button type="button" id="dbok">Dar de baja</button></div>
+</dialog>
 
 <div id="toast" role="status" aria-live="polite"></div>
 <div id="ld" role="status" aria-live="polite" hidden>
@@ -579,7 +593,8 @@ function toolbar() {
   $('ibm').classList.toggle('on', !t && !a); $('ibm').setAttribute('aria-pressed', String(!t && !a));
   $('ibt').classList.toggle('on', t);  $('ibt').setAttribute('aria-pressed', String(t));
   $('iba').classList.toggle('on', a);  $('iba').setAttribute('aria-pressed', String(a));
-  $('ibt').disabled = $('iba').disabled = cerrado();
+  $('ibt').disabled = $('iba').disabled = $('ibb').disabled = cerrado();
+  $('ibb').title = cerrado() ? 'Dar de baja (el registro ya está de baja)' : 'Dar de baja';
   $('ibt').title = cerrado() ? 'Cambio de titular (el registro ya está de baja)' : 'Cambio de titular';
   $('iba').title = cerrado() ? 'Cambio de actividad (el registro ya está de baja)' : 'Cambio de actividad';
   $('pnsv').textContent = t ? 'Crear nuevo titular' : a ? 'Crear nuevo registro' : 'Guardar';
@@ -664,6 +679,33 @@ async function guardaTitular() {
   } catch (x) { msg('No se pudo confirmar la operación. Actualiza los datos y comprueba si se hizo antes de repetirla.', 'e'); }
   finally { $('pnsv').disabled = $('pnd').disabled = false; }
 }
+
+// ===== Baja =====
+$('ibb').onclick = () => {
+  if (!sel || cerrado()) return;
+  if (hayCambios() && !confirm('Hay cambios sin guardar. ¿Descartarlos?')) return;
+  const r = sel;
+  $('dbi').innerHTML = `Se dará de baja <b>${esc((iNC >= 0 && r[iNC]) || r[colIdx('titular')])}</b> (${esc(r[colIdx('titular')])}) con la fecha de hoy. La fecha de modificación se borrará y la causa se añadirá a Observaciones.`;
+  $('dbc').value = ''; $('dbm').textContent = ''; $('dbok').disabled = $('dbx').disabled = false;
+  $('dbaja').showModal(); $('dbc').focus();
+};
+$('dbx').onclick = () => $('dbaja').close();
+$('dbok').onclick = async () => {
+  const row = sel, causa = $('dbc').value.replace(/\s+/g, ' ').trim();
+  if (!row) return $('dbaja').close();
+  if (!causa) return $('dbm').textContent = 'Indica la causa de la baja.';
+  $('dbok').disabled = $('dbx').disabled = true; $('dbm').textContent = 'Guardando…';
+  try {
+    const r = await api({ action: 'baja', token: localStorage.getItem('tk'), id: row[iId], causa }, 1, 60000);
+    if (r.expired) { $('dbaja').close(); return caducada(); }
+    if (!r.ok) { $('dbm').textContent = r.error; return; }
+    r.row.forEach((v, i) => { row[i] = v; });
+    row.h = fold(vis.map(i => row[i]).join(' ')); marcar(row); contRev(); filter(true);
+    $('dbaja').close(); if (sel === row) cerrar(true);
+    render(); toast('Baja realizada');
+  } catch (x) { $('dbm').textContent = 'No se pudo confirmar la operación. Actualiza los datos y comprueba si se hizo antes de repetirla.'; }
+  finally { $('dbok').disabled = $('dbx').disabled = false; }
+};
 
 if (localStorage.getItem('tk')) load();
 </script>
