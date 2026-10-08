@@ -182,7 +182,7 @@ select{width:100%}
   <h3 id="dat">Nueva alta</h3>
   <div id="da1">
     <div class="aviso">Indica dónde está el establecimiento. Se buscarán comercios de baja en esa localidad que se puedan recuperar.</div>
-    <div id="dapw"><label for="dap">Provincia</label><select id="dap"></select></div>
+    <div id="dapw" hidden><label for="dap">Provincia</label><select id="dap"></select></div>
     <label for="dam">Municipio</label><input id="dam" list="dlm" autocomplete="off"><datalist id="dlm"></datalist>
     <label for="dal">Localidad</label><input id="dal" list="dll" autocomplete="off"><datalist id="dll"></datalist>
     <div class="bt"><span class="m" id="dam1" role="status"></span><button type="button" class="sec" id="dax">Cancelar</button><button type="button" id="dac">Continuar</button></div>
@@ -222,6 +222,7 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fold = s => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const clave = s => fold(s).replace(/[^a-z0-9]/g, '');
+let terr = null, terrP = null;   // árbol provincia → municipio → localidades (se pide una vez)
 let iMun = -1, iLoc = -1, iEst = -1, iAlta = -1, iModi = -1, iBaja = -1, head = [], vis = [], all = [], view = [], page = 0, sortCol = -1, sortDesc = false, info = {}, gen = 0, ldTimer, iId = -1, iNC = -1, sel = null, cat = null, catP = null, modo = 'mod', snap = '';
 
 const espera = ms => new Promise(r => setTimeout(r, ms));
@@ -238,7 +239,7 @@ async function api(body, intentos = 3, ms = 40000) {
 }
 
 function showLogin(msg) {
-  gen++; showLoad(false); setAct(''); cerrar(true); cat = null; catP = null;
+  gen++; showLoad(false); setAct(''); cerrar(true); cat = null; catP = null; terr = null; terrP = null;
   localStorage.removeItem('tk'); localStorage.removeItem('usr');
   $('app').hidden = true; $('login').hidden = false; $('le').textContent = msg || ''; $('bl').disabled = false;
 }
@@ -339,6 +340,7 @@ function setData(r, keep, primera) {
   rellenarLoc(l);
   contRev();
   buildHead(); filter(true);
+  cargarTerr().catch(() => {}).then(() => cargarCat().catch(() => {}));   // precarga: ventana de altas y listas del panel, sin esperas
 }
 
 function parseFecha(s) {
@@ -644,6 +646,10 @@ function cargarLocs() {
   const iM = colIdx('municipio'), iP = colIdx('provincia'); if (iM < 0 || iP < 0) return;
   const row = sel, prov = row[iP], mun = row[iM], key = fold(prov) + '|' + fold(mun);
   if (locCache[key]) { locs = locCache[key]; return; }
+  if (terr) {
+    const P = Object.keys(terr).find(p => fold(p) === fold(prov)), M = P && Object.keys(terr[P]).find(m => fold(m) === fold(mun));
+    if (M) { locs = locCache[key] = terr[P][M]; return; }
+  }
   locs = null;
   api({ action: 'localidades', token: localStorage.getItem('tk'), provincia: prov, municipio: mun }, 2, 40000).then(r => {
     if (r.expired) return caducada();
@@ -731,44 +737,44 @@ let alta = { prov: '', mun: '', loc: '', muns: [], locs: [], cur: '', cands: [],
 const tok = () => localStorage.getItem('tk');
 const quitaBaja = t => String(t || '').split(' | ').filter(x => !/^BAJA(:| POR )/i.test(x.trim())).join(' | ');
 
-$('alta').onclick = () => {
-  $('da1').hidden = false; $('da2').hidden = true; $('dam').value = ''; $('dal').value = ''; $('dam1').textContent = '';
-  alta.cur = ''; $('dalta').showModal(); cargaMun('');
+function cargarTerr() {
+  if (terr) return Promise.resolve(terr);
+  return terrP || (terrP = api({ action: 'territorio', token: tok() }, 2, 60000).then(r => {
+    if (r.expired) { caducada(); throw new Error('expired'); }
+    if (!r.ok) throw new Error(r.error);
+    terr = r.t; return terr;
+  }).catch(e => { terrP = null; throw e; }));
+}
+function setProv(p) {
+  alta.prov = p; alta.muns = p && terr[p] ? Object.keys(terr[p]).sort(ord) : []; alta.cur = ''; alta.locs = [];
+  $('dam').value = ''; $('dal').value = ''; $('dll').innerHTML = '';
+  $('dlm').innerHTML = alta.muns.map(m => `<option value="${esc(m)}">`).join('');
+}
+$('alta').onclick = async () => {
+  const usr = JSON.parse(localStorage.getItem('usr') || '{}'), admin = fold(usr.p || '') === 'todas';
+  $('da1').hidden = false; $('da2').hidden = true; $('dam1').textContent = ''; $('dapw').hidden = !admin;
+  alta.prov = ''; alta.muns = []; alta.locs = []; alta.cur = '';
+  $('dam').value = ''; $('dal').value = ''; $('dlm').innerHTML = ''; $('dll').innerHTML = '';
+  if (admin) $('dap').innerHTML = '<option value="">Elige provincia</option>';
+  $('dalta').showModal();
+  if (!terr) { $('dam1').textContent = 'Cargando listas…'; $('dac').disabled = true; }
+  try { await cargarTerr(); }
+  catch (e) { $('dam1').textContent = 'No se pudieron cargar las listas. Cierra y vuelve a intentarlo.'; $('dac').disabled = false; return; }
+  $('dac').disabled = false; $('dam1').textContent = '';
+  const provs = Object.keys(terr).sort(ord);
+  $('dapw').hidden = provs.length < 2;
+  if (provs.length > 1) $('dap').innerHTML = '<option value="">Elige provincia</option>' + provs.map(p => `<option>${esc(p)}</option>`).join('');
+  else { $('dap').innerHTML = provs.map(p => `<option>${esc(p)}</option>`).join(''); setProv(provs[0] || ''); }
 };
 $('dax').onclick = () => $('dalta').close();
-async function cargaMun(prov) {
-  $('dam1').textContent = 'Cargando…'; $('dac').disabled = true;
-  try {
-    const r = await api({ action: 'municipios', token: tok(), provincia: prov }, 2, 40000);
-    if (r.expired) { $('dalta').close(); return caducada(); }
-    if (!r.ok) throw new Error(r.error);
-    alta.prov = r.provincia; alta.muns = r.municipios; alta.locs = []; alta.cur = '';
-    $('dap').innerHTML = (r.provincia ? '' : '<option value="">Elige provincia</option>') + r.provincias.map(p => `<option>${esc(p)}</option>`).join('');
-    $('dap').value = r.provincia; $('dapw').hidden = r.provincias.length < 2;
-    $('dlm').innerHTML = r.municipios.map(m => `<option value="${esc(m)}">`).join('');
-    $('dam').value = ''; $('dal').value = ''; $('dll').innerHTML = ''; $('dam1').textContent = '';
-  } catch (e) { $('dam1').textContent = 'No se pudo cargar la lista de municipios. Cierra y vuelve a intentarlo.'; }
-  finally { $('dac').disabled = false; }
-}
-$('dap').onchange = () => cargaMun($('dap').value);
-$('dam').oninput = async () => {
+$('dap').onchange = () => { if (terr) setProv($('dap').value); };
+$('dam').oninput = () => {
   const m = alta.muns.find(x => fold(x) === fold($('dam').value.trim()));
   if (!m) { alta.cur = ''; alta.locs = []; $('dll').innerHTML = ''; return; }
   if (m === alta.cur) return;
-  alta.cur = m; alta.locs = []; $('dal').value = ''; $('dll').innerHTML = '';
-  const key = fold(alta.prov) + '|' + fold(m); let locs = locCache[key];
-  if (!locs) {
-    try {
-      const r = await api({ action: 'localidades', token: tok(), provincia: alta.prov, municipio: m }, 2, 40000);
-      if (r.expired) { $('dalta').close(); return caducada(); }
-      if (!r.ok) throw new Error(r.error);
-      locs = locCache[key] = r.loc;
-    } catch (e) { $('dam1').textContent = 'No se pudo cargar la lista de localidades.'; return; }
-  }
-  if (alta.cur !== m) return;
-  alta.locs = locs; $('dll').innerHTML = locs.map(l => `<option value="${esc(l)}">`).join('');
-  if (locs.length === 1) $('dal').value = locs[0];
-  $('dam1').textContent = '';
+  alta.cur = m; alta.locs = terr[alta.prov][m] || []; $('dal').value = '';
+  $('dll').innerHTML = alta.locs.map(l => `<option value="${esc(l)}">`).join('');
+  if (alta.locs.length === 1) $('dal').value = alta.locs[0];
 };
 $('dac').onclick = () => {
   const m = alta.muns.find(x => fold(x) === fold($('dam').value.trim())), l = alta.locs.find(x => fold(x) === fold($('dal').value.trim())), e = $('dam1');
