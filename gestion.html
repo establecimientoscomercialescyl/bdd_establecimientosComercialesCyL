@@ -22,6 +22,7 @@ button.sec{background:transparent;color:var(--ink);border:1px solid var(--line)}
 button:disabled{opacity:.5;cursor:wait}
 #login button{width:100%;margin-top:18px}
 .err{color:var(--err);min-height:20px;margin:10px 0 0}
+#verl{margin:14px 0 0;text-align:center;font-size:12px;color:var(--mute)}
 header{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;padding:12px 16px;background:var(--card);border-bottom:1px solid var(--line)}
 header h2{font-size:16px;margin:0;flex:1 1 200px}
 header .who{color:var(--mute)}
@@ -143,6 +144,7 @@ select{width:100%}
     <label for="p">Contraseña</label><input id="p" type="password" autocomplete="current-password" required>
     <button id="bl">Entrar</button>
     <p class="err" id="le" role="alert"></p>
+    <p id="verl"></p>
   </form>
 </section>
 
@@ -229,7 +231,7 @@ select{width:100%}
 
 <script>
 // Versión visible en la pantalla de carga. Sube 0,1 en cada entrega del HTML (1.0, 1.1, 1.2…).
-const VERSION = '1.0';
+const VERSION = '1.1';
 // Para usar el escudo oficial en lugar del logotipo dibujado: guarda la imagen junto a este HTML y pon aquí su nombre (ej. 'escudo.png').
 const LOGO_SRC = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbywcJXtUPfuBJbbPzNYOqz10G4tyFGvHKN-PrENIPYy8R8amdFb_bOdnlwMeSXwZjGA/exec';
@@ -240,6 +242,7 @@ const OCULTAS = ['id','nre','ot','ncn','est','idprovincia','idmunicipio','idloca
 const FECHA_REVISION = new Date(2026, 6, 1);   // 01/07/2026
 const $ = id => document.getElementById(id);
 $('ver').textContent = 'Versión ' + VERSION;
+$('verl').textContent = 'Versión ' + VERSION;
 if (LOGO_SRC) $('logo').innerHTML = '<img src="' + LOGO_SRC.replace(/"/g, '') + '" alt="">';
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fold = s => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
