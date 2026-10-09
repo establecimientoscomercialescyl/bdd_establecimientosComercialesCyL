@@ -48,6 +48,11 @@ th.pt,td.pt{width:34px;min-width:34px;padding:7px 6px 7px 12px}
 .pag{display:flex;gap:10px;align-items:center;padding:12px 16px}
 .pag span{color:var(--mute)}
 #ld{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;background:color-mix(in srgb,var(--bg) 94%,transparent)}
+#ld .marca{display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:10px}
+#ld .logo{width:96px;height:auto;color:var(--acc)}
+#ld .logo img{width:96px;height:auto;display:block}
+#ld h1{margin:0;max-width:760px;font-size:clamp(22px,3.4vw,36px);line-height:1.2;letter-spacing:.02em}
+#ld .ver{margin:0;font-size:13px;color:var(--mute)}
 #ld .sp{width:84px;height:84px;border:9px solid var(--line);border-top-color:var(--acc);border-radius:50%;animation:giro 1s linear infinite}
 #ld h3{margin:8px 0 0;font-size:26px}
 #ld p{margin:0;color:var(--mute);font-size:16px;max-width:420px}
@@ -206,6 +211,15 @@ select{width:100%}
 
 <div id="toast" role="status" aria-live="polite"></div>
 <div id="ld" role="status" aria-live="polite" hidden>
+  <div class="marca">
+    <div class="logo" id="logo" aria-hidden="true"><svg viewBox="0 0 96 112" width="96" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M8 8h80v50c0 24-18 40-40 48C26 98 8 82 8 58z" fill="color-mix(in srgb,currentColor 10%,transparent)"/>
+      <path d="M22 40l6-14h40l6 14z"/><path d="M22 40a6.5 6.5 0 0013 0 6.5 6.5 0 0013 0 6.5 6.5 0 0013 0 6.5 6.5 0 0013 0"/>
+      <path d="M26 46v26h44V46"/><path d="M42 72V56h12v16"/>
+    </svg></div>
+    <h1>BASE DE DATOS DE ESTABLECIMIENTOS COMERCIALES DE CASTILLA Y LEÓN</h1>
+    <p class="ver" id="ver"></p>
+  </div>
   <div class="sp"></div>
   <h3>Cargando datos…</h3>
   <p id="ldm"></p>
@@ -214,6 +228,10 @@ select{width:100%}
 </div>
 
 <script>
+// Versión visible en la pantalla de carga. Sube 0,1 en cada entrega del HTML (1.0, 1.1, 1.2…).
+const VERSION = '1.0';
+// Para usar el escudo oficial en lugar del logotipo dibujado: guarda la imagen junto a este HTML y pon aquí su nombre (ej. 'escudo.png').
+const LOGO_SRC = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbywcJXtUPfuBJbbPzNYOqz10G4tyFGvHKN-PrENIPYy8R8amdFb_bOdnlwMeSXwZjGA/exec';
 const PAGE = 50;
 // Columnas que se reciben (para uso interno) pero no se muestran en la tabla
@@ -221,6 +239,8 @@ const OCULTAS = ['id','nre','ot','ncn','est','idprovincia','idmunicipio','idloca
 // Un registro cuenta como "revisado" si su fecha de alta, modificación o baja es posterior a esta fecha
 const FECHA_REVISION = new Date(2026, 6, 1);   // 01/07/2026
 const $ = id => document.getElementById(id);
+$('ver').textContent = 'Versión ' + VERSION;
+if (LOGO_SRC) $('logo').innerHTML = '<img src="' + LOGO_SRC.replace(/"/g, '') + '" alt="">';
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fold = s => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const clave = s => fold(s).replace(/[^a-z0-9]/g, '');
