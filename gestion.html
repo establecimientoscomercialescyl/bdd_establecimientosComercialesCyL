@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Gestión de establecimientos comerciales</title>
 <style>
-:root{--bg:#f4f5f7;--card:#fff;--ink:#1c2230;--mute:#667085;--line:#dde1e8;--acc:#1f5fbf;--accT:#fff;--err:#b42318;--head:#e9edf3;--c-alta:#e3f4e6;--c-modi:#e1ecfa;--c-baja:#fbe4e2;--ok:#2e9e5b;--off:#d64545}
-@media(prefers-color-scheme:dark){:root{--bg:#14171d;--card:#1d222b;--ink:#e8ebf0;--mute:#98a2b3;--line:#323946;--acc:#6ea0f0;--accT:#10151c;--err:#f97066;--head:#262c37;--c-alta:#1f3a2a;--c-modi:#1f2f47;--c-baja:#472524;--ok:#4cc27e;--off:#f06a6a}}
+:root{--bg:#f4f5f7;--card:#fff;--ink:#1c2230;--mute:#667085;--line:#dde1e8;--acc:#1f5fbf;--accT:#fff;--err:#b42318;--head:#e9edf3;--c-alta:#e3f4e6;--c-modi:#e1ecfa;--c-baja:#fbe4e2;--c-ver:#ece3f8;--ok:#2e9e5b;--off:#d64545}
+@media(prefers-color-scheme:dark){:root{--bg:#14171d;--card:#1d222b;--ink:#e8ebf0;--mute:#98a2b3;--line:#323946;--acc:#6ea0f0;--accT:#10151c;--err:#f97066;--head:#262c37;--c-alta:#1f3a2a;--c-modi:#1f2f47;--c-baja:#472524;--c-ver:#35284d;--ok:#4cc27e;--off:#f06a6a}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
 [hidden]{display:none!important}
@@ -35,6 +35,7 @@ th{position:sticky;top:0;background:var(--head);cursor:pointer;user-select:none;
 th.s::after{content:" \25B2"}th.s.d::after{content:" \25BC"}
 tbody tr.r-alta{background:var(--c-alta)}
 tbody tr.r-modi{background:var(--c-modi)}
+tbody tr.r-ver{background:var(--c-ver)}
 tbody tr.r-baja{background:var(--c-baja)}
 tbody tr:hover td{background-image:linear-gradient(rgba(127,127,127,.14),rgba(127,127,127,.14))}
 th.pt,td.pt{width:34px;min-width:34px;padding:7px 6px 7px 12px}
@@ -106,6 +107,7 @@ textarea{width:100%;min-height:70px;padding:9px 10px;border:1px solid var(--line
 .aviso{background:var(--head);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:12px 0 4px;font-size:13px;line-height:1.45}
 label i{color:var(--err);font-style:normal}
 button.verde{background:#1f7a3a;color:#fff}
+button.ver{background:#6b46c1;color:#fff}
 dialog#dalta{border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);padding:18px 20px;width:min(940px,95vw)}
 dialog#dalta::backdrop{background:rgba(0,0,0,.45)}
 dialog#dalta h3{margin:0 0 6px}
@@ -174,7 +176,7 @@ select{width:100%}
   </div>
   <form id="pnform" novalidate>
     <div class="pnb" id="pnf"></div>
-    <div class="pnbt"><span id="pnm" role="status"></span><button type="button" class="sec" id="pnd">Descartar</button><button id="pnsv">Guardar</button></div>
+    <div class="pnbt"><span id="pnm" role="status"></span><button type="button" class="sec" id="pnd">Descartar</button><button type="button" class="ver" id="pnrv" title="Los datos están correctos: actualiza la fecha de modificación a hoy">✔ Todo correcto</button><button id="pnsv">Guardar</button></div>
   </form>
 </aside>
 
@@ -223,7 +225,7 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;
 const fold = s => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const clave = s => fold(s).replace(/[^a-z0-9]/g, '');
 let terr = null, terrP = null;   // árbol provincia → municipio → localidades (se pide una vez)
-let iMun = -1, iLoc = -1, iEst = -1, iAlta = -1, iModi = -1, iBaja = -1, head = [], vis = [], all = [], view = [], page = 0, sortCol = -1, sortDesc = false, info = {}, gen = 0, ldTimer, iId = -1, iNC = -1, sel = null, cat = null, catP = null, modo = 'mod', snap = '';
+let iMun = -1, iLoc = -1, iEst = -1, iAlta = -1, iModi = -1, iBaja = -1, iVer = -1, head = [], vis = [], all = [], view = [], page = 0, sortCol = -1, sortDesc = false, info = {}, gen = 0, ldTimer, iId = -1, iNC = -1, sel = null, cat = null, catP = null, modo = 'mod', snap = '';
 
 const espera = ms => new Promise(r => setTimeout(r, ms));
 // Petición con reintentos automáticos (Apps Script falla a veces en el primer intento)
@@ -328,7 +330,7 @@ function setData(r, keep, primera) {
   iMun = head.findIndex(h => clave(h) === 'municipio');
   iLoc = head.findIndex(h => clave(h) === 'localidad');
   const col = c => head.findIndex(h => clave(h) === c);
-  iId = col('id'); iNC = col('ncomercial'); iEst = col('est'); iAlta = col('fechaalta'); iModi = col('fechamodi'); iBaja = col('fechabaja');
+  iId = col('id'); iNC = col('ncomercial'); iEst = col('est'); iAlta = col('fechaalta'); iModi = col('fechamodi'); iBaja = col('fechabaja'); iVer = col('fechaverificacion');
   all.forEach(marcar);
   if (selId != null) { sel = all.find(x => x[iId] === selId) || null; if (!sel) cerrar(true); }
   if (!keep) {
@@ -409,6 +411,7 @@ $('ley').innerHTML = `<span><i class="dot ok" style="width:10px;height:10px;bord
   <span><i class="dot off" style="width:10px;height:10px;border:0;border-radius:50%"></i> Cerrado</span>
   <span><i style="background:var(--c-alta)"></i> Alta posterior al ${fc}</span>
   <span><i style="background:var(--c-modi)"></i> Modificado después del ${fc}</span>
+  <span><i style="background:var(--c-ver)"></i> Verificado (todo correcto) después del ${fc}</span>
   <span><i style="background:var(--c-baja)"></i> Baja posterior al ${fc}</span>`;
 $('q').oninput = $('fl').onchange = $('fr').onchange = filter;
 $('fm').onchange = () => { rellenarLoc(''); filter(); };
@@ -421,9 +424,10 @@ $('nx').onclick = () => { page++; render(); };
 function marcar(row) {
   const post = i => { const d = i >= 0 ? parseFecha(row[i]) : null; return !!d && d > FECHA_REVISION; };
   const a = post(iAlta), m = post(iModi), b = post(iBaja);
-  row.rev = a || m || b;
-  // prioridad: baja reciente (rojo) > alta nueva (verde) > modificado (azul)
-  row.cls = b ? 'r-baja' : a ? 'r-alta' : m ? 'r-modi' : '';
+  const v = post(iVer);
+  row.rev = a || m || b || v;
+  // prioridad: baja reciente (rojo) > alta nueva (verde) > verificado (morado) > modificado (azul)
+  row.cls = b ? 'r-baja' : a ? 'r-alta' : v ? 'r-ver' : m ? 'r-modi' : '';
 }
 function contRev() {
   const v = $('fr').value, n = all.filter(r => r.rev).length;
@@ -514,6 +518,21 @@ $('pnform').onsubmit = async e => {
   finally { $('pnsv').disabled = $('pnd').disabled = false; }
 };
 $('pnd').onclick = () => { if (sel) pintaPanel(); };
+$('pnrv').onclick = async () => {
+  const row = sel; if (!row || modo !== 'mod' || row.alta) return;
+  if (hayCambios()) return msg('Hay cambios sin guardar. Pulsa Guardar (ya actualiza la fecha) o Descartar.', 'e');
+  $('pnsv').disabled = $('pnd').disabled = $('pnrv').disabled = true; msg('Guardando…');
+  try {
+    const r = await api({ action: 'revisar', token: localStorage.getItem('tk'), id: row[iId] }, 2, 60000);
+    if (r.expired) return caducada();
+    if (!r.ok) return msg(r.error, 'e');
+    r.row.forEach((v, i) => { row[i] = v; });
+    row.h = fold(vis.map(i => row[i]).join(' ')); marcar(row); contRev(); filter(true);
+    if (sel === row) cerrar(true);
+    render(); toast('Marcado como verificado');
+  } catch (x) { msg('No se pudo guardar. Revisa la conexión e inténtalo de nuevo.', 'e'); }
+  finally { $('pnsv').disabled = $('pnd').disabled = $('pnrv').disabled = false; }
+};
 $('pnx').onclick = () => cerrar();
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && sel && !$('ld').offsetParent && !document.querySelector('dialog[open]')) cerrar(); });
 $('tb').onclick = e => { const tr = e.target.closest('tr'); if (tr && view[+tr.dataset.k]) abrir(view[+tr.dataset.k]); };
@@ -616,7 +635,7 @@ const TIT_EDIT = ['titular', 'nif', 'sexo', 'ncomercial', 'direccion', 'cp', 'lo
 const TIT_VACIOS = ['titular', 'nif', 'sexo'];
 const ALTA_EDIT = TIT_EDIT.filter(k => k !== 'localidad');   // alta: municipio y localidad quedan fijados por la ventana previa
 const ACT_EDIT = TIT_EDIT.filter(k => !TIT_VACIOS.includes(k));   // cambio de actividad: titular, NIF y SEXO no se tocan
-const TIT_FECHAS = ['fechaalta', 'fechamodi', 'fechabaja'];
+const TIT_FECHAS = ['fechaalta', 'fechamodi', 'fechabaja', 'fechaverificacion'];
 let locs = null; const locCache = {};
 const colIdx = k => head.findIndex(x => clave(x) === k);
 const cerrado = () => !!sel && iEst >= 0 && String(sel[iEst]).trim() === '0';
@@ -631,6 +650,7 @@ function toolbar() {
   $('ibb').title = cerrado() ? 'Dar de baja (el registro ya está de baja)' : 'Dar de baja';
   $('ibt').title = cerrado() ? 'Cambio de titular (el registro ya está de baja)' : 'Cambio de titular';
   $('iba').title = cerrado() ? 'Cambio de actividad (el registro ya está de baja)' : 'Cambio de actividad';
+  $('pnrv').hidden = !(modo === 'mod' && iVer >= 0 && !cerrado());
   $('pnsv').textContent = t ? 'Crear nuevo titular' : a ? 'Crear nuevo registro' : al ? 'Crear alta' : 'Guardar';
 }
 function cambiaModo(m) {
