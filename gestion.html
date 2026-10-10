@@ -95,6 +95,7 @@ tbody tr.sel td{box-shadow:inset 0 2px 0 var(--acc),inset 0 -2px 0 var(--acc)}
 textarea{width:100%;min-height:70px;padding:9px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit;resize:vertical}
 .pnbt{display:flex;gap:10px;align-items:center;padding:12px 16px;border-top:1px solid var(--line)}
 #pnm{flex:1;color:var(--mute);min-height:20px}
+#pnm.e,#pnm.o{font-weight:700;font-size:calc(1em + 1px)}
 #pnm.e{color:var(--err)}#pnm.o{color:var(--ok)}
 @media(max-width:600px){.g2{grid-template-columns:1fr}}
 
@@ -124,8 +125,10 @@ dialog#ddel::backdrop{background:rgba(0,0,0,.45)}
 dialog#ddel h3{margin:0 0 6px}
 dialog#ddel ul{margin:8px 0 0;padding-left:18px}
 dialog#ddel .bt{display:flex;gap:10px;justify-content:flex-end;margin-top:14px;align-items:center}
-dialog#ddel .bt .m{margin-right:auto;color:var(--err);font-size:13px}
-#toast{position:fixed;left:16px;bottom:16px;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;z-index:20;opacity:0;transition:opacity .25s;pointer-events:none}
+dialog#ddel .bt .m{margin-right:auto;font-size:14px;font-weight:700;color:var(--err)}
+dialog#ddel .bt .m.o{color:var(--ok)}
+#toast{position:fixed;left:16px;bottom:16px;background:#1f1f1f;color:#4ade80;font-weight:700;font-size:calc(1em + 1px);padding:10px 16px;border-radius:8px;z-index:20;opacity:0;transition:opacity .25s;pointer-events:none}
+#toast.e{color:#ff7b7b}
 #toast.on{opacity:1}
 .aviso{background:var(--head);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:12px 0 4px;font-size:13px;line-height:1.45}
 label i{color:var(--err);font-style:normal}
@@ -136,7 +139,8 @@ dialog#dalta::backdrop{background:rgba(0,0,0,.45)}
 dialog#dalta h3{margin:0 0 6px}
 #da1{max-width:460px}
 dialog#dalta .bt{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px;align-items:center}
-dialog#dalta .bt .m{margin-right:auto;color:var(--err);font-size:13px}
+dialog#dalta .bt .m{margin-right:auto;font-size:14px;font-weight:700;color:var(--err)}
+dialog#dalta .bt .m.o{color:var(--ok)}
 dialog#dalta .tw{max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:8px;margin-top:10px}
 #dat2{width:100%;border-collapse:collapse;font-size:13px}
 #dat2 th,#dat2 td{padding:7px 9px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
@@ -147,7 +151,8 @@ dialog#dbaja::backdrop{background:rgba(0,0,0,.45)}
 dialog#dbaja h3{margin:0 0 6px}
 dialog#dbaja textarea{width:100%;min-height:90px;padding:9px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit;resize:vertical}
 dialog#dbaja .bt{display:flex;gap:10px;justify-content:flex-end;margin-top:14px;align-items:center}
-dialog#dbaja .bt .m{margin-right:auto;color:var(--err);font-size:13px}
+dialog#dbaja .bt .m{margin-right:auto;font-size:14px;font-weight:700;color:var(--err)}
+dialog#dbaja .bt .m.o{color:var(--ok)}
 select{width:100%}
 </style>
 </head>
@@ -258,7 +263,7 @@ select{width:100%}
 
 <script>
 // Versión visible en la pantalla de carga. Sube 0,1 en cada entrega del HTML (1.0, 1.1, 1.2…).
-const VERSION = '1.6';
+const VERSION = '1.7';
 // Para usar el escudo oficial en lugar del logotipo dibujado: guarda la imagen junto a este HTML y pon aquí su nombre (ej. 'escudo.png').
 const LOGO_SRC = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbywcJXtUPfuBJbbPzNYOqz10G4tyFGvHKN-PrENIPYy8R8amdFb_bOdnlwMeSXwZjGA/exec';
@@ -548,7 +553,7 @@ $('pnform').onsubmit = async e => {
   if (modo === 'alta') return guardaAlta();
   if (modo !== 'mod') return guardaTitular();
   const cam = cambios(), row = sel, ks = Object.keys(cam);
-  if (!ks.length) return msg('No has cambiado ningún dato.');
+  if (!ks.length) return msg('No has cambiado ningún dato.', 'e');
   if (cam.cp && !/^\d{5}$/.test(cam.cp)) return msg('El C.P. debe tener 5 dígitos.', 'e');
   if (cam.email && !/^\S+@\S+\.\S+$/.test(cam.email)) return msg('El email no es válido.', 'e');
   for (const k of Object.keys(CATS)) {
@@ -556,7 +561,7 @@ $('pnform').onsubmit = async e => {
     if (!cam[k]) return msg('El campo ' + k.toUpperCase() + ' no puede quedar vacío.', 'e');
     if (cat && !cat[CATS[k]].some(n => fold(n) === fold(cam[k]))) return msg('Elige un valor de la lista en ' + k.toUpperCase() + '.', 'e');
   }
-  $('pnsv').disabled = $('pnd').disabled = true; msg('Guardando…');
+  $('pnsv').disabled = $('pnd').disabled = true; msg('Guardando…', 'o');
   try {
     const r = await api({ action: 'update', token: localStorage.getItem('tk'), id: row[iId], cambios: cam }, 2, 60000);
     if (r.expired) return caducada();
@@ -572,7 +577,7 @@ $('pnd').onclick = () => { if (sel) pintaPanel(); };
 $('pnrv').onclick = async () => {
   const row = sel; if (!row || modo !== 'mod' || row.alta) return;
   if (hayCambios()) return msg('Hay cambios sin guardar. Pulsa Guardar (ya actualiza la fecha) o Descartar.', 'e');
-  $('pnsv').disabled = $('pnd').disabled = $('pnrv').disabled = true; msg('Guardando…');
+  $('pnsv').disabled = $('pnd').disabled = $('pnrv').disabled = true; msg('Guardando…', 'o');
   try {
     const r = await api({ action: 'revisar', token: localStorage.getItem('tk'), id: row[iId] }, 2, 60000);
     if (r.expired) return caducada();
@@ -590,7 +595,7 @@ const clicFila = e => {
   const tr = e.target.closest('tr'), r = tr && view[+tr.dataset.k]; if (!r) return;
   if (!delMode) return abrir(r);
   const id = String(r[iId]);
-  if (delSel.has(id)) delSel.delete(id); else if (delSel.size >= 200) return toast('Máximo 200 registros cada vez'); else delSel.add(id);
+  if (delSel.has(id)) delSel.delete(id); else if (delSel.size >= 200) return toast('Máximo 200 registros cada vez', 'e'); else delSel.add(id);
   tr.classList.toggle('del', delSel.has(id)); actualizaDel();
 };
 $('tb').onclick = clicFila;
@@ -760,7 +765,8 @@ function progreso(pon, pasos) {
   return () => clearInterval(t);
 }
 let toastT;
-function toast(t) { const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove('on'), 3000); }
+function dmsg(id, t, tipo) { const e = $(id); e.textContent = t || ''; e.className = 'm' + (t && tipo !== 'e' ? ' o' : ''); }
+function toast(t, tipo) { const e = $('toast'); e.textContent = t; e.className = 'on' + (tipo === 'e' ? ' e' : ''); clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove('on'), 3000); }
 
 
 // ===== Cambio de titular =====
@@ -859,7 +865,7 @@ async function guardaTitular() {
     if (!d.titular) return msg('Introduce el titular.', 'e');
     if (!d.nif) return msg('Introduce el NIF.', 'e');
     if (!/^[A-Za-z0-9]{8,12}$/.test(d.nif.replace(/[\s.\-]/g, ''))) return msg('El NIF no es válido.', 'e');
-  } else if (!hayCambios()) return msg('No has cambiado ningún dato.');
+  } else if (!hayCambios()) return msg('No has cambiado ningún dato.', 'e');
   if (d.email && !/^\S+@\S+\.\S+$/.test(d.email)) return msg('El email no es válido.', 'e');
   if (d.cp && !/^\d{5}$/.test(d.cp)) return msg('El C.P. debe tener 5 dígitos.', 'e');
   for (const k of [...Object.keys(CATS), 'localidad']) {
@@ -871,7 +877,7 @@ async function guardaTitular() {
   if (!confirm(act ? 'Se dará de baja el registro actual y se creará uno nuevo con la nueva actividad y los mismos titular y OT. ¿Continuar?'
                    : 'Se dará de baja el registro actual y se creará uno nuevo a nombre de ' + d.titular + '. ¿Continuar?')) return;
   $('pnsv').disabled = $('pnd').disabled = true;
-  const parar = progreso(msg, ['Comprobando los datos…', 'Dando de baja el registro actual…', 'Creando el registro nuevo…', 'Asignando el nuevo OT…', 'Guardando en la base de datos…', 'Finalizando…']);
+  const parar = progreso(t => msg(t, 'o'), ['Comprobando los datos…', 'Dando de baja el registro actual…', 'Creando el registro nuevo…', 'Asignando el nuevo OT…', 'Guardando en la base de datos…', 'Finalizando…']);
   try {
     const r = await api({ action: act ? 'actividad' : 'titular', token: localStorage.getItem('tk'), id: row[iId], datos: d }, 1, 60000);
     if (r.expired) return caducada();
@@ -880,7 +886,7 @@ async function guardaTitular() {
     const nu = r.nuevo, hh = x => fold(vis.map(i => x[i]).join(' '));
     row.h = hh(row); nu.h = hh(nu); marcar(row); marcar(nu);
     all.splice(all.indexOf(row) + 1, 0, nu);
-    contRev(); filter(true); cerrar(true); render(); toast(act ? 'Cambio de actividad realizado' : 'Cambio de titular realizado');
+    contRev(); filter(true); cerrar(true); render(); toast(act ? 'Cambio de actividad realizado' : 'Cambio de titular realizado'); pideIndice();
   } catch (x) { msg('No se pudo confirmar la operación. Actualiza los datos y comprueba si se hizo antes de repetirla.', 'e'); }
   finally { parar(); $('pnsv').disabled = $('pnd').disabled = false; }
 }
@@ -1023,7 +1029,7 @@ async function guardaAlta() {
   if (!confirm(base ? 'Se creará un registro nuevo recuperando el NRE del establecimiento de baja. ¿Continuar?' : 'Se creará una alta nueva en ' + A.loc + ' (' + A.mun + '). ¿Continuar?')) return;
   $('pnsv').disabled = $('pnd').disabled = true;
   const t0 = performance.now();
-  const parar = progreso(msg, base
+  const parar = progreso(t => msg(t, 'o'), base
     ? ['Comprobando los datos…', 'Recuperando el NRE del establecimiento de baja…', 'Creando el registro nuevo…', 'Guardando en la base de datos…', 'Finalizando…']
     : ['Comprobando los datos…', 'Obteniendo el nuevo NRE…', 'Adjudicando el NRE al establecimiento…', 'Creando el registro nuevo…', 'Guardando en la base de datos…', 'Finalizando…']);
   try {
@@ -1039,8 +1045,7 @@ async function guardaAlta() {
       pos = (la >= 0 ? la : lp) + 1;
     }
     if (pos <= 0) all.push(nu); else all.splice(pos, 0, nu);
-    contRev(); filter(true); cerrar(true); render(); toast((base ? 'Establecimiento recuperado' : 'Alta creada') + ' (' + ((performance.now() - t0) / 1000).toFixed(1).replace('.', ',') + ' s)');
-    if (r.tiempos) setTimeout(() => prompt('Tiempos del servidor (temporal, solo administrador). Selecciona todo y copia con Ctrl+C:', r.tiempos + ' | NAVEGADOR ' + ((performance.now() - t0) / 1000).toFixed(1) + ' s'), 400);
+    contRev(); filter(true); cerrar(true); render(); toast((base ? 'Establecimiento recuperado' : 'Alta creada') + ' (' + ((performance.now() - t0) / 1000).toFixed(1).replace('.', ',') + ' s)'); if (base) pideIndice();
   } catch (x) { msg('No se pudo confirmar la operación. Actualiza los datos y comprueba si se hizo antes de repetirla.', 'e'); }
   finally { parar(); $('pnsv').disabled = $('pnd').disabled = false; }
 }
@@ -1058,20 +1063,31 @@ $('dbx').onclick = () => $('dbaja').close();
 $('dbok').onclick = async () => {
   const row = sel, causa = $('dbc').value.replace(/\s+/g, ' ').trim();
   if (!row) return $('dbaja').close();
-  if (!causa) return $('dbm').textContent = 'Indica la causa de la baja.';
+  if (!causa) return dmsg('dbm', 'Indica la causa de la baja.', 'e');
   $('dbok').disabled = $('dbx').disabled = true;
-  const parar = progreso(t => { $('dbm').textContent = t; }, ['Comprobando los datos…', 'Dando de baja el registro…', 'Guardando en la base de datos…', 'Finalizando…']);
+  const parar = progreso(t => dmsg('dbm', t), ['Comprobando los datos…', 'Dando de baja el registro…', 'Guardando en la base de datos…', 'Finalizando…']);
   try {
     const r = await api({ action: 'baja', token: localStorage.getItem('tk'), id: row[iId], causa }, 1, 60000);
     if (r.expired) { $('dbaja').close(); return caducada(); }
-    if (!r.ok) { $('dbm').textContent = r.error; return; }
+    if (!r.ok) { dmsg('dbm', r.error, 'e'); return; }
     r.row.forEach((v, i) => { row[i] = v; });
     row.h = fold(vis.map(i => row[i]).join(' ')); marcar(row); contRev(); filter(true);
     $('dbaja').close(); if (sel === row) cerrar(true);
-    render(); toast('Baja realizada');
-  } catch (x) { $('dbm').textContent = 'No se pudo confirmar la operación. Actualiza los datos y comprueba si se hizo antes de repetirla.'; }
+    render(); toast('Baja realizada'); pideIndice();
+  } catch (x) { dmsg('dbm', 'No se pudo confirmar la operación. Actualiza los datos y comprueba si se hizo antes de repetirla.', 'e'); }
   finally { parar(); $('dbok').disabled = $('dbx').disabled = false; }
 };
+
+// Tras operaciones que dejan obsoleto el índice de NRE del servidor (baja, titular, actividad, eliminar, recuperar baja) se recalcula en
+// segundo plano, sin bloquear nada. Se espera unos segundos tras la última operación para no repetirlo si se encadenan varias.
+let precalT = null;
+function pideIndice() {
+  clearTimeout(precalT);
+  precalT = setTimeout(() => {
+    if (!tok()) return;
+    try { fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'precalentar', token: tok() }) }).catch(() => {}); } catch (e) {}
+  }, 8000);
+}
 
 // ===== Eliminar registros (solo administrador) =====
 let delMode = false, delSel = new Set();
@@ -1108,17 +1124,17 @@ $('ddc').oninput = () => { $('ddok').disabled = $('ddc').value.trim().toUpperCas
 $('ddx').onclick = () => $('ddel').close();
 $('ddok').onclick = async () => {
   const ids = [...delSel]; if (!ids.length) return;
-  $('ddok').disabled = $('ddx').disabled = true; $('ddm').textContent = 'Eliminando filas de la hoja…';
+  $('ddok').disabled = $('ddx').disabled = true; dmsg('ddm', 'Eliminando filas de la hoja…');
   try {
     const r = await api({ action: 'eliminar', token: tok(), ids }, 1, 120000);
     if (r.expired) { $('ddel').close(); return caducada(); }
-    if (!r.ok) { $('ddm').textContent = r.error; $('ddx').disabled = false; return; }
+    if (!r.ok) { dmsg('ddm', r.error, 'e'); $('ddx').disabled = false; return; }
     const fuera = new Set(r.eliminados.map(String));
     all = all.filter(x => !fuera.has(String(x[iId])));
     $('ddel').close(); salirDel(true); contRev(); filter(true);
     const n = r.eliminados.length, rest = (r.noEncontrados || []).length + (r.duplicados || []).length;
-    toast(n + (n === 1 ? ' registro eliminado' : ' registros eliminados') + (rest ? ' · ' + rest + ' no se pudieron eliminar (actualiza los datos)' : ''));
-  } catch (x) { $('ddm').textContent = 'No se pudo confirmar la operación. Actualiza los datos y comprueba qué se eliminó antes de repetirla.'; $('ddx').disabled = false; }
+    toast(n + (n === 1 ? ' registro eliminado' : ' registros eliminados') + (rest ? ' · ' + rest + ' no se pudieron eliminar (actualiza los datos)' : ''), rest ? 'e' : ''); pideIndice();
+  } catch (x) { dmsg('ddm', 'No se pudo confirmar la operación. Actualiza los datos y comprueba qué se eliminó antes de repetirla.', 'e'); $('ddx').disabled = false; }
 };
 
 if (localStorage.getItem('tk')) load();
