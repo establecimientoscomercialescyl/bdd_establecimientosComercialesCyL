@@ -266,7 +266,7 @@ select{width:100%}
 
 <script>
 // Versión visible en la pantalla de carga. Sube 0,1 en cada entrega del HTML (1.0, 1.1, 1.2…).
-const VERSION = '1.8';
+const VERSION = '1.9';
 // Para usar el escudo oficial en lugar del logotipo dibujado: guarda la imagen junto a este HTML y pon aquí su nombre (ej. 'escudo.png').
 const LOGO_SRC = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbywcJXtUPfuBJbbPzNYOqz10G4tyFGvHKN-PrENIPYy8R8amdFb_bOdnlwMeSXwZjGA/exec';
@@ -645,6 +645,11 @@ pnf.addEventListener('click', e => {
   else if (e.target === inp && ul.hidden) { cbAbrir(inp, true); inp.select(); }
 });
 pnf.addEventListener('input', e => {
+  const t = e.target;
+  if (t.dataset && t.dataset.i !== undefined && !t.closest('.cb') && !t.disabled && t.tagName !== 'SELECT') {
+    const k = clave(head[+t.dataset.i] || ''), nv = (k === 'tfn' || k === 'movil') ? t.value : aFormato(k, t.value);
+    if (nv !== t.value) { const a = t.selectionStart, b = t.selectionEnd; t.value = nv; try { t.setSelectionRange(a, b); } catch (x) {} }
+  }
   if (e.target.closest('.cb')) cbAbrir(e.target, false);
   else if (clave(head[+e.target.dataset.i] || '') === 'localizacion') { clearTimeout(mapT); mapT = setTimeout(actualizaMapa, 600); }
 });
@@ -682,7 +687,31 @@ function coords(s) {
   return Math.abs(la) <= 90 && Math.abs(lo) <= 180 ? [la, lo] : null;
 }
 const conGps = (k, ed, ctl) => k === 'localizacion' && ed
-  ? `<div class="gpsr">${ctl}<button type="button" class="sec gpsb" title="Calcular las coordenadas a partir de la dirección">Obtener GPS</button></div><div class="gpsm" aria-live="polite"></div>` : ctl;
+  ? `<div class="gpsr">${ctl}<button type="button" class="sec gpsb" title="Calcular las coordenadas a partir de la dirección">Obtener GPS</button></div><div class="gpsm" aria-live="polite"></div>`
+  : (k === 'tfn' || k === 'movil') && ed
+    ? `<div class="gpsr">${ctl}<button type="button" class="sec masb" title="Añadir otro número (se guardan separados por /)" aria-label="Añadir otro número">+</button></div>` : ctl;
+
+// ----- Formato de los textos: MAYÚSCULAS salvo email y web (minúsculas); LOCALIZACIÓN se respeta; varios teléfonos separados por " / " -----
+const MINUS_ = ['email', 'web'];
+function normalizaTels(x) {   // igual que telefonos_ del servidor
+  return String(x == null ? '' : x).split(/[\/;,|]/).map(p => {
+    p = p.replace(/\s+/g, ' ').trim(); if (!p) return '';
+    if (/^\+?[\d\s.\-()]+$/.test(p)) { const d = p.replace(/\D/g, ''); if (d.length <= 12) return (p[0] === '+' ? '+' : '') + d; }
+    return p.toUpperCase();
+  }).filter(Boolean).join(' / ');
+}
+function aFormato(k, v) { return k === 'localizacion' ? v : MINUS_.includes(k) ? v.toLowerCase() : v.toUpperCase(); }
+pnf.addEventListener('click', e => {
+  const b = e.target.closest('.masb'); if (!b) return;
+  const inp = b.parentElement.querySelector('input'); if (!inp || inp.disabled) return;
+  let v = normalizaTels(inp.value);
+  if (v) v += ' / ';
+  inp.value = v; inp.focus(); try { inp.setSelectionRange(v.length, v.length); } catch (x) {}
+});
+pnf.addEventListener('change', e => {
+  const t = e.target, k = t.dataset && t.dataset.i !== undefined ? clave(head[+t.dataset.i] || '') : '';
+  if ((k === 'tfn' || k === 'movil') && !t.disabled) t.value = normalizaTels(t.value);
+});
 const GPS_TIPO = { ROOFTOP: 'Ubicación precisa del portal.', RANGE_INTERPOLATED: 'Ubicación estimada dentro de la calle (portal aproximado).',
                    GEOMETRIC_CENTER: 'Solo se ha localizado la calle o la zona: ubicación aproximada.', APPROXIMATE: 'Solo se ha localizado la zona: ubicación aproximada.' };
 pnf.addEventListener('click', async e => {
@@ -1059,6 +1088,7 @@ $('ibb').onclick = () => {
   if (hayCambios() && !confirm('Hay cambios sin guardar. ¿Descartarlos?')) return;
   const r = sel;
   $('dbi').innerHTML = `Se dará de baja <b>${esc((iNC >= 0 && r[iNC]) || r[colIdx('titular')])}</b> (${esc(r[colIdx('titular')])}) con la fecha de hoy. La fecha de modificación se borrará y la causa se añadirá a Observaciones.`;
+  $('dbc').oninput = e => { const t = e.target, a = t.selectionStart, b = t.selectionEnd; t.value = t.value.toUpperCase(); try { t.setSelectionRange(a, b); } catch (x) {} };
   $('dbc').value = ''; $('dbm').textContent = ''; $('dbok').disabled = $('dbx').disabled = false;
   $('dbaja').showModal(); $('dbc').focus();
 };
