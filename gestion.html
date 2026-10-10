@@ -4,9 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Gestión de establecimientos comerciales</title>
+<script>try{var t=localStorage.getItem('tema');if(t==='claro'||t==='oscuro')document.documentElement.dataset.tema=t}catch(e){}</script>
 <style>
-:root{--bg:#f4f5f7;--card:#fff;--ink:#1c2230;--mute:#667085;--line:#dde1e8;--acc:#1f5fbf;--accT:#fff;--err:#b42318;--head:#e9edf3;--c-alta:#e3f4e6;--c-modi:#e1ecfa;--c-baja:#fbe4e2;--c-ver:#ece3f8;--ok:#2e9e5b;--off:#d64545}
-@media(prefers-color-scheme:dark){:root{--bg:#14171d;--card:#1d222b;--ink:#e8ebf0;--mute:#98a2b3;--line:#323946;--acc:#6ea0f0;--accT:#10151c;--err:#f97066;--head:#262c37;--c-alta:#1f3a2a;--c-modi:#1f2f47;--c-baja:#472524;--c-ver:#35284d;--ok:#4cc27e;--off:#f06a6a}}
+:root{color-scheme:light;--bg:#f4f5f7;--card:#fff;--ink:#1c2230;--mute:#667085;--line:#dde1e8;--acc:#1f5fbf;--accT:#fff;--err:#b42318;--head:#e9edf3;--c-alta:#e3f4e6;--c-modi:#e1ecfa;--c-baja:#fbe4e2;--c-ver:#ece3f8;--ok:#2e9e5b;--off:#d64545}
+@media(prefers-color-scheme:dark){:root:not([data-tema="claro"]){color-scheme:dark;--bg:#14171d;--card:#1d222b;--ink:#e8ebf0;--mute:#98a2b3;--line:#323946;--acc:#6ea0f0;--accT:#10151c;--err:#f97066;--head:#262c37;--c-alta:#1f3a2a;--c-modi:#1f2f47;--c-baja:#472524;--c-ver:#35284d;--ok:#4cc27e;--off:#f06a6a}}
+:root[data-tema="oscuro"]{color-scheme:dark;--bg:#14171d;--card:#1d222b;--ink:#e8ebf0;--mute:#98a2b3;--line:#323946;--acc:#6ea0f0;--accT:#10151c;--err:#f97066;--head:#262c37;--c-alta:#1f3a2a;--c-modi:#1f2f47;--c-baja:#472524;--c-ver:#35284d;--ok:#4cc27e;--off:#f06a6a}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
 [hidden]{display:none!important}
@@ -176,6 +178,7 @@ select{width:100%}
     <span class="who" id="who"></span>
     <button class="verde" id="alta" type="button">+ Nueva alta</button>
     <button class="peligro" id="del" type="button" hidden title="Solo administrador: eliminar filas de la hoja">Eliminar registros</button>
+    <button class="sec" id="tema" type="button" title="Cambiar entre tema claro y oscuro"></button>
     <button class="sec" id="out">Salir</button>
   </header>
   <div class="bar">
@@ -263,7 +266,7 @@ select{width:100%}
 
 <script>
 // Versión visible en la pantalla de carga. Sube 0,1 en cada entrega del HTML (1.0, 1.1, 1.2…).
-const VERSION = '1.7';
+const VERSION = '1.8';
 // Para usar el escudo oficial en lugar del logotipo dibujado: guarda la imagen junto a este HTML y pon aquí su nombre (ej. 'escudo.png').
 const LOGO_SRC = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbywcJXtUPfuBJbbPzNYOqz10G4tyFGvHKN-PrENIPYy8R8amdFb_bOdnlwMeSXwZjGA/exec';
@@ -1088,6 +1091,24 @@ function pideIndice() {
     try { fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'precalentar', token: tok() }) }).catch(() => {}); } catch (e) {}
   }, 8000);
 }
+
+// ===== Tema claro / oscuro =====
+// Sin elección guardada se sigue el tema del sistema; al pulsar el botón se guarda la elección en este navegador.
+const mqOscuro = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+const temaActual = () => document.documentElement.dataset.tema || (mqOscuro && mqOscuro.matches ? 'oscuro' : 'claro');
+function pintaTema() {
+  const oscuro = temaActual() === 'oscuro';
+  $('tema').textContent = oscuro ? '☀️ Tema claro' : '🌙 Tema oscuro';
+  $('tema').setAttribute('aria-label', oscuro ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro');
+}
+$('tema').onclick = () => {
+  const nuevo = temaActual() === 'oscuro' ? 'claro' : 'oscuro';
+  document.documentElement.dataset.tema = nuevo;
+  try { localStorage.setItem('tema', nuevo); } catch (e) {}
+  pintaTema();
+};
+if (mqOscuro && mqOscuro.addEventListener) mqOscuro.addEventListener('change', pintaTema);
+pintaTema();
 
 // ===== Eliminar registros (solo administrador) =====
 let delMode = false, delSel = new Set();
