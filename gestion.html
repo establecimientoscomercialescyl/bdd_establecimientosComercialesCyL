@@ -23,6 +23,8 @@ button:disabled{opacity:.5;cursor:wait}
 #login button{width:100%;margin-top:18px}
 .err{color:var(--err);min-height:20px;margin:10px 0 0}
 #verl{margin:14px 0 0;text-align:center;font-size:12px;color:var(--mute)}
+.gpsr{display:flex;gap:6px}.gpsr input{flex:1;min-width:0}.gpsr button{white-space:nowrap;padding:9px 12px}
+.gpsm{font-size:12px;color:var(--mute);margin-top:4px}.gpsm.e{color:var(--err)}
 header{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;padding:12px 16px;background:var(--card);border-bottom:1px solid var(--line)}
 header h2{font-size:16px;margin:0;flex:1 1 200px}
 header .who{color:var(--mute)}
@@ -231,7 +233,7 @@ select{width:100%}
 
 <script>
 // Versión visible en la pantalla de carga. Sube 0,1 en cada entrega del HTML (1.0, 1.1, 1.2…).
-const VERSION = '1.1';
+const VERSION = '1.2';
 // Para usar el escudo oficial en lugar del logotipo dibujado: guarda la imagen junto a este HTML y pon aquí su nombre (ej. 'escudo.png').
 const LOGO_SRC = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbywcJXtUPfuBJbbPzNYOqz10G4tyFGvHKN-PrENIPYy8R8amdFb_bOdnlwMeSXwZjGA/exec';
@@ -494,7 +496,7 @@ function pintaPanel() {
       : (CATS[k] && ed)
         ? `<div class="cb"><input id="${id}" data-i="${i}" value="${v}" data-ok="${v}" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="cbl_${k}"><button type="button" class="cbt" tabindex="-1" aria-label="Ver todas las opciones">&#9662;</button><ul class="cbl" id="cbl_${k}" role="listbox" hidden></ul></div>`
         : `<input id="${id}" data-i="${i}" value="${v}" ${ed ? '' : 'disabled'} ${k === 'cp' ? 'inputmode="numeric" maxlength="5"' : ''}>`;
-    return `<div class="${w.trim()}"><label for="${id}">${esc(head[i])}</label>${ctl}</div>`;
+    return `<div class="${w.trim()}"><label for="${id}">${esc(head[i])}</label>${conGps(k, ed, ctl)}</div>`;
   };
   $('pnt').textContent = (iNC >= 0 && r[iNC]) || 'Registro';
   $('pns').textContent = [r[iMun], r[iLoc]].filter(Boolean).join(' · ');
@@ -638,6 +640,29 @@ function coords(s) {
   const la = +m[1], lo = +m[2];
   return Math.abs(la) <= 90 && Math.abs(lo) <= 180 ? [la, lo] : null;
 }
+const conGps = (k, ed, ctl) => k === 'localizacion' && ed
+  ? `<div class="gpsr">${ctl}<button type="button" class="sec gpsb" title="Calcular las coordenadas a partir de la dirección">Obtener GPS</button></div><div class="gpsm" aria-live="polite"></div>` : ctl;
+const GPS_TIPO = { ROOFTOP: 'Ubicación precisa del portal.', RANGE_INTERPOLATED: 'Ubicación estimada dentro de la calle (portal aproximado).',
+                   GEOMETRIC_CENTER: 'Solo se ha localizado la calle o la zona: ubicación aproximada.', APPROXIMATE: 'Solo se ha localizado la zona: ubicación aproximada.' };
+pnf.addEventListener('click', async e => {
+  const b = e.target.closest('.gpsb'); if (!b || !sel) return;
+  const row = sel, m = pnf.querySelector('.gpsm');
+  const g = k => { const i = colIdx(k); if (i < 0) return ''; const el = pnf.querySelector(`[data-i="${i}"]`); return (el ? el.value : String(row[i] || '')).trim(); };
+  const iL = colIdx('localizacion'), el = pnf.querySelector(`[data-i="${iL}"]`);
+  if (!g('direccion')) { m.textContent = 'Escribe primero la dirección.'; m.className = 'gpsm e'; return; }
+  b.disabled = true; m.className = 'gpsm'; m.textContent = 'Buscando la dirección en el mapa…';
+  try {
+    const r = await api({ action: 'geocodificar', token: tok(), direccion: g('direccion'), cp: g('cp'), localidad: g('localidad'), municipio: g('municipio'), provincia: g('provincia') }, 1, 30000);
+    if (r.expired) return caducada();
+    if (sel !== row || !el.isConnected) return;
+    if (!r.ok) { m.textContent = r.error; m.className = 'gpsm e'; return; }
+    if (coords(el.value) && !confirm('LOCALIZACIÓN ya tiene coordenadas. ¿Sustituirlas por las nuevas (' + r.texto + ')?')) { m.textContent = ''; return; }
+    el.value = r.texto; el.dispatchEvent(new Event('input', { bubbles: true }));
+    m.className = 'gpsm' + (r.coincide ? '' : ' e');
+    m.textContent = (GPS_TIPO[r.tipo] || '') + ' Encontrada: ' + r.direccion + '.' + (r.coincide ? '' : ' Atención: no parece estar en el municipio indicado.') + ' Revisa el mapa antes de guardar.';
+  } catch (x) { if (sel === row) { m.textContent = 'No se pudo consultar el mapa. Inténtalo de nuevo.'; m.className = 'gpsm e'; } }
+  finally { b.disabled = false; }
+});
 function actualizaMapa() {
   const box = $('pnmap'); if (!box || !sel) return;
   const iL = head.findIndex(x => clave(x) === 'localizacion');
@@ -648,6 +673,12 @@ function actualizaMapa() {
   const ll = c[0].toFixed(6) + ',' + c[1].toFixed(6);
   box.innerHTML = `<div class="co"><span>GPS: ${c[0].toFixed(6)}, ${c[1].toFixed(6)}</span><a href="https://www.google.com/maps/search/?api=1&query=${ll}" target="_blank" rel="noopener">Abrir en Google Maps</a></div>` +
     `<iframe title="Mapa de la localización" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://maps.google.com/maps?q=${ll}&z=17&output=embed"></iframe>`;
+}
+// Mensajes de progreso mientras el servidor guarda. Son orientativos: avanzan por tiempo y el último se queda hasta que responde.
+function progreso(pon, pasos) {
+  let i = 0; pon(pasos[0]);
+  const t = setInterval(() => { if (i < pasos.length - 1) pon(pasos[++i]); }, 1800);
+  return () => clearInterval(t);
 }
 let toastT;
 function toast(t) { const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove('on'), 3000); }
@@ -716,7 +747,7 @@ function pintaTitular() {
       : ed && (CATS[k] || k === 'localidad')
         ? `<div class="cb"><input id="${id}" data-i="${i}" value="${v}" data-ok="${v}" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="cbl_${k}"><button type="button" class="cbt" tabindex="-1" aria-label="Ver todas las opciones">&#9662;</button><ul class="cbl" id="cbl_${k}" role="listbox" hidden></ul></div>`
         : `<input id="${id}" data-i="${i}" value="${v}" ${ed ? '' : 'disabled'} ${k === 'cp' ? 'inputmode="numeric" maxlength="5"' : ''}>`;
-    return `<div class="${w}"><label for="${id}">${esc(head[i])}${req}</label>${ctl}</div>`;
+    return `<div class="${w}"><label for="${id}">${esc(head[i])}${req}</label>${conGps(k, ed, ctl)}</div>`;
   };
   const lista = vis.filter(i => !TIT_FECHAS.includes(clave(head[i])));
   let aviso, h4;
@@ -760,7 +791,8 @@ async function guardaTitular() {
   }
   if (!confirm(act ? 'Se dará de baja el registro actual y se creará uno nuevo con la nueva actividad y los mismos titular y OT. ¿Continuar?'
                    : 'Se dará de baja el registro actual y se creará uno nuevo a nombre de ' + d.titular + '. ¿Continuar?')) return;
-  $('pnsv').disabled = $('pnd').disabled = true; msg('Guardando…');
+  $('pnsv').disabled = $('pnd').disabled = true;
+  const parar = progreso(msg, ['Comprobando los datos…', 'Dando de baja el registro actual…', 'Creando el registro nuevo…', 'Asignando el nuevo OT…', 'Guardando en la base de datos…', 'Finalizando…']);
   try {
     const r = await api({ action: act ? 'actividad' : 'titular', token: localStorage.getItem('tk'), id: row[iId], datos: d }, 1, 60000);
     if (r.expired) return caducada();
@@ -771,7 +803,7 @@ async function guardaTitular() {
     all.splice(all.indexOf(row) + 1, 0, nu);
     contRev(); filter(true); cerrar(true); render(); toast(act ? 'Cambio de actividad realizado' : 'Cambio de titular realizado');
   } catch (x) { msg('No se pudo confirmar la operación. Actualiza los datos y comprueba si se hizo antes de repetirla.', 'e'); }
-  finally { $('pnsv').disabled = $('pnd').disabled = false; }
+  finally { parar(); $('pnsv').disabled = $('pnd').disabled = false; }
 }
 
 // ===== Altas nuevas =====
@@ -910,7 +942,10 @@ async function guardaAlta() {
   const dup = dir ? all.find(x => String(x[iEst]).trim() === '1' && limpia(x[iN]) === limpia(d.nif) && clave(x[iD]) === dir) : null;
   if (dup && !confirm('Ya existe un registro ACTIVO con el mismo NIF en esa misma dirección (' + (dup[iNC] || dup[colIdx('titular')]) + ', ' + dup[iD] + '). ¿Crear el alta igualmente?')) return;
   if (!confirm(base ? 'Se creará un registro nuevo recuperando el NRE del establecimiento de baja. ¿Continuar?' : 'Se creará una alta nueva en ' + A.loc + ' (' + A.mun + '). ¿Continuar?')) return;
-  $('pnsv').disabled = $('pnd').disabled = true; msg('Guardando…');
+  $('pnsv').disabled = $('pnd').disabled = true;
+  const parar = progreso(msg, base
+    ? ['Comprobando los datos…', 'Recuperando el NRE del establecimiento de baja…', 'Creando el registro nuevo…', 'Guardando en la base de datos…', 'Finalizando…']
+    : ['Comprobando los datos…', 'Obteniendo el nuevo NRE…', 'Adjudicando el NRE al establecimiento…', 'Creando el registro nuevo…', 'Guardando en la base de datos…', 'Finalizando…']);
   try {
     const r = await api({ action: 'alta', token: tok(), base, provincia: A.prov, municipio: A.mun, localidad: A.loc, datos: d }, 1, 60000);
     if (r.expired) return caducada();
@@ -926,7 +961,7 @@ async function guardaAlta() {
     if (pos <= 0) all.push(nu); else all.splice(pos, 0, nu);
     contRev(); filter(true); cerrar(true); render(); toast(base ? 'Establecimiento recuperado' : 'Alta creada');
   } catch (x) { msg('No se pudo confirmar la operación. Actualiza los datos y comprueba si se hizo antes de repetirla.', 'e'); }
-  finally { $('pnsv').disabled = $('pnd').disabled = false; }
+  finally { parar(); $('pnsv').disabled = $('pnd').disabled = false; }
 }
 
 // ===== Baja =====
@@ -943,7 +978,8 @@ $('dbok').onclick = async () => {
   const row = sel, causa = $('dbc').value.replace(/\s+/g, ' ').trim();
   if (!row) return $('dbaja').close();
   if (!causa) return $('dbm').textContent = 'Indica la causa de la baja.';
-  $('dbok').disabled = $('dbx').disabled = true; $('dbm').textContent = 'Guardando…';
+  $('dbok').disabled = $('dbx').disabled = true;
+  const parar = progreso(t => { $('dbm').textContent = t; }, ['Comprobando los datos…', 'Dando de baja el registro…', 'Guardando en la base de datos…', 'Finalizando…']);
   try {
     const r = await api({ action: 'baja', token: localStorage.getItem('tk'), id: row[iId], causa }, 1, 60000);
     if (r.expired) { $('dbaja').close(); return caducada(); }
@@ -953,7 +989,7 @@ $('dbok').onclick = async () => {
     $('dbaja').close(); if (sel === row) cerrar(true);
     render(); toast('Baja realizada');
   } catch (x) { $('dbm').textContent = 'No se pudo confirmar la operación. Actualiza los datos y comprueba si se hizo antes de repetirla.'; }
-  finally { $('dbok').disabled = $('dbx').disabled = false; }
+  finally { parar(); $('dbok').disabled = $('dbx').disabled = false; }
 };
 
 if (localStorage.getItem('tk')) load();
