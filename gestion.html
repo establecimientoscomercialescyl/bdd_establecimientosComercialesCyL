@@ -258,7 +258,7 @@ select{width:100%}
 
 <script>
 // Versión visible en la pantalla de carga. Sube 0,1 en cada entrega del HTML (1.0, 1.1, 1.2…).
-const VERSION = '1.5';
+const VERSION = '1.6';
 // Para usar el escudo oficial en lugar del logotipo dibujado: guarda la imagen junto a este HTML y pon aquí su nombre (ej. 'escudo.png').
 const LOGO_SRC = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbywcJXtUPfuBJbbPzNYOqz10G4tyFGvHKN-PrENIPYy8R8amdFb_bOdnlwMeSXwZjGA/exec';
@@ -1040,14 +1040,7 @@ async function guardaAlta() {
     }
     if (pos <= 0) all.push(nu); else all.splice(pos, 0, nu);
     contRev(); filter(true); cerrar(true); render(); toast((base ? 'Establecimiento recuperado' : 'Alta creada') + ' (' + ((performance.now() - t0) / 1000).toFixed(1).replace('.', ',') + ' s)');
-    if (r.tiempos) {
-      const tn = ((performance.now() - t0) / 1000).toFixed(1);
-      (async () => {
-        toast('Midiendo la velocidad de lectura de la hoja (unos 30 s)…');
-        let b = ''; try { const mm = await api({ action: 'medir', token: tok() }, 1, 120000); b = mm.ok ? mm.txt : (mm.error || 'sin datos'); } catch (e) { b = 'medición no disponible'; }
-        prompt('Tiempos (temporal, solo administrador). Selecciona todo y copia con Ctrl+C:', r.tiempos + ' | NAVEGADOR ' + tn + ' s || MEDICIÓN: ' + b);
-      })();
-    }
+    if (r.tiempos) setTimeout(() => prompt('Tiempos del servidor (temporal, solo administrador). Selecciona todo y copia con Ctrl+C:', r.tiempos + ' | NAVEGADOR ' + ((performance.now() - t0) / 1000).toFixed(1) + ' s'), 400);
   } catch (x) { msg('No se pudo confirmar la operación. Actualiza los datos y comprueba si se hizo antes de repetirla.', 'e'); }
   finally { parar(); $('pnsv').disabled = $('pnd').disabled = false; }
 }
