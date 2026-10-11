@@ -38,7 +38,15 @@ header .who{color:var(--mute)}
 .wrap{margin:0 16px;overflow:auto;max-height:calc(100vh - 240px);border:1px solid var(--line);border-radius:8px;background:var(--card)}
 table{border-collapse:collapse;width:max-content;min-width:100%}
 th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;max-width:320px;overflow:hidden;text-overflow:ellipsis}
-th{position:sticky;top:0;background:var(--head);cursor:pointer;user-select:none;z-index:1}
+th{position:sticky;top:0;background:var(--head);cursor:pointer;user-select:none;z-index:2}
+:root{--div:rgba(127,127,127,.6)}
+th.fz{z-index:4}
+td.fz{position:sticky;z-index:1;background:var(--card)}
+tr.r-alta td.fz{background:var(--c-alta)}tr.r-modi td.fz{background:var(--c-modi)}tr.r-ver td.fz{background:var(--c-ver)}tr.r-baja td.fz{background:var(--c-baja)}
+.fzl{box-shadow:inset -2px 0 0 var(--div)}
+tbody tr.sel td.fzl{box-shadow:inset -2px 0 0 var(--div),inset 0 2px 0 var(--acc),inset 0 -2px 0 var(--acc)}
+body.pn-open tbody tr.sel td.fzl{box-shadow:inset -2px 0 0 var(--div),inset 0 3px 0 var(--acc),inset 0 -3px 0 var(--acc)}
+tbody tr.del td.fzl{box-shadow:inset -2px 0 0 var(--div),inset 0 0 0 999px rgba(179,38,28,.28)}
 th.s::after{content:" \25B2"}th.s.d::after{content:" \25BC"}
 tbody tr.r-alta{background:var(--c-alta)}
 tbody tr.r-modi{background:var(--c-modi)}
@@ -192,10 +200,12 @@ select{width:100%}
     <button class="sec" id="out">Salir</button>
   </header>
   <div class="bar">
+    <select id="fp" aria-label="Provincia" hidden></select>
     <select id="fm" aria-label="Municipio"></select>
     <select id="fl" aria-label="Localidad"></select>
     <select id="fr" aria-label="Revisados"></select>
     <button class="sec" id="lf">Limpiar filtros</button>
+    <select id="fz" aria-label="Columnas fijas" title="Columnas fijas: se quedan a la vista al desplazar la tabla hacia la derecha"></select>
     <input id="q" type="search" placeholder="Buscar en todos los campos" aria-label="Buscar">
     <span class="act" id="act" hidden role="status"><i></i><span id="actt"></span><button class="sec" id="rf" hidden>Actualizar ahora</button></span>
     <span class="info" id="info"></span>
@@ -282,7 +292,7 @@ select{width:100%}
 
 <script>
 // Versión visible en la pantalla de carga. Sube 0,1 en cada entrega del HTML (1.0, 1.1, 1.2…).
-const VERSION = '2.1';
+const VERSION = '2.2';
 // Para usar el escudo oficial en lugar del logotipo dibujado: guarda la imagen junto a este HTML y pon aquí su nombre (ej. 'escudo.png').
 const LOGO_SRC = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbywcJXtUPfuBJbbPzNYOqz10G4tyFGvHKN-PrENIPYy8R8amdFb_bOdnlwMeSXwZjGA/exec';
@@ -299,7 +309,7 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;
 const fold = s => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const clave = s => fold(s).replace(/[^a-z0-9]/g, '');
 let terr = null, terrP = null;   // árbol provincia → municipio → localidades (se pide una vez)
-let iMun = -1, iLoc = -1, iEst = -1, iAlta = -1, iModi = -1, iBaja = -1, iVer = -1, head = [], vis = [], all = [], view = [], page = 0, sortCol = -1, sortDesc = false, info = {}, gen = 0, ldTimer, iId = -1, iNC = -1, sel = null, cat = null, catP = null, modo = 'mod', snap = '';
+let iProv = -1, iMun = -1, iLoc = -1, iEst = -1, iAlta = -1, iModi = -1, iBaja = -1, iVer = -1, head = [], vis = [], all = [], view = [], page = 0, sortCol = -1, sortDesc = false, info = {}, gen = 0, ldTimer, iId = -1, iNC = -1, sel = null, cat = null, catP = null, modo = 'mod', snap = '';
 
 const espera = ms => new Promise(r => setTimeout(r, ms));
 // Petición con reintentos automáticos (Apps Script falla a veces en el primer intento)
@@ -402,6 +412,7 @@ function setData(r, keep, primera) {
   vis = head.map((h, i) => i).filter(i => !OCULTAS.includes(clave(head[i])));
   all.forEach(row => { row.h = fold(vis.map(i => row[i]).join(' ')); });
   info = { fuente: r.fuente, gen: r.gen, primera };
+  iProv = head.findIndex(h => clave(h) === 'provincia');
   iMun = head.findIndex(h => clave(h) === 'municipio');
   iLoc = head.findIndex(h => clave(h) === 'localidad');
   const col = c => head.findIndex(h => clave(h) === c);
@@ -410,10 +421,12 @@ function setData(r, keep, primera) {
   if (selId != null) { sel = all.find(x => x[iId] === selId) || null; if (!sel) cerrar(true); }
   if (!keep) {
     sortCol = -1; sortDesc = false; page = 0; $('q').value = '';
-    $('fm').value = ''; $('fl').value = ''; $('fr').value = '';
+    $('fp').value = ''; $('fm').value = ''; $('fl').value = ''; $('fr').value = '';
   }
-  const m = $('fm').value, l = $('fl').value, v = $('fr').value;
-  rellenar($('fm'), valores(iMun), 'Todos los municipios', m);
+  const p = $('fp').value, m = $('fm').value, l = $('fl').value;
+  $('fp').hidden = !(esAdmin() && iProv >= 0);
+  rellenar($('fp'), valores(iProv), 'Todas las provincias', p);
+  rellenar($('fm'), valores(iMun, '', $('fp').value), 'Todos los municipios', m);
   rellenarLoc(l);
   contRev();
   buildHead(); filter(true);
@@ -428,18 +441,38 @@ function parseFecha(s) {
   return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
 }
 const ord = (a, b) => a.localeCompare(b, 'es', { sensitivity: 'base', numeric: true });
-function valores(i, mun) {
+function valores(i, mun, prov) {
   const set = new Set();
-  all.forEach(r => { if (r[i] !== '' && (!mun || r[iMun] === mun)) set.add(r[i]); });
+  all.forEach(r => { if (i >= 0 && r[i] !== '' && (!mun || r[iMun] === mun) && (!prov || r[iProv] === prov)) set.add(r[i]); });
   return [...set].sort(ord);
 }
 function rellenar(sel, vals, ph, actual) {
   sel.innerHTML = `<option value="">${ph}</option>` + vals.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
   sel.value = vals.includes(actual) ? actual : '';
 }
-function rellenarLoc(actual) { rellenar($('fl'), valores(iLoc, $('fm').value), 'Todas las localidades', actual); }
+function rellenarLoc(actual) { rellenar($('fl'), valores(iLoc, $('fm').value, $('fp').value), 'Todas las localidades', actual); }
+
+let fzKey = localStorage.getItem('fz') || '';
+function aplicaFijas(avisa) {
+  const th = $('th').rows[0]; if (!th) return;
+  document.querySelectorAll('.fz').forEach(e => { e.classList.remove('fz', 'fzl'); e.style.left = ''; });
+  const j0 = vis.findIndex(i => clave(head[i]) === fzKey), n = j0 < 0 ? 0 : j0 + 1; if (!n) return;
+  const pt = iEst >= 0 ? 1 : 0, max = document.querySelector('.wrap').clientWidth * 0.6;
+  const ws = [...th.cells].map(c => c.offsetWidth), lefts = []; let x = 0;
+  for (let j = 0; j < pt + n && j < ws.length; j++) { if (j > pt && x + ws[j] > max) break; lefts.push(x); x += ws[j]; }
+  const k = lefts.length;
+  [th, ...$('tb').rows].forEach(r => lefts.forEach((l, j) => {
+    const c = r.cells[j]; if (!c) return;
+    c.classList.add('fz'); if (j === k - 1) c.classList.add('fzl'); c.style.left = l + 'px';
+  }));
+  if (avisa && k < pt + n) { const c = k - pt; toast('En esta pantalla solo caben ' + c + (c === 1 ? ' columna fija' : ' columnas fijas') + '.'); }
+}
+$('fz').onchange = () => { fzKey = $('fz').value; localStorage.setItem('fz', fzKey); aplicaFijas(true); };
+new ResizeObserver(() => aplicaFijas()).observe(document.querySelector('.wrap'));
 
 function buildHead() {
+  $('fz').innerHTML = '<option value="">Sin columnas fijas</option>' + vis.map(i => `<option value="${esc(clave(head[i]))}">Fijar hasta: ${esc(head[i])}</option>`).join('');
+  $('fz').value = vis.some(i => clave(head[i]) === fzKey) ? fzKey : '';
   $('th').innerHTML = '<tr>' + (iEst >= 0 ? `<th class="pt" tabindex="0" data-i="${iEst}" title="Estado (ordenar)" aria-label="Estado"></th>` : '') + vis.map(i => `<th tabindex="0" data-i="${i}">${esc(head[i])}</th>`).join('') + '</tr>';
   $('th').querySelectorAll('th').forEach(t => {
     const go = () => sortBy(+t.dataset.i);
@@ -449,8 +482,8 @@ function buildHead() {
 
 function filter(keep) {
   const q = fold($('q').value.trim());
-  const m = $('fm').value, l = $('fl').value, v = $('fr').value;
-  view = all.filter(r => (!m || r[iMun] === m) && (!l || r[iLoc] === l) &&
+  const p = $('fp').value, m = $('fm').value, l = $('fl').value, v = $('fr').value;
+  view = all.filter(r => (!p || r[iProv] === p) && (!m || r[iMun] === m) && (!l || r[iLoc] === l) &&
     (v === '' || (v === 'si') === r.rev) && (!q || r.h.includes(q)));
   if (sortCol >= 0) doSort();
   if (keep !== true) page = 0;
@@ -479,6 +512,7 @@ function render() {
   $('pv').disabled = page === 0; $('nx').disabled = page >= pages - 1;
   $('info').textContent = `${view.length.toLocaleString('es')} registros · primera carga ${info.primera} s · ` +
     (info.fuente === 'json' ? `archivo diario (${info.gen})` : 'datos en directo de la hoja');
+  aplicaFijas();
 }
 
 const fc = FECHA_REVISION.toLocaleDateString('es', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -489,8 +523,9 @@ $('ley').innerHTML = `<span><i class="dot ok" style="width:10px;height:10px;bord
   <span><i style="background:var(--c-ver)"></i> Verificado (todo correcto) después del ${fc}</span>
   <span><i style="background:var(--c-baja)"></i> Baja posterior al ${fc}</span>`;
 $('q').oninput = $('fl').onchange = $('fr').onchange = filter;
+$('fp').onchange = () => { rellenar($('fm'), valores(iMun, '', $('fp').value), 'Todos los municipios', ''); rellenarLoc(''); filter(); };
 $('fm').onchange = () => { rellenarLoc(''); filter(); };
-$('lf').onclick = () => { $('q').value = ''; $('fm').value = ''; $('fr').value = ''; rellenarLoc(''); filter(); };
+$('lf').onclick = () => { $('q').value = ''; $('fp').value = ''; rellenar($('fm'), valores(iMun), 'Todos los municipios', ''); $('fr').value = ''; rellenarLoc(''); filter(); };
 $('pv').onclick = () => { page--; render(); };
 $('nx').onclick = () => { page++; render(); };
 
