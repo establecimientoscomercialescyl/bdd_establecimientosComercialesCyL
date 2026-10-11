@@ -26,6 +26,8 @@ button:disabled{opacity:.5;cursor:wait}
 .err{color:var(--err);min-height:20px;margin:10px 0 0}
 #verl{margin:14px 0 0;text-align:center;font-size:12px;color:var(--mute)}
 .gpsr{display:flex;gap:6px}.gpsr input{flex:1;min-width:0}.gpsr button{white-space:nowrap;padding:9px 12px}
+.tels>input.tel{margin-top:6px}
+.nota{font-size:12px;color:var(--mute);margin:6px 0 0}
 .gpsm{font-size:12px;color:var(--mute);margin-top:4px}.gpsm.e{color:var(--err)}
 header{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;padding:12px 16px;background:var(--card);border-bottom:1px solid var(--line)}
 header h2{font-size:16px;margin:0;flex:1 1 200px}
@@ -266,7 +268,7 @@ select{width:100%}
 
 <script>
 // Versión visible en la pantalla de carga. Sube 0,1 en cada entrega del HTML (1.0, 1.1, 1.2…).
-const VERSION = '1.9';
+const VERSION = '2.0';
 // Para usar el escudo oficial en lugar del logotipo dibujado: guarda la imagen junto a este HTML y pon aquí su nombre (ej. 'escudo.png').
 const LOGO_SRC = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbywcJXtUPfuBJbbPzNYOqz10G4tyFGvHKN-PrENIPYy8R8amdFb_bOdnlwMeSXwZjGA/exec';
@@ -495,7 +497,7 @@ function contRev() {
 }
 
 // ===== Panel lateral: Modificar =====
-const EDITABLES = ['ncomercial','direccion','cp','tfn','movil','email','web','localizacion','observaciones','sectorcomercial','cnae','iae'];
+const EDITABLES = ['titular','ncomercial','direccion','cp','tfn','movil','email','web','localizacion','observaciones','sectorcomercial','cnae','iae'];
 const CATS = { sectorcomercial: 'sc', cnae: 'cnae', iae: 'iae' };
 const ANCHOS = ['ncomercial','direccion','observaciones','sectorcomercial','cnae','iae','titular','email','web','localizacion'];
 
@@ -521,21 +523,23 @@ function cerrar(force) {
   sel = null; modo = 'mod'; $('pn').hidden = true; document.body.classList.remove('pn-open'); msg('');
   if (!force) render();
 }
+const MAPA_TRAS = i => clave(head[i]) === 'localizacion' ? '<div class="w"><h4>Ubicación</h4><div id="pnmap" class="mapa"></div></div>' : '';
 function pintaPanel() {
   if (modo !== 'mod') return pintaTitular();
   const r = sel, f = i => {
     const k = clave(head[i]), ed = EDITABLES.includes(k), w = ANCHOS.includes(k) ? ' w' : '', id = 'c_' + i, v = esc(r[i]);
+    const req = ed && (k === 'titular' || k === 'direccion') ? ' <i aria-hidden="true">*</i>' : '';
     const ctl = k === 'observaciones'
       ? `<textarea id="${id}" data-i="${i}" maxlength="2000">${v}</textarea>`
+      : esTel(k) && ed ? telCtl(id, i, r[i])
       : (CATS[k] && ed)
         ? `<div class="cb"><input id="${id}" data-i="${i}" value="${v}" data-ok="${v}" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="cbl_${k}"><button type="button" class="cbt" tabindex="-1" aria-label="Ver todas las opciones">&#9662;</button><ul class="cbl" id="cbl_${k}" role="listbox" hidden></ul></div>`
         : `<input id="${id}" data-i="${i}" value="${v}" ${ed ? '' : 'disabled'} ${k === 'cp' ? 'inputmode="numeric" maxlength="5"' : ''}>`;
-    return `<div class="${w.trim()}"><label for="${id}">${esc(head[i])}</label>${conGps(k, ed, ctl)}</div>`;
+    return `<div class="${w.trim()}"><label for="${id}">${esc(head[i])}${req}</label>${conGps(k, ed, ctl)}</div>`;
   };
   $('pnt').textContent = (iNC >= 0 && r[iNC]) || 'Registro';
   $('pns').textContent = [r[iMun], r[iLoc]].filter(Boolean).join(' · ');
-  $('pnf').innerHTML = '<h4>Datos modificables</h4><div class="g2">' + vis.filter(i => EDITABLES.includes(clave(head[i]))).map(f).join('') +
-    '</div><h4>Ubicación</h4><div id="pnmap" class="mapa"></div><h4>Datos no modificables</h4><div class="g2">' + vis.filter(i => !EDITABLES.includes(clave(head[i]))).map(f).join('') + '</div>';
+  $('pnf').innerHTML = '<h4>Datos del registro</h4><p class="nota">Los campos en gris no se pueden modificar.</p><div class="g2">' + vis.map(i => f(i) + MAPA_TRAS(i)).join('') + '</div>';
   $('pnf').scrollTop = 0; msg('La fecha de modificación se actualiza sola al guardar.');
   mapKey = ''; actualizaMapa();
   snap = formVals(); toolbar();
@@ -556,6 +560,9 @@ $('pnform').onsubmit = async e => {
   if (modo === 'alta') return guardaAlta();
   if (modo !== 'mod') return guardaTitular();
   const cam = cambios(), row = sel, ks = Object.keys(cam);
+  const iDir = colIdx('direccion'), elD = iDir >= 0 ? $('pnf').querySelector(`[data-i="${iDir}"]`) : null;
+  if (elD && !elD.disabled && !elD.value.trim()) return msg('La dirección es obligatoria.', 'e');
+  if ('titular' in cam && !cam.titular) return msg('El titular no puede quedar vacío.', 'e');
   if (!ks.length) return msg('No has cambiado ningún dato.', 'e');
   if (cam.cp && !/^\d{5}$/.test(cam.cp)) return msg('El C.P. debe tener 5 dígitos.', 'e');
   if (cam.email && !/^\S+@\S+\.\S+$/.test(cam.email)) return msg('El email no es válido.', 'e');
@@ -646,6 +653,7 @@ pnf.addEventListener('click', e => {
 });
 pnf.addEventListener('input', e => {
   const t = e.target;
+  if (t.classList && t.classList.contains('tel')) return syncTels(t.closest('.tels'));
   if (t.dataset && t.dataset.i !== undefined && !t.closest('.cb') && !t.disabled && t.tagName !== 'SELECT') {
     const k = clave(head[+t.dataset.i] || ''), nv = (k === 'tfn' || k === 'movil') ? t.value : aFormato(k, t.value);
     if (nv !== t.value) { const a = t.selectionStart, b = t.selectionEnd; t.value = nv; try { t.setSelectionRange(a, b); } catch (x) {} }
@@ -688,11 +696,23 @@ function coords(s) {
 }
 const conGps = (k, ed, ctl) => k === 'localizacion' && ed
   ? `<div class="gpsr">${ctl}<button type="button" class="sec gpsb" title="Calcular las coordenadas a partir de la dirección">Obtener GPS</button></div><div class="gpsm" aria-live="polite"></div>`
-  : (k === 'tfn' || k === 'movil') && ed
-    ? `<div class="gpsr">${ctl}<button type="button" class="sec masb" title="Añadir otro número (se guardan separados por /)" aria-label="Añadir otro número">+</button></div>` : ctl;
+  : ctl;
 
 // ----- Formato de los textos: MAYÚSCULAS salvo email y web (minúsculas); LOCALIZACIÓN se respeta; varios teléfonos separados por " / " -----
 const MINUS_ = ['email', 'web'];
+const esTel = k => k === 'tfn' || k === 'movil';
+const telsDe = raw => String(raw == null ? '' : raw).split(/[\/;,|]/).map(x => x.trim()).filter(Boolean);
+const telBox = (v, id) => `<input class="tel"${id ? ' id="' + id + '"' : ''} value="${esc(v)}" inputmode="tel" autocomplete="off">`;
+function telCtl(id, i, raw) {   // una caja por número; el valor real (separado por " / ") va en un campo oculto con data-i
+  const ts = telsDe(raw); if (!ts.length) ts.push('');
+  const o = esc(raw == null ? '' : raw);
+  return `<div class="tels"><input type="hidden" data-i="${i}" value="${o}" data-o="${o}"><div class="gpsr">${telBox(ts[0], id)}<button type="button" class="sec masb" title="Añadir otro número (se guardan separados por /)" aria-label="Añadir otro número">+</button></div>${ts.slice(1).map(t => telBox(t)).join('')}</div>`;
+}
+function syncTels(g) {
+  const hid = g.querySelector('input[type=hidden]');
+  const v = normalizaTels([...g.querySelectorAll('.tel')].map(b => b.value).join(' / '));
+  hid.value = v === normalizaTels(hid.dataset.o) ? hid.dataset.o : v;   // si no hay cambio real, se conserva el valor original
+}
 function normalizaTels(x) {   // igual que telefonos_ del servidor
   return String(x == null ? '' : x).split(/[\/;,|]/).map(p => {
     p = p.replace(/\s+/g, ' ').trim(); if (!p) return '';
@@ -703,14 +723,17 @@ function normalizaTels(x) {   // igual que telefonos_ del servidor
 function aFormato(k, v) { return k === 'localizacion' ? v : MINUS_.includes(k) ? v.toLowerCase() : v.toUpperCase(); }
 pnf.addEventListener('click', e => {
   const b = e.target.closest('.masb'); if (!b) return;
-  const inp = b.parentElement.querySelector('input'); if (!inp || inp.disabled) return;
-  let v = normalizaTels(inp.value);
-  if (v) v += ' / ';
-  inp.value = v; inp.focus(); try { inp.setSelectionRange(v.length, v.length); } catch (x) {}
+  const g = b.closest('.tels'), cajas = g.querySelectorAll('.tel'), ult = cajas[cajas.length - 1];
+  if (!ult.value.trim()) { ult.focus(); return; }   // ya hay una caja vacía: se usa esa
+  g.insertAdjacentHTML('beforeend', telBox('')); g.lastElementChild.focus();
 });
 pnf.addEventListener('change', e => {
-  const t = e.target, k = t.dataset && t.dataset.i !== undefined ? clave(head[+t.dataset.i] || '') : '';
-  if ((k === 'tfn' || k === 'movil') && !t.disabled) t.value = normalizaTels(t.value);
+  const t = e.target; if (!t.classList || !t.classList.contains('tel')) return;
+  const g = t.closest('.tels'), ps = normalizaTels(t.value).split(' / ').filter(Boolean);
+  t.value = ps[0] || '';
+  let ancla = t.closest('.gpsr') || t;
+  ps.slice(1).forEach(p => { ancla.insertAdjacentHTML('afterend', telBox(p)); ancla = ancla.nextElementSibling; });   // varios números pegados en una caja: se reparten
+  syncTels(g);
 });
 const GPS_TIPO = { ROOFTOP: 'Ubicación precisa del portal.', RANGE_INTERPOLATED: 'Ubicación estimada dentro de la calle (portal aproximado).',
                    GEOMETRIC_CENTER: 'Solo se ha localizado la calle o la zona: ubicación aproximada.', APPROXIMATE: 'Solo se ha localizado la zona: ubicación aproximada.' };
@@ -858,8 +881,9 @@ function pintaTitular() {
   const f = i => {
     const k = clave(head[i]), ed = EDIT.includes(k), id = 'c_' + i;
     const v = esc(vacia && TIT_VACIOS.includes(k) ? '' : r[i]), w = ANCHOS.includes(k) ? 'w' : '';
-    const req = (!act && (k === 'titular' || k === 'nif')) || (al && CATS[k]) ? ' <i aria-hidden="true">*</i>' : '';
+    const req = (!act && (k === 'titular' || k === 'nif')) || (al && CATS[k]) || (ed && k === 'direccion') ? ' <i aria-hidden="true">*</i>' : '';
     const ctl = k === 'observaciones' ? `<textarea id="${id}" data-i="${i}" maxlength="2000">${v}</textarea>`
+      : esTel(k) && ed ? telCtl(id, i, r[i])
       : k === 'sexo' && !act ? `<select id="${id}" data-i="${i}"><option value=""></option>${sexos.map(x => `<option${esc(x) === v ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>`
       : ed && (CATS[k] || k === 'localidad')
         ? `<div class="cb"><input id="${id}" data-i="${i}" value="${v}" data-ok="${v}" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="cbl_${k}"><button type="button" class="cbt" tabindex="-1" aria-label="Ver todas las opciones">&#9662;</button><ul class="cbl" id="cbl_${k}" role="listbox" hidden></ul></div>`
@@ -884,8 +908,7 @@ function pintaTitular() {
     $('pnt').textContent = act ? 'Cambio de actividad' : 'Cambio de titular';
     $('pns').textContent = (iNC >= 0 && r[iNC]) || '';
   }
-  $('pnf').innerHTML = aviso + '<h4>' + h4 + '</h4><div class="g2">' + lista.filter(i => EDIT.includes(clave(head[i]))).map(f).join('') +
-    '</div><h4>Ubicación</h4><div id="pnmap" class="mapa"></div><h4>Datos que se mantienen</h4><div class="g2">' + lista.filter(i => !EDIT.includes(clave(head[i]))).map(f).join('') + '</div>';
+  $('pnf').innerHTML = aviso + '<h4>' + h4 + '</h4><p class="nota">Los campos en gris se mantienen y no se pueden modificar.</p><div class="g2">' + lista.map(i => f(i) + MAPA_TRAS(i)).join('') + '</div>';
   $('pnf').scrollTop = 0; msg('');
   mapKey = ''; actualizaMapa();
   snap = formVals(); toolbar();
@@ -898,6 +921,7 @@ async function guardaTitular() {
     if (!d.nif) return msg('Introduce el NIF.', 'e');
     if (!/^[A-Za-z0-9]{8,12}$/.test(d.nif.replace(/[\s.\-]/g, ''))) return msg('El NIF no es válido.', 'e');
   } else if (!hayCambios()) return msg('No has cambiado ningún dato.', 'e');
+  if (!d.direccion) return msg('La dirección es obligatoria.', 'e');
   if (d.email && !/^\S+@\S+\.\S+$/.test(d.email)) return msg('El email no es válido.', 'e');
   if (d.cp && !/^\d{5}$/.test(d.cp)) return msg('El C.P. debe tener 5 dígitos.', 'e');
   for (const k of [...Object.keys(CATS), 'localidad']) {
@@ -1047,6 +1071,7 @@ async function guardaAlta() {
   if (!d.titular) return msg('Introduce el titular.', 'e');
   if (!d.nif) return msg('Introduce el NIF.', 'e');
   if (!/^[A-Za-z0-9]{8,12}$/.test(d.nif.replace(/[\s.\-]/g, ''))) return msg('El NIF no es válido.', 'e');
+  if (!d.direccion) return msg('La dirección es obligatoria.', 'e');
   if (d.email && !/^\S+@\S+\.\S+$/.test(d.email)) return msg('El email no es válido.', 'e');
   if (d.cp && !/^\d{5}$/.test(d.cp)) return msg('El C.P. debe tener 5 dígitos.', 'e');
   for (const k of Object.keys(CATS)) {
