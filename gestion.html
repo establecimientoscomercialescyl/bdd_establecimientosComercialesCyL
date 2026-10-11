@@ -78,6 +78,14 @@ tbody tr{cursor:pointer}
 tbody tr.sel td{box-shadow:inset 0 2px 0 var(--acc),inset 0 -2px 0 var(--acc)}
 #pn{position:fixed;top:0;right:0;bottom:0;width:var(--pw);max-width:100%;background:var(--card);border-left:1px solid var(--line);box-shadow:-8px 0 24px rgba(0,0,0,.15);display:flex;flex-direction:column;z-index:5}
 @media(min-width:900px){body.pn-open #app{margin-right:var(--pw)}}
+.wrap{transition:filter .2s}
+body.pn-open .wrap{filter:brightness(.8)}
+body.pn-open tbody tr.sel td{box-shadow:inset 0 3px 0 var(--acc),inset 0 -3px 0 var(--acc)}
+dialog#dcancel{border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);padding:18px 20px;width:min(460px,92vw)}
+dialog#dcancel::backdrop{background:rgba(0,0,0,.45)}
+dialog#dcancel h3{margin:0 0 8px}
+dialog#dcancel p{margin:0;line-height:1.45}
+dialog#dcancel .bt{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
 .pnh{padding:14px 16px 0;border-bottom:1px solid var(--line)}
 .pnt{display:flex;gap:10px;align-items:flex-start}
 .pnt div{flex:1;min-width:0}
@@ -232,6 +240,12 @@ select{width:100%}
   </div>
 </dialog>
 
+<dialog id="dcancel" aria-labelledby="dct">
+  <h3 id="dct">Cancelar el proceso</h3>
+  <p id="dci"></p>
+  <div class="bt"><button type="button" class="sec" id="dcno">No, seguir con el proceso</button><button type="button" class="peligro" id="dcsi">Sí, cancelar el proceso</button></div>
+</dialog>
+
 <dialog id="dbaja" aria-labelledby="dbt">
   <h3 id="dbt">Dar de baja el establecimiento</h3>
   <div class="aviso" id="dbi"></div>
@@ -268,7 +282,7 @@ select{width:100%}
 
 <script>
 // Versión visible en la pantalla de carga. Sube 0,1 en cada entrega del HTML (1.0, 1.1, 1.2…).
-const VERSION = '2.0';
+const VERSION = '2.1';
 // Para usar el escudo oficial en lugar del logotipo dibujado: guarda la imagen junto a este HTML y pon aquí su nombre (ej. 'escudo.png').
 const LOGO_SRC = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbywcJXtUPfuBJbbPzNYOqz10G4tyFGvHKN-PrENIPYy8R8amdFb_bOdnlwMeSXwZjGA/exec';
@@ -511,8 +525,29 @@ function cargarCat() {
 }
 function msg(t, tipo) { $('pnm').textContent = t || ''; $('pnm').className = tipo || ''; }
 
-function abrir(row) {
-  if (sel && sel !== row && hayCambios() && !confirm('Hay cambios sin guardar. ¿Descartarlos?')) return;
+// Proceso en curso = alta, cambio de titular o cambio de actividad (Modificar no cuenta). Salir de uno pide confirmación en un cuadro modal.
+const PROCESOS = { tit: 'Cambio de titular', act: 'Cambio de actividad' };
+const procesoActivo = () => !!sel && (modo === 'tit' || modo === 'act' || modo === 'alta');
+const nombreProceso = () => modo === 'alta' ? (sel.alta && sel.alta.base ? 'Alta (recuperación de un establecimiento de baja)' : 'Alta nueva') : PROCESOS[modo];
+function confirmaSalir() {
+  return new Promise(ok => {
+    const d = $('dcancel'); let r = false;
+    $('dci').innerHTML = `¿Realmente quiere cancelar el proceso <b>${esc(nombreProceso())}</b> que está haciendo? Se perderán los datos que haya introducido.`;
+    $('dcsi').onclick = () => { r = true; d.close(); };
+    $('dcno').onclick = () => d.close();
+    d.onclose = () => ok(r);   // Esc equivale a «No, seguir»
+    d.showModal(); $('dcno').focus();
+  });
+}
+async function puedeSalir() {
+  if (!sel) return true;
+  if (procesoActivo()) return confirmaSalir();
+  return !hayCambios() || confirm('Hay cambios sin guardar. ¿Descartarlos?');
+}
+async function cerrarPreguntando() { if (!(await puedeSalir())) return; cerrar(true); render(); }
+async function abrir(row) {
+  if (sel === row) return;   // clic en el registro que ya está abierto: no se toca lo que se esté escribiendo
+  if (sel && !(await puedeSalir())) return;
   sel = row; modo = 'mod'; document.body.classList.add('pn-open'); $('pn').hidden = false;
   pintaPanel(); render();
   cargarCat()
@@ -587,6 +622,8 @@ $('pnd').onclick = () => { if (sel) pintaPanel(); };
 $('pnrv').onclick = async () => {
   const row = sel; if (!row || modo !== 'mod' || row.alta) return;
   if (hayCambios()) return msg('Hay cambios sin guardar. Pulsa Guardar (ya actualiza la fecha) o Descartar.', 'e');
+  const iDir = colIdx('direccion');
+  if (iDir >= 0 && !String(row[iDir]).trim()) return msg('No se puede verificar: el registro no tiene dirección. Escríbela y guarda primero.', 'e');
   $('pnsv').disabled = $('pnd').disabled = $('pnrv').disabled = true; msg('Guardando…', 'o');
   try {
     const r = await api({ action: 'revisar', token: localStorage.getItem('tk'), id: row[iId] }, 2, 60000);
@@ -599,8 +636,8 @@ $('pnrv').onclick = async () => {
   } catch (x) { msg('No se pudo guardar. Revisa la conexión e inténtalo de nuevo.', 'e'); }
   finally { $('pnsv').disabled = $('pnd').disabled = $('pnrv').disabled = false; }
 };
-$('pnx').onclick = () => cerrar();
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && sel && !$('ld').offsetParent && !document.querySelector('dialog[open]')) cerrar(); });
+$('pnx').onclick = cerrarPreguntando;
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && sel && !$('ld').offsetParent && !document.querySelector('dialog[open]')) cerrarPreguntando(); });
 const clicFila = e => {
   const tr = e.target.closest('tr'), r = tr && view[+tr.dataset.k]; if (!r) return;
   if (!delMode) return abrir(r);
@@ -847,9 +884,9 @@ function toolbar() {
   $('pnrv').hidden = !(modo === 'mod' && iVer >= 0 && !cerrado());
   $('pnsv').textContent = t ? 'Crear nuevo titular' : a ? 'Crear nuevo registro' : al ? 'Crear alta' : 'Guardar';
 }
-function cambiaModo(m) {
+async function cambiaModo(m) {
   if (!sel || sel.alta || modo === m) return;
-  if (hayCambios() && !confirm('Hay cambios sin guardar. ¿Descartarlos?')) return;
+  if (!(await puedeSalir())) return;
   modo = m; pintaPanel();
 }
 $('ibm').onclick = () => cambiaModo('mod');
@@ -967,6 +1004,7 @@ function setProv(p) {
   $('dlm').innerHTML = alta.muns.map(m => `<option value="${esc(m)}">`).join('');
 }
 $('alta').onclick = async () => {
+  if (procesoActivo()) { if (!(await confirmaSalir())) return; cerrar(true); render(); }
   const usr = JSON.parse(localStorage.getItem('usr') || '{}'), admin = fold(usr.p || '') === 'todas';
   $('da1').hidden = false; $('da2').hidden = true; $('dam1').textContent = ''; $('dapw').hidden = !admin;
   alta.prov = ''; alta.muns = []; alta.locs = []; alta.cur = '';
@@ -1108,9 +1146,10 @@ async function guardaAlta() {
 }
 
 // ===== Baja =====
-$('ibb').onclick = () => {
+$('ibb').onclick = async () => {
   if (!sel || cerrado()) return;
-  if (hayCambios() && !confirm('Hay cambios sin guardar. ¿Descartarlos?')) return;
+  if (!(await puedeSalir())) return;
+  if (modo !== 'mod') { modo = 'mod'; pintaPanel(); }   // se abandona el proceso en curso
   const r = sel;
   $('dbi').innerHTML = `Se dará de baja <b>${esc((iNC >= 0 && r[iNC]) || r[colIdx('titular')])}</b> (${esc(r[colIdx('titular')])}) con la fecha de hoy. La fecha de modificación se borrará y la causa se añadirá a Observaciones.`;
   $('dbc').oninput = e => { const t = e.target, a = t.selectionStart, b = t.selectionEnd; t.value = t.value.toUpperCase(); try { t.setSelectionRange(a, b); } catch (x) {} };
