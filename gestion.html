@@ -292,7 +292,7 @@ select{width:100%}
 
 <script>
 // Versión visible en la pantalla de carga. Sube 0,1 en cada entrega del HTML (1.0, 1.1, 1.2…).
-const VERSION = '2.3';
+const VERSION = '2.4';
 // Para usar el escudo oficial en lugar del logotipo dibujado: guarda la imagen junto a este HTML y pon aquí su nombre (ej. 'escudo.png').
 const LOGO_SRC = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbywcJXtUPfuBJbbPzNYOqz10G4tyFGvHKN-PrENIPYy8R8amdFb_bOdnlwMeSXwZjGA/exec';
@@ -324,6 +324,11 @@ async function api(body, intentos = 3, ms = 40000) {
   }
 }
 
+function resumenFiltro(f) {
+  f = String(f || '').trim(); if (!f) return '';
+  f = f.replace(/<=/g, '≤').replace(/>=/g, '≥').replace(/\s*;\s*/g, '; ');
+  return ' · municipios: ' + (f.length > 48 ? f.slice(0, 47) + '…' : f);
+}
 function showLogin(msg) {
   salirDel(true); gen++; showLoad(false); setAct(''); cerrar(true); cat = null; catP = null; terr = null; terrP = null;
   localStorage.removeItem('tk'); localStorage.removeItem('usr');
@@ -336,8 +341,9 @@ $('f').onsubmit = async e => {
     const r = await api({ action: 'login', usuario: $('u').value, password: $('p').value });
     if (!r.ok) return showLogin(r.error);
     localStorage.setItem('tk', r.token);
-    localStorage.setItem('usr', JSON.stringify({ u: r.usuario, p: r.provincia }));
+    localStorage.setItem('usr', JSON.stringify({ u: r.usuario, p: r.provincia, f: r.filtro || '' }));
     $('p').value = ''; load();
+    if (r.aviso) toast(r.aviso, 'e', 9000);
   } catch (x) { showLogin('No se pudo conectar con el servidor. Inténtalo de nuevo.'); }
 };
 $('out').onclick = $('cl').onclick = () => showLogin();
@@ -364,7 +370,7 @@ async function load() {
   const tk = localStorage.getItem('tk'); if (!tk) return showLogin();
   const usr = JSON.parse(localStorage.getItem('usr') || '{}'), id = ++gen, t0 = performance.now();
   $('login').hidden = true; $('app').hidden = false;
-  $('who').textContent = usr.u + ' · ' + usr.p;
+  $('who').textContent = usr.u + ' · ' + usr.p + resumenFiltro(usr.f); $('who').title = usr.f ? 'Restricción de municipios: ' + usr.f : '';
   $('del').hidden = !esAdmin() || delMode;
   $('tb').innerHTML = ''; $('th').innerHTML = ''; $('info').textContent = ''; setAct('');
   showLoad(true, 'Puede tardar unos segundos.');
@@ -927,7 +933,7 @@ function progreso(pon, pasos) {
 }
 let toastT;
 function dmsg(id, t, tipo) { const e = $(id); e.textContent = t || ''; e.className = 'm' + (t && tipo !== 'e' ? ' o' : ''); }
-function toast(t, tipo) { const e = $('toast'); e.textContent = t; e.className = 'on' + (tipo === 'e' ? ' e' : ''); clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove('on'), 3000); }
+function toast(t, tipo, ms) { const e = $('toast'); e.textContent = t; e.className = 'on' + (tipo === 'e' ? ' e' : ''); clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove('on'), ms || 3000); }
 
 
 // ===== Cambio de titular =====
