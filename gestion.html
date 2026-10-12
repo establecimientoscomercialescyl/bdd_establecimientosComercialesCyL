@@ -54,6 +54,9 @@ tbody tr.r-ver{background:var(--c-ver)}
 tbody tr.r-baja{background:var(--c-baja)}
 tbody tr:hover td{background-image:linear-gradient(rgba(127,127,127,.14),rgba(127,127,127,.14))}
 th.pt,td.pt{width:34px;min-width:34px;padding:7px 6px 7px 12px}
+.ic{width:19px;height:19px;vertical-align:middle;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;overflow:visible}
+.ic.on{color:var(--ok)}.ic.off{color:var(--off)}.ic .tach{stroke-width:2.2}
+td.pt .ic{display:block}
 .dot{display:inline-block;width:10px;height:10px;border-radius:50%;vertical-align:middle}
 .dot.ok{background:var(--ok)}.dot.off{background:var(--off)}
 .sr{position:absolute;left:-9999px}
@@ -177,6 +180,7 @@ select{width:100%}
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><symbol id="ic-deporte" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18M5.6 5.6c3 3 3 10.8 0 12.8M18.4 5.6c-3 3-3 10.8 0 12.8"/></symbol><symbol id="ic-bazar" viewBox="0 0 24 24"><path d="M6 8h12l1 12H5z"/><path d="M9 8V7a3 3 0 0 1 6 0v1"/></symbol><symbol id="ic-bricolaje" viewBox="0 0 24 24"><path d="M14 4l6 6-3 3-6-6z"/><path d="M12.5 11.5L5.5 18.5a1.5 1.5 0 0 0 2 2l7-7"/></symbol><symbol id="ic-calzado" viewBox="0 0 24 24"><path d="M3 16.5V8.5l3.5-1 1.5 3c1.5 1.5 4 2 6 2.5 2.8.7 5 1.2 5 4v.5z"/><path d="M3 19.5h18"/></symbol><symbol id="ic-carne" viewBox="0 0 24 24"><path d="M5 12c0-4 3-7 8-7 4 0 6 2.5 6 5.5S16 17 12 18c-3 .8-7 1-7-6z"/><circle cx="13" cy="10.5" r="2"/></symbol><symbol id="ic-combustible" viewBox="0 0 24 24"><path d="M5 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16"/><path d="M3 21h14M5 10h10M15 8h2.5L20 10.5V17a1.5 1.5 0 0 1-3 0v-3.5"/></symbol><symbol id="ic-electro" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><circle cx="12" cy="14" r="4"/><path d="M8.5 7h.01M11.5 7h.01"/></symbol><symbol id="ic-farmacia" viewBox="0 0 24 24"><path d="M9.5 4h5v5.5H20v5h-5.5V20h-5v-5.5H4v-5h5.5z"/></symbol><symbol id="ic-fruta" viewBox="0 0 24 24"><path d="M12 8c-1.8-1.2-6-1-6 4.2 0 4.3 2.6 8.3 6 8.3s6-4 6-8.3C18 7 13.8 6.8 12 8z"/><path d="M12 8c0-2 .8-3.5 2.5-4.5"/></symbol><symbol id="ic-informatica" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M2 20h20"/></symbol><symbol id="ic-kiosko" viewBox="0 0 24 24"><path d="M4 5h14v13a2 2 0 0 0 2 2H6a2 2 0 0 1-2-2z"/><path d="M18 9h2v9a2 2 0 0 1-2 2M7 9h8M7 13h8M7 16h5"/></symbol><symbol id="ic-libro" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 5v16M8.5 7h7"/></symbol><symbol id="ic-mueble" viewBox="0 0 24 24"><path d="M5 11V8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3"/><path d="M3 13a2 2 0 0 1 4 0v1h10v-1a2 2 0 0 1 4 0v4H3z"/><path d="M6 17v2M18 17v2"/></symbol><symbol id="ic-regalo" viewBox="0 0 24 24"><path d="M4 9h16v11H4z"/><path d="M3 6h18v3H3zM12 6v14"/></symbol><symbol id="ic-pan" viewBox="0 0 24 24"><path d="M4 10a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4c0 1.5-.8 2.3-1 3v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-5c-.2-.7-1-1.5-1-3z"/><path d="M9 9l1.5 3M13.5 9L15 12"/></symbol><symbol id="ic-pez" viewBox="0 0 24 24"><path d="M3 12c2.5-4 7-5.5 12-3l3-2.5v11l-3-2.5c-5 2.5-9.5 1-12-3z"/><path d="M7 11.5h.01"/></symbol><symbol id="ic-huella" viewBox="0 0 24 24"><circle cx="6.5" cy="11" r="1.7"/><circle cx="10" cy="6.8" r="1.7"/><circle cx="14" cy="6.8" r="1.7"/><circle cx="17.5" cy="11" r="1.7"/><path d="M12 12c-3 0-5 3-5 5.2 0 1.6 1.2 2.3 2.6 2.1 1-.2 1.6-.5 2.4-.5s1.4.3 2.4.5c1.4.2 2.6-.5 2.6-2.1 0-2.2-2-5.2-5-5.2z"/></symbol><symbol id="ic-camisa" viewBox="0 0 24 24"><path d="M8 4L3 7l2.5 3.5L8 9v11h8V9l2.5 1.5L21 7l-5-3c-.5 1.5-2 2.5-4 2.5S8.5 5.5 8 4z"/></symbol><symbol id="ic-frasco" viewBox="0 0 24 24"><path d="M9 3h6v3H9z"/><path d="M8 6h8v3l1 2v9a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-9l1-2z"/><path d="M10 15h4"/></symbol><symbol id="ic-gema" viewBox="0 0 24 24"><path d="M6 4h12l3 5-9 11L3 9z"/><path d="M3 9h18M9 4L7.5 9 12 20M15 4l1.5 5L12 20"/></symbol><symbol id="ic-intercambio" viewBox="0 0 24 24"><path d="M4 8h13M14 5l3 3-3 3M20 16H7M10 13l-3 3 3 3"/></symbol><symbol id="ic-carrito" viewBox="0 0 24 24"><path d="M3 4h2.2l2.4 11h10.4l2-8H6.2"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></symbol><symbol id="ic-cigarro" viewBox="0 0 24 24"><path d="M3 15h14v4H3zM17 15v4M20 15v4"/><path d="M19 12c0-1.5 1-1.5 1-3s-1-1.5-1-3"/></symbol><symbol id="ic-coche" viewBox="0 0 24 24"><path d="M3 16v-3.2c0-1 .7-1.8 1.6-2L6.5 7.5A2 2 0 0 1 8.4 6h7.2a2 2 0 0 1 1.9 1.5l1.9 3.3c.9.2 1.6 1 1.6 2V16z"/><path d="M6.5 11h11"/><circle cx="7.5" cy="17" r="1.5"/><circle cx="16.5" cy="17" r="1.5"/></symbol><symbol id="ic-tienda" viewBox="0 0 24 24"><path d="M3 9l1.5-5h15L21 9"/><path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/><path d="M5 12.5V20h14v-7.5M10 20v-4h4v4"/></symbol></defs></svg>
 
 <section id="login">
   <form id="f">
@@ -292,7 +296,7 @@ select{width:100%}
 
 <script>
 // Versión visible en la pantalla de carga. Sube 0,1 en cada entrega del HTML (1.0, 1.1, 1.2…).
-const VERSION = '2.4';
+const VERSION = '2.5';
 // Para usar el escudo oficial en lugar del logotipo dibujado: guarda la imagen junto a este HTML y pon aquí su nombre (ej. 'escudo.png').
 const LOGO_SRC = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbywcJXtUPfuBJbbPzNYOqz10G4tyFGvHKN-PrENIPYy8R8amdFb_bOdnlwMeSXwZjGA/exec';
@@ -309,7 +313,7 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;
 const fold = s => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const clave = s => fold(s).replace(/[^a-z0-9]/g, '');
 let terr = null, terrP = null;   // árbol provincia → municipio → localidades (se pide una vez)
-let iProv = -1, iMun = -1, iLoc = -1, iEst = -1, iAlta = -1, iModi = -1, iBaja = -1, iVer = -1, head = [], vis = [], all = [], view = [], page = 0, sortCol = -1, sortDesc = false, info = {}, gen = 0, ldTimer, iId = -1, iNC = -1, sel = null, cat = null, catP = null, modo = 'mod', snap = '';
+let iSect = -1, iProv = -1, iMun = -1, iLoc = -1, iEst = -1, iAlta = -1, iModi = -1, iBaja = -1, iVer = -1, head = [], vis = [], all = [], view = [], page = 0, sortCol = -1, sortDesc = false, info = {}, gen = 0, ldTimer, iId = -1, iNC = -1, sel = null, cat = null, catP = null, modo = 'mod', snap = '';
 
 const espera = ms => new Promise(r => setTimeout(r, ms));
 // Petición con reintentos automáticos (Apps Script falla a veces en el primer intento)
@@ -422,7 +426,7 @@ function setData(r, keep, primera) {
   iMun = head.findIndex(h => clave(h) === 'municipio');
   iLoc = head.findIndex(h => clave(h) === 'localidad');
   const col = c => head.findIndex(h => clave(h) === c);
-  iId = col('id'); iNC = col('ncomercial'); iEst = col('est'); iAlta = col('fechaalta'); iModi = col('fechamodi'); iBaja = col('fechabaja'); iVer = col('fechaverificacion');
+  iId = col('id'); iNC = col('ncomercial'); iEst = col('est'); iAlta = col('fechaalta'); iModi = col('fechamodi'); iBaja = col('fechabaja'); iVer = col('fechaverificacion'); iSect = col('sectorcomercial');
   all.forEach(marcar);
   if (selId != null) { sel = all.find(x => x[iId] === selId) || null; if (!sel) cerrar(true); }
   if (!keep) {
@@ -504,13 +508,29 @@ function doSort() {
   view.sort((a, b) => d * String(a[i]).localeCompare(String(b[i]), 'es', { sensitivity: 'base', numeric: true }));
 }
 
+// Icono según el sector comercial (se reconoce por palabras clave, sin tildes ni mayúsculas); los sectores sin icono propio usan el de tienda.
+const ICONOS_SECTOR = [
+  [/deport/, 'deporte'], [/bazar/, 'bazar'], [/bricol/, 'bricolaje'], [/calzado|cuero/, 'calzado'], [/carnic/, 'carne'],
+  [/combustib/, 'combustible'], [/electrodom/, 'electro'], [/farmaci|optica/, 'farmacia'], [/fruter/, 'fruta'],
+  [/informat|telecom/, 'informatica'], [/kiosk|quiosc|papeler/, 'kiosko'], [/libreri|juguet/, 'libro'], [/mueble/, 'mueble'],
+  [/articulos nuevos/, 'regalo'], [/panader|confiter/, 'pan'], [/pescader/, 'pez'], [/planta|animal/, 'huella'],
+  [/prenda|textil|vestir/, 'camisa'], [/cosmetic|higien/, 'frasco'], [/relojer|joyer/, 'gema'], [/segunda mano/, 'intercambio'],
+  [/supermerc|alimentac/, 'carrito'], [/tabaco|estanco/, 'cigarro'], [/vehicul|repuesto/, 'coche']
+];
+const memoIcono = {};
+function iconoSector(s) {
+  if (s in memoIcono) return memoIcono[s];
+  const f = fold(s), x = ICONOS_SECTOR.find(([re]) => re.test(f));
+  return (memoIcono[s] = x ? x[1] : 'tienda');
+}
+const svgEstado = (ic, abierto) => `<svg class="ic ${abierto ? 'on' : 'off'}" aria-hidden="true"><use href="#ic-${ic}"/>${abierto ? '' : '<path class="tach" d="M4 20L20 4"/>'}</svg>`;
 function render() {
   const pages = Math.max(1, Math.ceil(view.length / PAGE));
   page = Math.min(page, pages - 1);
   $('tb').innerHTML = view.slice(page * PAGE, page * PAGE + PAGE)
     .map((r, n) => `<tr tabindex="0" data-k="${page * PAGE + n}" class="${r.cls}${r === sel ? ' sel' : ''}${delSel.has(String(r[iId])) ? ' del' : ''}">` + (iEst >= 0 ? (String(r[iEst]).trim() === '0'
-      ? '<td class="pt" title="Cerrado"><i class="dot off"></i><span class="sr">Cerrado</span></td>'
-      : '<td class="pt" title="Activo"><i class="dot ok"></i><span class="sr">Activo</span></td>') : '') + vis.map(i => `<td title="${esc(r[i])}">${esc(r[i])}</td>`).join('') + '</tr>').join('');
+      ? '<td class="pt" title="' + (iSect >= 0 && r[iSect] ? esc(r[iSect]) + ' · ' : '') + 'Cerrado">' + svgEstado(iconoSector(iSect >= 0 ? r[iSect] : ''), false) + '<span class="sr">Cerrado</span></td>'
+      : '<td class="pt" title="' + (iSect >= 0 && r[iSect] ? esc(r[iSect]) + ' · ' : '') + 'Activo">' + svgEstado(iconoSector(iSect >= 0 ? r[iSect] : ''), true) + '<span class="sr">Activo</span></td>') : '') + vis.map(i => `<td title="${esc(r[i])}">${esc(r[i])}</td>`).join('') + '</tr>').join('');
   $('th').querySelectorAll('th').forEach(t => {
     const on = +t.dataset.i === sortCol; t.classList.toggle('s', on); t.classList.toggle('d', on && sortDesc);
   });
@@ -522,8 +542,9 @@ function render() {
 }
 
 const fc = FECHA_REVISION.toLocaleDateString('es', { day: '2-digit', month: '2-digit', year: 'numeric' });
-$('ley').innerHTML = `<span><i class="dot ok" style="width:10px;height:10px;border:0;border-radius:50%"></i> Activo</span>
-  <span><i class="dot off" style="width:10px;height:10px;border:0;border-radius:50%"></i> Cerrado</span>
+$('ley').innerHTML = `<span>${svgEstado('tienda', true)} Activo (icono verde)</span>
+  <span>${svgEstado('tienda', false)} Cerrado (icono rojo y tachado)</span>
+  <span>El dibujo indica el sector comercial</span>
   <span><i style="background:var(--c-alta)"></i> Alta posterior al ${fc}</span>
   <span><i style="background:var(--c-modi)"></i> Modificado después del ${fc}</span>
   <span><i style="background:var(--c-ver)"></i> Verificado (todo correcto) después del ${fc}</span>
