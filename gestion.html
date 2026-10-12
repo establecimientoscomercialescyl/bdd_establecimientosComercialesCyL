@@ -292,7 +292,7 @@ select{width:100%}
 
 <script>
 // Versión visible en la pantalla de carga. Sube 0,1 en cada entrega del HTML (1.0, 1.1, 1.2…).
-const VERSION = '2.2';
+const VERSION = '2.3';
 // Para usar el escudo oficial en lugar del logotipo dibujado: guarda la imagen junto a este HTML y pon aquí su nombre (ej. 'escudo.png').
 const LOGO_SRC = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbywcJXtUPfuBJbbPzNYOqz10G4tyFGvHKN-PrENIPYy8R8amdFb_bOdnlwMeSXwZjGA/exec';
@@ -634,8 +634,7 @@ $('pnform').onsubmit = async e => {
   if (elD && !elD.disabled && !elD.value.trim()) return msg('La dirección es obligatoria.', 'e');
   if ('titular' in cam && !cam.titular) return msg('El titular no puede quedar vacío.', 'e');
   if (!ks.length) return msg('No has cambiado ningún dato.', 'e');
-  if (cam.cp && !/^\d{5}$/.test(cam.cp)) return msg('El C.P. debe tener 5 dígitos.', 'e');
-  if (cam.email && !/^\S+@\S+\.\S+$/.test(cam.email)) return msg('El email no es válido.', 'e');
+  { const pe = primerError(cam, CLAVES_FORMATO, row[iProv]); if (pe) return falloCampo(pe[0], pe[1]); }
   for (const k of Object.keys(CATS)) {
     if (!(k in cam)) continue;
     if (!cam[k]) return msg('El campo ' + k.toUpperCase() + ' no puede quedar vacío.', 'e');
@@ -773,6 +772,38 @@ const conGps = (k, ed, ctl) => k === 'localizacion' && ed
 // ----- Formato de los textos: MAYÚSCULAS salvo email y web (minúsculas); LOCALIZACIÓN se respeta; varios teléfonos separados por " / " -----
 const MINUS_ = ['email', 'web'];
 const esTel = k => k === 'tfn' || k === 'movil';
+const CP_PROV = { avila: '05', burgos: '09', leon: '24', palencia: '34', salamanca: '37', segovia: '40', soria: '42', valladolid: '47', zamora: '49' };
+const EMAIL_RE = /^[a-z0-9._%+\-]+@([a-z0-9\-]+\.)+[a-z]{2,}$/;
+const WEB_RE = /^(https?:\/\/)?([a-z0-9\-]+\.)+[a-z]{2,}(:\d{1,5})?([\/?#]\S*)?$/;
+const CLAVES_FORMATO = ['nif', 'cp', 'tfn', 'movil', 'email', 'web'];
+// Igual que errFormato_ del servidor. Devuelve el texto del error o ''.
+function errorCampo(k, v, prov) {
+  v = esTel(k) ? normalizaTels(v) : k === 'nif' ? String(v).toUpperCase().replace(/[\s.\-]/g, '') : MINUS_.includes(k) ? String(v).trim().toLowerCase() : String(v).trim();
+  if (!v) return '';
+  if (k === 'nif') return /^[A-Z0-9]{8,9}$/.test(v) ? '' : 'El NIF no es válido: 8 o 9 caracteres (letras y números), sin espacios ni signos.';
+  if (k === 'cp') {
+    if (!/^\d{5}$/.test(v)) return 'El C.P. debe tener 5 dígitos.';
+    const p = CP_PROV[fold(prov).replace(/[^a-z0-9]+/g, '_')];
+    return p && v.slice(0, 2) !== p ? 'El C.P. de ' + prov + ' debe empezar por ' + p + '.' : '';
+  }
+  if (esTel(k)) {
+    const fijo = k === 'tfn', mal = v.split(' / ').filter(x => !(fijo ? /^[89]\d{8}$/ : /^[67]\d{8}$/).test(x));
+    return mal.length ? (fijo ? 'Teléfono no válido (' : 'Móvil no válido (') + mal.join(', ') + '): debe tener 9 dígitos y empezar por ' + (fijo ? '8 o 9' : '6 o 7') + '.' : '';
+  }
+  if (k === 'email') return EMAIL_RE.test(v) && !v.includes('..') ? '' : 'El email no es válido (ejemplo: nombre@dominio.es).';
+  if (k === 'web') return WEB_RE.test(v) ? '' : 'La web no es válida (ejemplo: www.ejemplo.es).';
+  return '';
+}
+// Muestra el error y lleva el cursor al campo
+function falloCampo(k, texto) {
+  msg(texto, 'e');
+  const el = $('pnf').querySelector(`[data-i="${colIdx(k)}"]`); if (!el) return;
+  (el.type === 'hidden' ? el.parentElement.querySelector('.tel') : el).focus();
+}
+function primerError(d, claves, prov) {
+  for (const k of claves) { if (!(k in d)) continue; const e = errorCampo(k, d[k], prov); if (e) return [k, e]; }
+  return null;
+}
 const telsDe = raw => String(raw == null ? '' : raw).split(/[\/;,|]/).map(x => x.trim()).filter(Boolean);
 const telBox = (v, id) => `<input class="tel"${id ? ' id="' + id + '"' : ''} value="${esc(v)}" inputmode="tel" autocomplete="off">`;
 function telCtl(id, i, raw) {   // una caja por número; el valor real (separado por " / ") va en un campo oculto con data-i
@@ -788,11 +819,14 @@ function syncTels(g) {
 function normalizaTels(x) {   // igual que telefonos_ del servidor
   return String(x == null ? '' : x).split(/[\/;,|]/).map(p => {
     p = p.replace(/\s+/g, ' ').trim(); if (!p) return '';
-    if (/^\+?[\d\s.\-()]+$/.test(p)) { const d = p.replace(/\D/g, ''); if (d.length <= 12) return (p[0] === '+' ? '+' : '') + d; }
+    if (/^\+?[\d\s.\-()]+$/.test(p)) {
+      const m = p.replace(/[\s.\-()]/g, '').match(/^(?:\+34|0034)(\d{9})$/); if (m) return m[1];
+      const d = p.replace(/\D/g, ''); if (d.length <= 12) return (p[0] === '+' ? '+' : '') + d;
+    }
     return p.toUpperCase();
   }).filter(Boolean).join(' / ');
 }
-function aFormato(k, v) { return k === 'localizacion' ? v : MINUS_.includes(k) ? v.toLowerCase() : v.toUpperCase(); }
+function aFormato(k, v) { return k === 'cp' ? v.replace(/\D/g, '') : k === 'localizacion' ? v : MINUS_.includes(k) ? v.toLowerCase() : v.toUpperCase(); }
 pnf.addEventListener('click', e => {
   const b = e.target.closest('.masb'); if (!b) return;
   const g = b.closest('.tels'), cajas = g.querySelectorAll('.tel'), ult = cajas[cajas.length - 1];
@@ -991,11 +1025,9 @@ async function guardaTitular() {
   if (!act) {
     if (!d.titular) return msg('Introduce el titular.', 'e');
     if (!d.nif) return msg('Introduce el NIF.', 'e');
-    if (!/^[A-Za-z0-9]{8,12}$/.test(d.nif.replace(/[\s.\-]/g, ''))) return msg('El NIF no es válido.', 'e');
   } else if (!hayCambios()) return msg('No has cambiado ningún dato.', 'e');
   if (!d.direccion) return msg('La dirección es obligatoria.', 'e');
-  if (d.email && !/^\S+@\S+\.\S+$/.test(d.email)) return msg('El email no es válido.', 'e');
-  if (d.cp && !/^\d{5}$/.test(d.cp)) return msg('El C.P. debe tener 5 dígitos.', 'e');
+  { const pe = primerError(d, CLAVES_FORMATO, row[iProv]); if (pe) return falloCampo(pe[0], pe[1]); }
   for (const k of [...Object.keys(CATS), 'localidad']) {
     if (!(k in d)) continue;
     if (!d[k]) return msg('El campo ' + k.toUpperCase() + ' no puede quedar vacío.', 'e');
@@ -1143,10 +1175,8 @@ async function guardaAlta() {
   $('pnf').querySelectorAll('[data-i]:not(:disabled)').forEach(el => { d[clave(head[+el.dataset.i])] = el.value.trim(); });
   if (!d.titular) return msg('Introduce el titular.', 'e');
   if (!d.nif) return msg('Introduce el NIF.', 'e');
-  if (!/^[A-Za-z0-9]{8,12}$/.test(d.nif.replace(/[\s.\-]/g, ''))) return msg('El NIF no es válido.', 'e');
   if (!d.direccion) return msg('La dirección es obligatoria.', 'e');
-  if (d.email && !/^\S+@\S+\.\S+$/.test(d.email)) return msg('El email no es válido.', 'e');
-  if (d.cp && !/^\d{5}$/.test(d.cp)) return msg('El C.P. debe tener 5 dígitos.', 'e');
+  { const pe = primerError(d, CLAVES_FORMATO, A.prov); if (pe) return falloCampo(pe[0], pe[1]); }
   for (const k of Object.keys(CATS)) {
     if (!d[k]) return msg('El campo ' + k.toUpperCase() + ' no puede quedar vacío.', 'e');
     const ops = opciones(k), ini = String(row[colIdx(k)]).trim();
