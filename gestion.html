@@ -92,6 +92,22 @@ tbody tr.sel td{box-shadow:inset 0 2px 0 var(--acc),inset 0 -2px 0 var(--acc)}
 .wrap{transition:filter .2s}
 body.pn-open .wrap{filter:brightness(.8)}
 body.pn-open tbody tr.sel td{box-shadow:inset 0 3px 0 var(--acc),inset 0 -3px 0 var(--acc)}
+dialog#dimp{border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);padding:18px 20px;width:min(680px,95vw);max-height:92vh;overflow:auto}
+dialog#dimp::backdrop{background:rgba(0,0,0,.45)}
+dialog#dimp h3{margin:0 0 8px}
+dialog#dimp #dimr{margin:10px 0}
+dialog#dimp #dimr ul{margin:4px 0 4px 18px;padding:0}
+dialog#dimp #dimr .m{margin:6px 0;font-weight:700;color:var(--err)}
+dialog#dimp #dimr .m.o{color:var(--ok)}
+dialog#dimp #dimc input{width:12em;margin-left:6px}
+dialog#dimp progress{width:100%;margin-top:10px}
+dialog#dimp .bt{display:flex;gap:10px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+dialog#dexp{border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);padding:18px 20px;width:min(520px,94vw)}
+dialog#dexp::backdrop{background:rgba(0,0,0,.45)}
+dialog#dexp h3{margin:0 0 8px}
+dialog#dexp label.rd{display:flex;gap:8px;align-items:flex-start;margin:8px 0;font-weight:400}
+dialog#dexp input{width:auto;margin-top:3px}
+dialog#dexp .bt{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
 dialog#dcancel{border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);padding:18px 20px;width:min(460px,92vw)}
 dialog#dcancel::backdrop{background:rgba(0,0,0,.45)}
 dialog#dcancel h3{margin:0 0 8px}
@@ -199,6 +215,8 @@ select{width:100%}
     <h2>Establecimientos comerciales</h2>
     <span class="who" id="who"></span>
     <button class="verde" id="alta" type="button">+ Nueva alta</button>
+    <button class="sec" id="exp" type="button" hidden title="Solo administrador: descargar la base de datos en CSV">Exportar CSV</button>
+    <button class="peligro" id="imp" type="button" hidden title="Solo administrador: sustituir toda la base de datos por un CSV">Importar CSV</button>
     <button class="peligro" id="del" type="button" hidden title="Solo administrador: eliminar filas de la hoja">Eliminar registros</button>
     <button class="sec" id="tema" type="button" title="Cambiar entre tema claro y oscuro"></button>
     <button class="sec" id="out">Salir</button>
@@ -254,6 +272,26 @@ select{width:100%}
   </div>
 </dialog>
 
+<dialog id="dimp" aria-labelledby="dimt">
+  <h3 id="dimt">Importar CSV: sustituir toda la base de datos</h3>
+  <p class="nota" style="color:var(--err)"><b>Se borran todos los registros actuales</b> y se sustituyen por el contenido del CSV. Antes se guarda una copia de seguridad en una hoja oculta. Mientras dura la importación nadie puede modificar datos. FECHA VERIFICACIÓN quedará vacía.</p>
+  <p class="nota">Formato: UTF-8, separador «;» y la misma cabecera que genera «Exportar CSV» (sin FECHA VERIFICACIÓN). Las columnas pueden ir en cualquier orden.</p>
+  <input type="file" id="dimf" accept=".csv,text/csv,text/plain">
+  <div id="dimr"></div>
+  <div id="dimc" hidden><label>Para confirmar escribe <b>SUSTITUIR</b>: <input id="dimk" autocomplete="off" spellcheck="false"></label></div>
+  <progress id="dimg" hidden max="100" value="0"></progress>
+  <p id="dimm" class="nota"></p>
+  <div class="bt"><button type="button" class="sec" id="dimn">Cancelar</button><button type="button" class="peligro" id="dims" disabled>Importar y sustituir</button></div>
+</dialog>
+
+<dialog id="dexp" aria-labelledby="dext">
+  <h3 id="dext">Exportar a CSV</h3>
+  <div id="dexo"></div>
+  <p class="nota">Se exportan todas las columnas salvo FECHA VERIFICACIÓN. Formato UTF-8, separador «;».</p>
+  <p class="nota" id="dexw" hidden style="color:var(--err)">Los datos todavía proceden del archivo diario y pueden no incluir los últimos cambios. Espera a que termine la actualización (arriba aparecerá «Actualizado a las…») y vuelve a abrir esta ventana.</p>
+  <div class="bt"><button type="button" class="sec" id="dexn">Cancelar</button><button type="button" id="dexs">Exportar</button></div>
+</dialog>
+
 <dialog id="dcancel" aria-labelledby="dct">
   <h3 id="dct">Cancelar el proceso</h3>
   <p id="dci"></p>
@@ -296,7 +334,7 @@ select{width:100%}
 
 <script>
 // Versión visible en la pantalla de carga. Sube 0,1 en cada entrega del HTML (1.0, 1.1, 1.2…).
-const VERSION = '2.5';
+const VERSION = '2.7';
 // Para usar el escudo oficial en lugar del logotipo dibujado: guarda la imagen junto a este HTML y pon aquí su nombre (ej. 'escudo.png').
 const LOGO_SRC = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbywcJXtUPfuBJbbPzNYOqz10G4tyFGvHKN-PrENIPYy8R8amdFb_bOdnlwMeSXwZjGA/exec';
@@ -375,7 +413,7 @@ async function load() {
   const usr = JSON.parse(localStorage.getItem('usr') || '{}'), id = ++gen, t0 = performance.now();
   $('login').hidden = true; $('app').hidden = false;
   $('who').textContent = usr.u + ' · ' + usr.p + resumenFiltro(usr.f); $('who').title = usr.f ? 'Restricción de municipios: ' + usr.f : '';
-  $('del').hidden = !esAdmin() || delMode;
+  $('del').hidden = !esAdmin() || delMode; $('exp').hidden = !esAdmin(); $('imp').hidden = !esAdmin() || !!usr.f;
   $('tb').innerHTML = ''; $('th').innerHTML = ''; $('info').textContent = ''; setAct('');
   showLoad(true, 'Puede tardar unos segundos.');
 
@@ -421,7 +459,7 @@ function setData(r, keep, primera) {
   head = r.head; all = r.rows;
   vis = head.map((h, i) => i).filter(i => !OCULTAS.includes(clave(head[i])));
   all.forEach(row => { row.h = fold(vis.map(i => row[i]).join(' ')); });
-  info = { fuente: r.fuente, gen: r.gen, primera };
+  info = { fuente: r.fuente, gen: r.gen, primera, vivo: r.fuente === 'hoja' || !!r.vigente };
   iProv = head.findIndex(h => clave(h) === 'provincia');
   iMun = head.findIndex(h => clave(h) === 'municipio');
   iLoc = head.findIndex(h => clave(h) === 'localidad');
@@ -1298,6 +1336,164 @@ pintaTema();
 
 // ===== Eliminar registros (solo administrador) =====
 let delMode = false, delSel = new Set();
+// ===== EXPORTAR A CSV (solo administrador) =====
+const csvCelda = v => { v = String(v == null ? '' : v); return /[;"\r\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+$('exp').onclick = () => {
+  if (!esAdmin() || !all.length) return;
+  const nf = n => n.toLocaleString('es');
+  $('dexo').innerHTML = `<label class="rd"><input type="radio" name="dexa" value="todo" checked> <span>Toda la base de datos <b>(${nf(all.length)} registros)</b></span></label>` +
+    (view.length !== all.length ? `<label class="rd"><input type="radio" name="dexa" value="filtro"> <span>Solo lo que se ve con los filtros actuales <b>(${nf(view.length)} registros)</b></span></label>` : '');
+  $('dexw').hidden = !!info.vivo; $('dexs').disabled = !info.vivo;
+  $('dexp').showModal();
+};
+$('dexn').onclick = () => $('dexp').close();
+$('dexs').onclick = () => {
+  const alc = ($('dexo').querySelector('input:checked') || {}).value === 'filtro' ? 'filtro' : 'todo', filas = alc === 'filtro' ? view : all;
+  const cols = head.map((x, i) => i).filter(i => clave(head[i]) !== 'fechaverificacion');
+  const lineas = [cols.map(i => csvCelda(head[i])).join(';')];
+  filas.forEach(r => lineas.push(cols.map(i => csvCelda(r[i])).join(';')));
+  const d = new Date(), p = n => String(n).padStart(2, '0');
+  const nombre = `bdd_${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${alc === 'filtro' ? '_filtrado' : ''}.csv`;
+  const url = URL.createObjectURL(new Blob(['\uFEFF' + lineas.join('\r\n') + '\r\n'], { type: 'text/csv;charset=utf-8' }));   // BOM para que Excel reconozca UTF-8
+  const a = document.createElement('a'); a.href = url; a.download = nombre; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  $('dexp').close();
+  toast('Exportados ' + filas.length.toLocaleString('es') + ' registros (' + nombre + ')');
+  api({ action: 'exportlog', token: localStorage.getItem('tk'), n: filas.length, alcance: alc }, 1).catch(() => {});
+};
+// ===== IMPORTAR CSV (solo administrador): sustituye TODA la base de datos =====
+function parseCsv(t) {
+  if (t.charCodeAt(0) === 0xFEFF) t = t.slice(1);
+  const filas = []; let f = [], c = '', q = false;
+  for (let i = 0; i < t.length; i++) {
+    const ch = t[i];
+    if (q) { if (ch === '"') { if (t[i + 1] === '"') { c += '"'; i++; } else q = false; } else c += ch; }
+    else if (ch === '"') q = true;
+    else if (ch === ';') { f.push(c); c = ''; }
+    else if (ch === '\n') { f.push(c); c = ''; filas.push(f); f = []; }
+    else if (ch !== '\r') c += ch;
+  }
+  if (c !== '' || f.length) { f.push(c); filas.push(f); }
+  return filas.filter(r => !(r.length === 1 && r[0].trim() === ''));
+}
+// Devuelve { errores: [...] (impiden importar), avisos: [{ txt, n, ej }] (no impiden), filas: [[...]] en el orden de columnas de la hoja }
+function analizaCsv(txt, cabecera) {
+  const res = { errores: [], avisos: [], filas: [] };
+  const reg = parseCsv(txt);
+  if (reg.length < 2) { res.errores.push('El archivo no contiene registros.'); return res; }
+  const claves = cabecera.map(clave), hc = reg[0].map(x => clave(x));
+  const faltan = cabecera.filter((h, i) => claves[i] !== 'fechaverificacion' && !hc.includes(claves[i]));
+  const sobran = reg[0].filter((h, j) => hc[j] !== 'fechaverificacion' && !claves.includes(hc[j]));
+  const dup = hc.filter((k, j) => hc.indexOf(k) !== j);
+  if (faltan.length) res.errores.push('Faltan columnas en el CSV: ' + faltan.join(', ') + '.');
+  if (sobran.length) res.errores.push('El CSV tiene columnas que no existen en la hoja: ' + sobran.join(', ') + '.');
+  if (dup.length) res.errores.push('Hay columnas repetidas en el CSV: ' + dup.join(', ') + '.');
+  if (res.errores.length) return res;
+  const mapa = claves.map(k => (k === 'fechaverificacion' ? -1 : hc.indexOf(k)));
+  const col = k => claves.indexOf(k), iId = col('id'), iNra = col('nra'), iEst = col('est'), iPr = col('provincia'), iMu = col('municipio'), iDir = col('direccion');
+  const malLong = [], idVacio = [], idRep = [], vistos = new Set(), nraVistos = new Set();
+  const cuenta = {}, aviso = (k, txtAviso, fila, v) => { const a = cuenta[k] = cuenta[k] || { txt: txtAviso, n: 0, ej: [] }; a.n++; if (a.ej.length < 3) a.ej.push('fila ' + fila + (v ? ' «' + String(v).slice(0, 40) + '»' : '')); };
+  for (let r = 1; r < reg.length; r++) {
+    const row = reg[r], fila = r + 1;
+    if (row.length !== hc.length) { malLong.push(fila); continue; }
+    const f = mapa.map(j => (j < 0 ? '' : row[j]));
+    f[iId] = f[iId].trim();
+    if (!f[iId]) { idVacio.push(fila); continue; }
+    if (vistos.has(f[iId])) { idRep.push(fila); continue; }
+    vistos.add(f[iId]);
+    res.filas.push(f);
+    // Avisos (no impiden importar: los datos antiguos pueden tener defectos)
+    if (iEst >= 0 && f[iEst] !== '0' && f[iEst] !== '1') aviso('est', 'registros con EST distinto de 0 y 1', fila, f[iEst]);
+    if (iPr >= 0 && !f[iPr]) aviso('prov', 'registros sin provincia (no los verá ningún usuario provincial)', fila);
+    if (iMu >= 0 && !f[iMu]) aviso('mun', 'registros sin municipio', fila);
+    if (iDir >= 0 && !f[iDir]) aviso('dir', 'registros sin dirección', fila);
+    if (iNra >= 0 && f[iNra]) { if (nraVistos.has(f[iNra])) aviso('nra', 'registros con NRA repetido', fila, f[iNra]); nraVistos.add(f[iNra]); }
+    for (const k of CLAVES_FORMATO) {
+      const j = col(k); if (j < 0 || !f[j]) continue;
+      const e = errorCampo(k, f[j], iPr >= 0 ? f[iPr] : '');
+      if (e) aviso(k, 'registros con ' + etqCsv(k) + ' no válido', fila, f[j]);
+    }
+  }
+  const lista = a => a.slice(0, 8).join(', ') + (a.length > 8 ? '… (' + a.length + ' en total)' : '');
+  if (malLong.length) res.errores.push('Filas con un número de columnas distinto al de la cabecera (' + hc.length + '): ' + lista(malLong) + '. Suele deberse a un «;» sin entrecomillar dentro de un texto.');
+  if (idVacio.length) res.errores.push('Filas sin ID: ' + lista(idVacio) + '.');
+  if (idRep.length) res.errores.push('Filas con un ID repetido: ' + lista(idRep) + '.');
+  if (!res.errores.length && !res.filas.length) res.errores.push('El archivo no contiene registros.');
+  res.avisos = Object.keys(cuenta).map(k => cuenta[k]);
+  return res;
+}
+const etqCsv = k => ({ nif: 'NIF', cp: 'C.P.', tfn: 'TFN', movil: 'MOVIL', email: 'EMAIL', web: 'WEB' }[k] || k);
+
+let impFilas = null, impOcupado = false;
+const impReset = () => {
+  impFilas = null; $('dimf').value = ''; $('dimf').disabled = false; $('dimr').innerHTML = ''; $('dimc').hidden = true; $('dimk').value = '';
+  $('dims').disabled = true; $('dimg').hidden = true; $('dimm').textContent = ''; $('dimn').disabled = false; $('dimn').textContent = 'Cancelar';
+};
+$('imp').onclick = () => { if (!esAdmin()) return; impReset(); $('dimp').showModal(); };
+$('dimp').addEventListener('cancel', e => { if (impOcupado) e.preventDefault(); });
+$('dimn').onclick = () => { if (!impOcupado) $('dimp').close(); };
+$('dimk').oninput = () => { $('dims').disabled = !(impFilas && $('dimk').value.trim() === 'SUSTITUIR'); };
+$('dimf').onchange = async () => {
+  const f = $('dimf').files[0]; impFilas = null; $('dimc').hidden = true; $('dims').disabled = true;
+  if (!f) { $('dimr').innerHTML = ''; return; }
+  $('dimr').textContent = 'Leyendo y comprobando el archivo…';
+  await new Promise(r => setTimeout(r, 30));
+  let txt;
+  try { txt = await f.text(); } catch (e) { $('dimr').textContent = 'No se pudo leer el archivo.'; return; }
+  const res = analizaCsv(txt, head), nf = n => n.toLocaleString('es');
+  let html = '';
+  if (res.errores.length) {
+    html = '<p class="m e"><b>No se puede importar este archivo:</b></p><ul>' + res.errores.map(e => '<li>' + esc(e) + '</li>').join('') + '</ul>';
+  } else {
+    const dif = res.filas.length - all.length;
+    html = `<p><b>${nf(res.filas.length)}</b> registros en el CSV · ahora hay <b>${nf(all.length)}</b> (${dif >= 0 ? '+' : ''}${nf(dif)}).</p>`;
+    if (all.length && res.filas.length < all.length * 0.5) html += '<p class="m e"><b>Atención:</b> el CSV tiene menos de la mitad de los registros actuales. ¿Es el archivo correcto?</p>';
+    if (res.avisos.length) html += '<p>Avisos (no impiden importar):</p><ul>' + res.avisos.map(a => `<li><b>${nf(a.n)}</b> ${esc(a.txt)} <span class="nota">(${esc(a.ej.join('; '))})</span></li>`).join('') + '</ul>';
+    else html += '<p class="m o">No se han detectado datos con defectos.</p>';
+    impFilas = res.filas; $('dimc').hidden = false; $('dimk').value = ''; $('dimk').focus();
+  }
+  $('dimr').innerHTML = html;
+};
+$('dims').onclick = async () => {
+  if (!impFilas || $('dimk').value.trim() !== 'SUSTITUIR' || impOcupado) return;
+  const tk = localStorage.getItem('tk'), total = impFilas.length, LOTE = 800, nf = n => n.toLocaleString('es');
+  const paso = (t, p) => { $('dimm').textContent = t; $('dimg').hidden = false; $('dimg').value = p; };
+  let fase = 'ini';
+  impOcupado = true; $('dims').disabled = true; $('dimn').disabled = true; $('dimf').disabled = true; $('dimk').disabled = true;
+  window.onbeforeunload = e => { e.preventDefault(); e.returnValue = ''; };
+  try {
+    paso('Preparando la importación… (se bloquean las modificaciones de los demás usuarios)', 2);
+    let r = await api({ action: 'importar', fase: 'ini', token: tk, total }, 1, 120000);
+    if (r.expired) { caducada(); throw new Error('Sesión caducada'); }
+    if (!r.ok) throw new Error(r.error);
+    fase = 'lote';
+    for (let off = 0; off < total; off += LOTE) {
+      paso('Subiendo registros… ' + nf(Math.min(off + LOTE, total)) + ' de ' + nf(total), 5 + (off / total) * 75);
+      r = await api({ action: 'importar', fase: 'lote', token: tk, offset: off, filas: impFilas.slice(off, off + LOTE) }, 3, 120000);
+      if (!r.ok) throw new Error(r.error);
+    }
+    fase = 'fin';
+    paso('Sustituyendo la base de datos… Puede tardar 1-3 minutos. No cierres esta ventana.', 85);
+    r = await api({ action: 'importar', fase: 'fin', token: tk, total }, 1, 330000);
+    if (!r.ok) throw new Error(r.error);
+    fase = 'json';
+    paso('Actualizando el archivo diario…', 96);
+    try { await api({ action: 'importar', fase: 'json', token: tk }, 1, 330000); } catch (e) {}
+    $('dimg').value = 100;
+    $('dimr').innerHTML = `<p class="m o"><b>Importación completada:</b> ${nf(r.importados)} registros (antes ${nf(r.antes)}).</p><p class="nota">Copia de seguridad anterior: hoja oculta «${esc(r.copia)}».</p>`;
+    $('dimm').textContent = ''; $('dimc').hidden = true; impFilas = null;
+    $('dimn').disabled = false; $('dimn').textContent = 'Cerrar y recargar datos';
+    $('dimn').onclick = () => { $('dimp').close(); $('dimn').onclick = () => { if (!impOcupado) $('dimp').close(); }; load(); };
+  } catch (e) {
+    if (fase !== 'fin' && fase !== 'json') { try { await api({ action: 'importar', fase: 'cancelar', token: tk }, 1, 60000); } catch (x) {} }
+    $('dimr').innerHTML = '<p class="m e"><b>No se ha completado la importación:</b> ' + esc(e.message || e) + '</p>' +
+      (fase === 'fin' ? '<p>Es posible que la base de datos haya quedado a medias. Ejecuta <b>restaurarCopiaBdd</b> en el editor de Apps Script para volver a los datos anteriores.</p>' : '<p>La base de datos no se ha modificado.</p>');
+    $('dimg').hidden = true; $('dimm').textContent = ''; $('dimn').disabled = false; $('dimn').textContent = 'Cerrar';
+  } finally {
+    impOcupado = false; window.onbeforeunload = null; $('dimk').disabled = false; $('dimf').disabled = false;
+  }
+};
+
 function esAdmin() { return fold((JSON.parse(localStorage.getItem('usr') || '{}').p) || '') === 'todas'; }
 function actualizaDel() {
   const n = delSel.size;
