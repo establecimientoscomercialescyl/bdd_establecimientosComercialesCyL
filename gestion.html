@@ -92,6 +92,11 @@ tbody tr.sel td{box-shadow:inset 0 2px 0 var(--acc),inset 0 -2px 0 var(--acc)}
 .wrap{transition:filter .2s}
 body.pn-open .wrap{filter:brightness(.8)}
 body.pn-open tbody tr.sel td{box-shadow:inset 0 3px 0 var(--acc),inset 0 -3px 0 var(--acc)}
+dialog#dfrv{border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);padding:18px 20px;width:min(480px,94vw)}
+dialog#dfrv::backdrop{background:rgba(0,0,0,.45)}
+dialog#dfrv h3{margin:0 0 8px}
+dialog#dfrv input{width:auto}
+dialog#dfrv .bt{display:flex;gap:10px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
 dialog#dimp{border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);padding:18px 20px;width:min(680px,95vw);max-height:92vh;overflow:auto}
 dialog#dimp::backdrop{background:rgba(0,0,0,.45)}
 dialog#dimp h3{margin:0 0 8px}
@@ -215,6 +220,7 @@ select{width:100%}
     <h2>Establecimientos comerciales</h2>
     <span class="who" id="who"></span>
     <button class="verde" id="alta" type="button">+ Nueva alta</button>
+    <button class="sec" id="frv" type="button" hidden title="Solo administrador: fecha a partir de la cual los registros cuentan como revisados (colores)">Fecha de revisión</button>
     <button class="sec" id="exp" type="button" hidden title="Solo administrador: descargar la base de datos en CSV">Exportar CSV</button>
     <button class="peligro" id="imp" type="button" hidden title="Solo administrador: sustituir toda la base de datos por un CSV">Importar CSV</button>
     <button class="peligro" id="del" type="button" hidden title="Solo administrador: eliminar filas de la hoja">Eliminar registros</button>
@@ -270,6 +276,14 @@ select{width:100%}
     <div class="tw"><table id="dat2"><thead></thead><tbody></tbody></table></div>
     <div class="bt"><button type="button" class="sec" id="dab">Atrás</button><button type="button" class="sec" id="dan">Ninguno me sirve: alta nueva</button><button type="button" id="dar" disabled>Recuperar el seleccionado</button></div>
   </div>
+</dialog>
+
+<dialog id="dfrv" aria-labelledby="dfrt">
+  <h3 id="dfrt">Fecha de revisión (colores de la tabla)</h3>
+  <p class="nota">Un registro cuenta como <b>revisado</b> y se colorea si su fecha de alta, modificación, baja o verificación es <b>posterior</b> a esta fecha. El cambio afecta a todos los usuarios, que lo verán al cargar o recargar la página.</p>
+  <label>Nueva fecha: <input type="date" id="dfrf"></label>
+  <p class="nota" id="dfrp"></p>
+  <div class="bt"><button type="button" class="sec" id="dfrn">Cancelar</button><button type="button" id="dfrs">Guardar fecha</button></div>
 </dialog>
 
 <dialog id="dimp" aria-labelledby="dimt">
@@ -334,7 +348,7 @@ select{width:100%}
 
 <script>
 // Versión visible en la pantalla de carga. Sube 0,1 en cada entrega del HTML (1.0, 1.1, 1.2…).
-const VERSION = '2.7';
+const VERSION = '2.8';
 // Para usar el escudo oficial en lugar del logotipo dibujado: guarda la imagen junto a este HTML y pon aquí su nombre (ej. 'escudo.png').
 const LOGO_SRC = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbywcJXtUPfuBJbbPzNYOqz10G4tyFGvHKN-PrENIPYy8R8amdFb_bOdnlwMeSXwZjGA/exec';
@@ -342,7 +356,9 @@ const PAGE = 50;
 // Columnas que se reciben (para uso interno) pero no se muestran en la tabla
 const OCULTAS = ['id','nre','ot','ncn','est','idprovincia','idmunicipio','idlocalidad','habitantes','idsc','codiae','codcnae','grupodeaccionlocal'];
 // Un registro cuenta como "revisado" si su fecha de alta, modificación o baja es posterior a esta fecha
-const FECHA_REVISION = new Date(2026, 6, 1);   // 01/07/2026
+let FECHA_REVISION = new Date(2026, 6, 1);   // valor por defecto; el real lo manda el servidor y lo cambia el administrador
+const aFecha = iso => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ''); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; };
+const aIso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 const $ = id => document.getElementById(id);
 $('ver').textContent = 'Versión ' + VERSION;
 $('verl').textContent = 'Versión ' + VERSION;
@@ -413,7 +429,7 @@ async function load() {
   const usr = JSON.parse(localStorage.getItem('usr') || '{}'), id = ++gen, t0 = performance.now();
   $('login').hidden = true; $('app').hidden = false;
   $('who').textContent = usr.u + ' · ' + usr.p + resumenFiltro(usr.f); $('who').title = usr.f ? 'Restricción de municipios: ' + usr.f : '';
-  $('del').hidden = !esAdmin() || delMode; $('exp').hidden = !esAdmin(); $('imp').hidden = !esAdmin() || !!usr.f;
+  $('del').hidden = !esAdmin() || delMode; $('exp').hidden = !esAdmin(); $('imp').hidden = !esAdmin() || !!usr.f; $('frv').hidden = !esAdmin() || !!usr.f;
   $('tb').innerHTML = ''; $('th').innerHTML = ''; $('info').textContent = ''; setAct('');
   showLoad(true, 'Puede tardar unos segundos.');
 
@@ -465,6 +481,7 @@ function setData(r, keep, primera) {
   iLoc = head.findIndex(h => clave(h) === 'localidad');
   const col = c => head.findIndex(h => clave(h) === c);
   iId = col('id'); iNC = col('ncomercial'); iEst = col('est'); iAlta = col('fechaalta'); iModi = col('fechamodi'); iBaja = col('fechabaja'); iVer = col('fechaverificacion'); iSect = col('sectorcomercial');
+  const frv = aFecha(r.fechaRev); if (frv) { FECHA_REVISION = frv; pintaLeyenda(); }
   all.forEach(marcar);
   if (selId != null) { sel = all.find(x => x[iId] === selId) || null; if (!sel) cerrar(true); }
   if (!keep) {
@@ -579,6 +596,7 @@ function render() {
   aplicaFijas();
 }
 
+function pintaLeyenda() {
 const fc = FECHA_REVISION.toLocaleDateString('es', { day: '2-digit', month: '2-digit', year: 'numeric' });
 $('ley').innerHTML = `<span>${svgEstado('tienda', true)} Activo (icono verde)</span>
   <span>${svgEstado('tienda', false)} Cerrado (icono rojo y tachado)</span>
@@ -587,6 +605,8 @@ $('ley').innerHTML = `<span>${svgEstado('tienda', true)} Activo (icono verde)</s
   <span><i style="background:var(--c-modi)"></i> Modificado después del ${fc}</span>
   <span><i style="background:var(--c-ver)"></i> Verificado (todo correcto) después del ${fc}</span>
   <span><i style="background:var(--c-baja)"></i> Baja posterior al ${fc}</span>`;
+}
+pintaLeyenda();
 $('q').oninput = $('fl').onchange = $('fr').onchange = filter;
 $('fp').onchange = () => { rellenar($('fm'), valores(iMun, '', $('fp').value), 'Todos los municipios', ''); rellenarLoc(''); filter(); };
 $('fm').onchange = () => { rellenarLoc(''); filter(); };
@@ -1494,6 +1514,31 @@ $('dims').onclick = async () => {
   }
 };
 
+// ===== FECHA DE REVISIÓN (solo administrador) =====
+const revisadoCon = (row, f) => [iAlta, iModi, iBaja, iVer].some(i => { const d = i >= 0 ? parseFecha(row[i]) : null; return !!d && d > f; });
+function previaFecha() {
+  const f = aFecha($('dfrf').value), nf = n => n.toLocaleString('es');
+  if (!f) { $('dfrp').textContent = ''; return; }
+  const n = all.filter(r => revisadoCon(r, f)).length, ahora = all.filter(r => r.rev).length;
+  $('dfrp').textContent = `Con esta fecha: ${nf(n)} revisados y ${nf(all.length - n)} sin revisar (ahora: ${nf(ahora)} y ${nf(all.length - ahora)}).`;
+}
+$('frv').onclick = () => { if (!esAdmin()) return; $('dfrf').value = aIso(FECHA_REVISION); previaFecha(); $('dfrv').showModal(); };
+$('dfrf').oninput = previaFecha;
+$('dfrn').onclick = () => $('dfrv').close();
+$('dfrs').onclick = async () => {
+  const f = aFecha($('dfrf').value);
+  if (!f) return toast('Elige una fecha válida.', 'e');
+  $('dfrs').disabled = true;
+  try {
+    const r = await api({ action: 'fecharev', token: localStorage.getItem('tk'), fecha: aIso(f) }, 1, 60000);
+    if (r.expired) { caducada(); return; }
+    if (!r.ok) throw new Error(r.error);
+    FECHA_REVISION = f; all.forEach(marcar); contRev(); pintaLeyenda(); filter(true);
+    $('dfrv').close();
+    toast('Fecha de revisión: ' + f.toLocaleDateString('es', { day: '2-digit', month: '2-digit', year: 'numeric' }));
+  } catch (e) { toast(e.message || 'No se pudo guardar la fecha.', 'e'); }
+  finally { $('dfrs').disabled = false; }
+};
 function esAdmin() { return fold((JSON.parse(localStorage.getItem('usr') || '{}').p) || '') === 'todas'; }
 function actualizaDel() {
   const n = delSel.size;
