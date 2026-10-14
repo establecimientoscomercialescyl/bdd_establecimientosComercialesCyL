@@ -270,6 +270,7 @@ select{width:100%}
     <div class="ibs" role="toolbar" aria-label="Acciones">
       <button type="button" class="ib on" id="ibm" aria-pressed="true" title="Modificar" aria-label="Modificar"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg></button>
       <button type="button" class="ib" id="ibt" aria-pressed="false" title="Cambio de titular" aria-label="Cambio de titular"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></button>
+      <button type="button" class="ib" id="itr" aria-pressed="false" title="Traslado" aria-label="Traslado"><svg viewBox="0 0 24 24"><path d="M2 6h12v10H2z"/><path d="M14 9h4l3 3v4h-7"/><circle cx="7" cy="18" r="1.7"/><circle cx="17" cy="18" r="1.7"/><path d="M5 11h6M9 9l2 2-2 2"/></svg></button>
       <button type="button" class="ib" id="iba" aria-pressed="false" title="Cambio de actividad" aria-label="Cambio de actividad"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2M3 13h18"/></svg></button>
       <button type="button" class="ib" id="ibb" title="Dar de baja" aria-label="Dar de baja"><svg viewBox="0 0 24 24"><path d="M3 9l1.5-5h15L21 9v1a3 3 0 01-6 0 3 3 0 01-6 0 3 3 0 01-6 0V9z"/><path d="M5 13v7h14v-7"/><path d="M10 20v-4h4v4"/><path d="M3 3l18 18"/></svg></button>
     </div>
@@ -366,7 +367,7 @@ select{width:100%}
 
 <script>
 // Versión visible en la pantalla de carga. Sube 0,1 en cada entrega del HTML (1.0, 1.1, 1.2…).
-const VERSION = '2.9';
+const VERSION = '3.0';
 // Para usar el escudo oficial en lugar del logotipo dibujado: guarda la imagen junto a este HTML y pon aquí su nombre (ej. 'escudo.png').
 const LOGO_SRC = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbywcJXtUPfuBJbbPzNYOqz10G4tyFGvHKN-PrENIPYy8R8amdFb_bOdnlwMeSXwZjGA/exec';
@@ -666,7 +667,7 @@ function msg(t, tipo) { $('pnm').textContent = t || ''; $('pnm').className = tip
 // Proceso en curso = alta, cambio de titular o cambio de actividad (Modificar no cuenta). Salir de uno pide confirmación en un cuadro modal.
 const PROCESOS = { tit: 'Cambio de titular', act: 'Cambio de actividad' };
 const procesoActivo = () => !!sel && (modo === 'tit' || modo === 'act' || modo === 'alta');
-const nombreProceso = () => modo === 'alta' ? (sel.alta && sel.alta.base ? 'Alta (recuperación de un establecimiento de baja)' : 'Alta nueva') : PROCESOS[modo];
+const nombreProceso = () => modo === 'alta' ? (sel.alta && sel.alta.tr ? 'Traslado' : sel.alta && sel.alta.base ? 'Alta (recuperación de un establecimiento de baja)' : 'Alta nueva') : PROCESOS[modo];
 function confirmaSalir() {
   return new Promise(ok => {
     const d = $('dcancel'); let r = false;
@@ -1049,12 +1050,16 @@ function toolbar() {
   $('ibm').disabled = al;
   $('ibt').classList.toggle('on', t);  $('ibt').setAttribute('aria-pressed', String(t));
   $('iba').classList.toggle('on', a);  $('iba').setAttribute('aria-pressed', String(a));
+  const tras = al && !!(sel.alta && sel.alta.tr);
+  $('itr').classList.toggle('on', tras); $('itr').setAttribute('aria-pressed', String(tras));
+  $('itr').disabled = al ? !tras : cerrado();
+  $('itr').title = !al && cerrado() ? 'Traslado (el registro ya está de baja)' : 'Traslado';
   $('ibt').disabled = $('iba').disabled = $('ibb').disabled = al || cerrado();
   $('ibb').title = cerrado() ? 'Dar de baja (el registro ya está de baja)' : 'Dar de baja';
   $('ibt').title = cerrado() ? 'Cambio de titular (el registro ya está de baja)' : 'Cambio de titular';
   $('iba').title = cerrado() ? 'Cambio de actividad (el registro ya está de baja)' : 'Cambio de actividad';
   $('pnrv').hidden = !(modo === 'mod' && iVer >= 0 && !cerrado());
-  $('pnsv').textContent = t ? 'Crear nuevo titular' : a ? 'Crear nuevo registro' : al ? 'Crear alta' : 'Guardar';
+  $('pnsv').textContent = t ? 'Crear nuevo titular' : a ? 'Crear nuevo registro' : al ? (tras ? 'Guardar traslado' : 'Crear alta') : 'Guardar';
 }
 async function cambiaModo(m) {
   if (!sel || sel.alta || modo === m) return;
@@ -1082,7 +1087,7 @@ function cargarLocs() {
 }
 
 function pintaTitular() {
-  const al = modo === 'alta', act = modo === 'act', EDIT = act ? ACT_EDIT : (al ? ALTA_EDIT : TIT_EDIT), vacia = modo === 'tit';
+  const al = modo === 'alta', act = modo === 'act', trs = al && !!(sel.alta && sel.alta.tr), EDIT = act ? ACT_EDIT : (al ? (trs ? TRAS_EDIT : ALTA_EDIT) : TIT_EDIT), vacia = modo === 'tit';
   if (!al) cargarLocs();
   const r = sel, iO = colIdx('ot'), ot = String(iO >= 0 ? r[iO] : '').trim().toUpperCase();
   const sig = /^[A-Y]$/.test(ot) ? String.fromCharCode(ot.charCodeAt(0) + 1) : '?';
@@ -1090,7 +1095,7 @@ function pintaTitular() {
   const f = i => {
     const k = clave(head[i]), ed = EDIT.includes(k), id = 'c_' + i;
     const v = esc(vacia && TIT_VACIOS.includes(k) ? '' : r[i]), w = ANCHOS.includes(k) ? 'w' : '';
-    const req = (!act && (k === 'titular' || k === 'nif')) || (al && CATS[k]) || (ed && k === 'direccion') ? ' <i aria-hidden="true">*</i>' : '';
+    const req = (!act && (k === 'titular' || (k === 'nif' && !trs))) || (al && CATS[k]) || (ed && k === 'direccion') ? ' <i aria-hidden="true">*</i>' : '';
     const ctl = k === 'observaciones' ? `<textarea id="${id}" data-i="${i}" maxlength="2000">${v}</textarea>`
       : esTel(k) && ed ? telCtl(id, i, r[i])
       : k === 'sexo' && !act ? `<select id="${id}" data-i="${i}"><option value=""></option>${sexos.map(x => `<option${esc(x) === v ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>`
@@ -1109,6 +1114,13 @@ function pintaTitular() {
     h4 = A.base ? 'Datos del establecimiento (puedes modificarlos)' : 'Datos del establecimiento';
     $('pnt').textContent = A.base ? 'Recuperar establecimiento' : 'Nueva alta';
     $('pns').textContent = [A.mun, A.loc].filter(Boolean).join(' · ');
+    if (A.tr) {
+      aviso = `<div class="aviso">Traslado de <b>${esc(A.tr.nombre)}</b> (NIF <b>${esc(A.tr.nif)}</b>) a <b>${esc(A.loc)}</b> (${esc(A.mun)}). Al guardar, el registro actual pasará a <b>baja</b> con la fecha de hoy y se creará ` +
+        (A.base ? `un registro nuevo recuperando el NRE <b>${esc(nre)}</b> del establecimiento de baja (<b>${esc(A.baseTitular || '')}</b>). ` : `un registro nuevo con OT <b>A</b>, EST 1 y un NRE nuevo (el siguiente número libre de la provincia). `) +
+        `El NIF no se puede modificar. Indica la <b>nueva dirección</b>.</div>`;
+      h4 = 'Datos del establecimiento en su nueva ubicación';
+      $('pnt').textContent = 'Traslado';
+    }
   } else {
     aviso = act
       ? `<div class="aviso">Al guardar, el registro actual (<b>${esc(r[colIdx('titular')])}</b>, OT <b>${esc(ot)}</b>) pasará a <b>baja</b> con la fecha de hoy y se creará un registro nuevo con el mismo titular, el mismo OT <b>${esc(ot)}</b>, EST 1 y fechas de alta y de modificación de hoy. El titular, el NIF y el sexo no se pueden cambiar.</div>`
@@ -1175,6 +1187,16 @@ function setProv(p) {
 }
 $('alta').onclick = async () => {
   if (procesoActivo()) { if (!(await confirmaSalir())) return; cerrar(true); render(); }
+  await abreDialogoAlta(null);
+};
+// tr = null (nueva alta) o { row, id, nif, nombre, mun, loc } del comercio que se traslada
+async function abreDialogoAlta(tr) {
+  alta.tr = tr;
+  $('dat').textContent = tr ? 'Traslado' : 'Nueva alta';
+  $('da1').querySelector('.aviso').innerHTML = tr
+    ? `Indica a qué municipio y localidad se traslada <b>${esc(tr.nombre)}</b>. Se buscarán comercios de baja en esa localidad que se puedan recuperar. El comercio actual solo se dará de baja (con la fecha de hoy) cuando confirmes el traslado.`
+    : 'Indica dónde está el establecimiento. Se buscarán comercios de baja en esa localidad que se puedan recuperar.';
+  $('dan').textContent = tr ? 'Ninguno me sirve: establecimiento nuevo' : 'Ninguno me sirve: alta nueva';
   const usr = JSON.parse(localStorage.getItem('usr') || '{}'), admin = fold(usr.p || '') === 'todas';
   $('da1').hidden = false; $('da2').hidden = true; $('dam1').textContent = ''; $('dapw').hidden = !admin;
   alta.prov = ''; alta.muns = []; alta.locs = []; alta.cur = '';
@@ -1189,7 +1211,7 @@ $('alta').onclick = async () => {
   $('dapw').hidden = provs.length < 2;
   if (provs.length > 1) $('dap').innerHTML = '<option value="">Elige provincia</option>' + provs.map(p => `<option>${esc(p)}</option>`).join('');
   else { $('dap').innerHTML = provs.map(p => `<option>${esc(p)}</option>`).join(''); setProv(provs[0] || ''); }
-};
+}
 $('dax').onclick = () => $('dalta').close();
 $('dap').onchange = () => { if (terr) setProv($('dap').value); };
 $('dam').oninput = () => {
@@ -1207,8 +1229,9 @@ $('dac').onclick = () => {
   if (!l) return e.textContent = 'Elige una localidad de la lista.';
   alta.mun = m; alta.loc = l; e.textContent = '';
   alta.cands = candidatos(alta.prov, m, l); alta.pick = null; alta.sort = -1; alta.desc = false;
-  if (!alta.cands.length) { $('dalta').close(); altaEnBlanco(); return toast('No hay comercios de baja recuperables en esta localidad: alta en blanco'); }
+  if (!alta.cands.length) { $('dalta').close(); altaEnBlanco(); return toast(alta.tr ? 'No hay comercios de baja recuperables en esta localidad: se creará un establecimiento nuevo' : 'No hay comercios de baja recuperables en esta localidad: alta en blanco'); }
   $('dai').innerHTML = `Comercios de baja en <b>${esc(l)}</b> (${esc(m)}) que no han tenido continuidad en la base: ${alta.cands.length}. Elige el que corresponda según la dirección (haz clic en una columna para ordenar), o pulsa «Ninguno me sirve».`;
+  if (alta.tr) $('dai').innerHTML = `Comercios de baja en <b>${esc(l)}</b> (${esc(m)}) que no han tenido continuidad en la base: ${alta.cands.length}. Si el establecimiento al que se traslada <b>${esc(alta.tr.nombre)}</b> es uno de ellos, elígelo (se recuperará su NRE); si no, pulsa «Ninguno me sirve: establecimiento nuevo».`;
   $('da1').hidden = true; $('da2').hidden = false; pintaCands();
 };
 $('dab').onclick = () => { $('da2').hidden = true; $('da1').hidden = false; };
@@ -1253,18 +1276,38 @@ $('dat2').tBodies[0].onkeydown = e => {
   if (alta.pick === r) recuperar(); else { alta.pick = r; pintaCands(); const k = alta.cands.indexOf(r), tr = $('dat2').tBodies[0].rows[k]; if (tr) tr.focus(); }
 };
 
+// ===== Traslado =====
+// Datos del titular que se trasladan al nuevo registro (la dirección, el C.P. y la localización NO: cambian con el traslado)
+const COPIA_TRASLADO = ['titular', 'nif', 'sexo', 'ncomercial', 'tfn', 'movil', 'email', 'web', 'sectorcomercial', 'cnae', 'iae', 'observaciones'];
+const TRAS_EDIT = ALTA_EDIT.filter(k => k !== 'nif');   // el NIF no se puede modificar en un traslado
+function filaTraslado(v) {
+  const o = alta.tr.row;
+  COPIA_TRASLADO.forEach(k => { const j = colIdx(k); if (j >= 0) v[j] = o[j]; });
+  return v;
+}
+async function iniciaTraslado() {
+  if (!sel || sel.alta || cerrado()) return;
+  if (!(await puedeSalir())) return;
+  modo = 'mod'; pintaPanel();   // se abandona el proceso en curso y se descartan los cambios sin guardar
+  const o = sel;
+  await abreDialogoAlta({ row: o, id: String(o[iId]), nif: String(o[colIdx('nif')] || '').trim(), nombre: (iNC >= 0 && o[iNC]) || o[colIdx('titular')] || 'el comercio', mun: o[iMun], loc: o[iLoc] });
+}
+$('itr').onclick = iniciaTraslado;
+
 function recuperar() {
   const b = alta.pick; if (!b) return;
   $('dalta').close();
   const v = b.slice(), iObs = colIdx('observaciones');
   if (iObs >= 0) v[iObs] = quitaBaja(v[iObs]);
   v.alta = { base: String(b[iId]), prov: alta.prov, mun: alta.mun, loc: alta.loc };
+  if (alta.tr) { v.alta.tr = alta.tr; v.alta.baseTitular = String(b[colIdx('titular')]); filaTraslado(v); }
   abrirAlta(v);
 }
 function altaEnBlanco() {
   const v = head.map(() => ''), iP = colIdx('provincia');
   v[iMun] = alta.mun; v[iLoc] = alta.loc; if (iP >= 0) v[iP] = alta.prov;
   v.alta = { base: '', prov: alta.prov, mun: alta.mun, loc: alta.loc };
+  if (alta.tr) { v.alta.tr = alta.tr; filaTraslado(v); }
   abrirAlta(v);
 }
 function abrirAlta(v) {
@@ -1274,8 +1317,9 @@ function abrirAlta(v) {
   cargarCat().catch(e => { if (e.message !== 'expired' && sel === v) msg('No se pudieron cargar las listas de sector, CNAE e IAE. Cierra y vuelve a empezar.', 'e'); });
 }
 async function guardaAlta() {
-  const row = sel, d = {}, A = row.alta, base = A.base;
+  const row = sel, d = {}, A = row.alta, base = A.base, tr = A.tr;
   $('pnf').querySelectorAll('[data-i]:not(:disabled)').forEach(el => { d[clave(head[+el.dataset.i])] = el.value.trim(); });
+  if (tr) d.nif = tr.nif;   // el NIF del traslado es el del registro de origen
   if (!d.titular) return msg('Introduce el titular.', 'e');
   if (!d.nif) return msg('Introduce el NIF.', 'e');
   if (!d.direccion) return msg('La dirección es obligatoria.', 'e');
@@ -1287,19 +1331,20 @@ async function guardaAlta() {
   }
   // Aviso (no bloquea): mismo NIF activo en esa misma dirección
   const iN = colIdx('nif'), iD = colIdx('direccion'), limpia = x => String(x).toUpperCase().replace(/[\s.\-]/g, ''), dir = clave(d.direccion || '');
-  const dup = dir ? all.find(x => String(x[iEst]).trim() === '1' && limpia(x[iN]) === limpia(d.nif) && clave(x[iD]) === dir) : null;
+  const dup = dir && !tr ? all.find(x => String(x[iEst]).trim() === '1' && limpia(x[iN]) === limpia(d.nif) && clave(x[iD]) === dir) : null;
   if (dup && !confirm('Ya existe un registro ACTIVO con el mismo NIF en esa misma dirección (' + (dup[iNC] || dup[colIdx('titular')]) + ', ' + dup[iD] + '). ¿Crear el alta igualmente?')) return;
-  if (!confirm(base ? 'Se creará un registro nuevo recuperando el NRE del establecimiento de baja. ¿Continuar?' : 'Se creará una alta nueva en ' + A.loc + ' (' + A.mun + '). ¿Continuar?')) return;
+  if (!confirm(tr ? 'Se dará de baja ' + tr.nombre + ' con la fecha de hoy y se creará el registro en ' + A.loc + ' (' + A.mun + ') ' + (base ? 'recuperando el NRE del establecimiento de baja' : 'con un NRE nuevo') + '. ¿Continuar con el traslado?' : base ? 'Se creará un registro nuevo recuperando el NRE del establecimiento de baja. ¿Continuar?' : 'Se creará una alta nueva en ' + A.loc + ' (' + A.mun + '). ¿Continuar?')) return;
   $('pnsv').disabled = $('pnd').disabled = true;
   const t0 = performance.now();
-  const parar = progreso(t => msg(t, 'o'), base
+  const parar = progreso(t => msg(t, 'o'), tr ? ['Comprobando los datos…', 'Creando el registro en el destino…', 'Dando de baja el registro anterior…', 'Guardando en la base de datos…', 'Finalizando…'] : base
     ? ['Comprobando los datos…', 'Recuperando el NRE del establecimiento de baja…', 'Creando el registro nuevo…', 'Guardando en la base de datos…', 'Finalizando…']
     : ['Comprobando los datos…', 'Obteniendo el nuevo NRE…', 'Adjudicando el NRE al establecimiento…', 'Creando el registro nuevo…', 'Guardando en la base de datos…', 'Finalizando…']);
   try {
-    const r = await api({ action: 'alta', token: tok(), base, provincia: A.prov, municipio: A.mun, localidad: A.loc, datos: d }, 1, 60000);
+    const r = await api({ action: tr ? 'traslado' : 'alta', token: tok(), idOrigen: tr ? tr.id : undefined, base, provincia: A.prov, municipio: A.mun, localidad: A.loc, datos: d }, 1, tr ? 90000 : 60000);
     if (r.expired) return caducada();
     if (!r.ok) return msg(r.error, 'e');
     const nu = r.nuevo; nu.h = fold(vis.map(i => nu[i]).join(' ')); marcar(nu);
+    if (tr && r.origen) { const o = all.find(x => String(x[iId]) === tr.id); if (o) { r.origen.forEach((v, i) => { o[i] = v; }); o.h = fold(vis.map(i => o[i]).join(' ')); marcar(o); } }
     let pos = 0;
     if (base) { const b = all.findIndex(x => String(x[iId]) === base); pos = b >= 0 ? b + 1 : 0; }
     else {
@@ -1308,7 +1353,7 @@ async function guardaAlta() {
       pos = (la >= 0 ? la : lp) + 1;
     }
     if (pos <= 0) all.push(nu); else all.splice(pos, 0, nu);
-    contRev(); filter(true); cerrar(true); render(); toast((base ? 'Establecimiento recuperado' : 'Alta creada') + ' (' + ((performance.now() - t0) / 1000).toFixed(1).replace('.', ',') + ' s)'); if (base) pideIndice();
+    contRev(); filter(true); cerrar(true); render(); toast((tr ? 'Traslado realizado' : base ? 'Establecimiento recuperado' : 'Alta creada') + ' (' + ((performance.now() - t0) / 1000).toFixed(1).replace('.', ',') + ' s)'); if (base || tr) pideIndice();
   } catch (x) { msg('No se pudo confirmar la operación. Actualiza los datos y comprueba si se hizo antes de repetirla.', 'e'); }
   finally { parar(); $('pnsv').disabled = $('pnd').disabled = false; }
 }
