@@ -24,6 +24,7 @@ button.sec{background:transparent;color:var(--ink);border:1px solid var(--line)}
 button:disabled{opacity:.5;cursor:wait}
 #login button{width:100%;margin-top:18px}
 .err{color:var(--err);min-height:20px;margin:10px 0 0}
+#f2 .rc{display:flex;align-items:center;gap:8px;margin:14px 0 0;font-weight:500;cursor:pointer}#f2 .rc input{width:auto;margin:0}#f2 #c2{font-size:24px;letter-spacing:.35em;text-align:center}#login #f2 button.sec{margin-top:10px}
 #verl{margin:14px 0 0;text-align:center;font-size:12px;color:var(--mute)}
 .gpsr{display:flex;gap:6px}.gpsr input{flex:1;min-width:0}.gpsr button{white-space:nowrap;padding:9px 12px}
 .tels>input.tel{margin-top:6px}
@@ -223,6 +224,17 @@ select{width:100%}
     <p class="err" id="le" role="alert"></p>
     <p id="verl"></p>
   </form>
+  <form id="f2" hidden>
+    <h1>Verificación en dos pasos</h1>
+    <p class="sub" id="f2t"></p>
+    <label for="c2">Código de 6 dígitos</label>
+    <input id="c2" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]*" required>
+    <label class="rc" for="rc"><input id="rc" type="checkbox" checked> Recordar este dispositivo 30 días</label>
+    <button id="b2">Verificar</button>
+    <button id="br" class="sec" type="button">Reenviar código</button>
+    <button id="bv" class="sec" type="button">Volver</button>
+    <p class="err" id="e2" role="alert"></p>
+  </form>
 </section>
 
 <main id="app" hidden>
@@ -367,7 +379,7 @@ select{width:100%}
 
 <script>
 // Versión visible en la pantalla de carga. Sube 0,1 en cada entrega del HTML (1.0, 1.1, 1.2…).
-const VERSION = '3.0';
+const VERSION = '3.1';
 // Para usar el escudo oficial en lugar del logotipo dibujado: guarda la imagen junto a este HTML y pon aquí su nombre (ej. 'escudo.png').
 const LOGO_SRC = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbywcJXtUPfuBJbbPzNYOqz10G4tyFGvHKN-PrENIPYy8R8amdFb_bOdnlwMeSXwZjGA/exec';
@@ -406,23 +418,59 @@ function resumenFiltro(f) {
   f = f.replace(/<=/g, '≤').replace(/>=/g, '≥').replace(/\s*;\s*/g, '; ');
   return ' · municipios: ' + (f.length > 48 ? f.slice(0, 47) + '…' : f);
 }
+let lg = null, reto = '';   // credenciales del paso 1 (solo en memoria) y código de reto mientras se espera el código
 function showLogin(msg) {
   salirDel(true); gen++; showLoad(false); setAct(''); cerrar(true); cat = null; catP = null; terr = null; terrP = null;
   localStorage.removeItem('tk'); localStorage.removeItem('usr');
   $('app').hidden = true; $('login').hidden = false; $('le').textContent = msg || ''; $('bl').disabled = false;
+  $('f').hidden = false; $('f2').hidden = true; lg = null; reto = '';
 }
 
+const dvKey = u => 'dv_' + String(u || '').trim().toLowerCase();
+const getDv = u => { try { return localStorage.getItem(dvKey(u)) || undefined; } catch (e) { return undefined; } };
+function terminaLogin(r) {
+  if (r.dev && lg) { try { localStorage.setItem(dvKey(lg.u), r.dev); } catch (e) {} }   // dispositivo recordado
+  localStorage.setItem('tk', r.token);
+  localStorage.setItem('usr', JSON.stringify({ u: r.usuario, p: r.provincia, f: r.filtro || '' }));
+  lg = null; reto = ''; $('p').value = ''; $('c2').value = '';
+  $('f2').hidden = true; $('f').hidden = false; load();
+  if (r.aviso) toast(r.aviso, 'e', 9000);
+}
+function muestraPaso2(r, reenviado) {
+  reto = r.reto;
+  $('f').hidden = true; $('f2').hidden = false; $('bl').disabled = false;
+  $('f2t').textContent = (reenviado ? 'Código reenviado a ' : 'Hemos enviado un código de 6 dígitos a ') + r.correo + '. Caduca en ' + r.minutos + ' minutos.';
+  $('c2').value = ''; $('e2').textContent = ''; $('b2').disabled = false; $('c2').focus();
+}
 $('f').onsubmit = async e => {
   e.preventDefault(); $('bl').disabled = true; $('le').textContent = '';
+  lg = { u: $('u').value, p: $('p').value };
   try {
-    const r = await api({ action: 'login', usuario: $('u').value, password: $('p').value });
+    const r = await api({ action: 'login', usuario: lg.u, password: lg.p, dev: getDv(lg.u) }, 2, 60000);
     if (!r.ok) return showLogin(r.error);
-    localStorage.setItem('tk', r.token);
-    localStorage.setItem('usr', JSON.stringify({ u: r.usuario, p: r.provincia, f: r.filtro || '' }));
-    $('p').value = ''; load();
-    if (r.aviso) toast(r.aviso, 'e', 9000);
+    if (r.mfa) return muestraPaso2(r);
+    terminaLogin(r);
   } catch (x) { showLogin('No se pudo conectar con el servidor. Inténtalo de nuevo.'); }
 };
+$('f2').onsubmit = async e => {
+  e.preventDefault(); $('b2').disabled = true; $('e2').textContent = '';
+  try {
+    const r = await api({ action: 'login2', reto, codigo: $('c2').value, recordar: $('rc').checked }, 1, 60000);
+    if (r.ok) return terminaLogin(r);
+    if (r.caducado) return showLogin(r.error);
+    $('e2').textContent = r.error || 'No se pudo verificar el código.'; $('b2').disabled = false; $('c2').select();
+  } catch (x) { $('e2').textContent = 'No se pudo conectar con el servidor. Inténtalo de nuevo.'; $('b2').disabled = false; }
+};
+$('br').onclick = async () => {
+  if (!lg) return showLogin();
+  $('br').disabled = true; $('e2').textContent = '';
+  try {
+    const r = await api({ action: 'login', usuario: lg.u, password: lg.p }, 1, 60000);
+    if (r.ok && r.mfa) muestraPaso2(r, true); else $('e2').textContent = r.error || 'No se pudo reenviar el código.';
+  } catch (x) { $('e2').textContent = 'No se pudo conectar con el servidor.'; }
+  setTimeout(() => { $('br').disabled = false; }, 20000);
+};
+$('bv').onclick = () => showLogin();
 $('out').onclick = $('cl').onclick = () => showLogin();
 $('rf').onclick = () => refrescar(localStorage.getItem('tk'), gen);
 
