@@ -138,16 +138,18 @@ dialog#dcancel h3{margin:0 0 8px}
 dialog#dcancel p{margin:0;line-height:1.45}
 dialog#dcancel .bt{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
 .pnh{padding:14px 16px 0;border-bottom:1px solid var(--line)}
-.pnt{display:flex;gap:10px;align-items:flex-start}
+.pnt{display:flex;gap:12px;align-items:center}
+.pni{flex:none;display:grid;place-items:center}
+.pni .ic{display:block;width:36px;height:36px;stroke-width:1.6}
 .pnt div{flex:1;min-width:0}
-.pnt h3{margin:0;font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pnt h3{margin:0;font-size:23px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pnt small{color:var(--mute)}
 .x{padding:4px 10px}
 .ibs{display:flex;gap:6px;padding:12px 0}
-.ib{width:42px;height:38px;padding:0;display:grid;place-items:center;background:transparent;color:var(--ink);border:1px solid var(--line)}
+.ib{width:56px;height:50px;padding:0;display:grid;place-items:center;background:transparent;color:var(--ink);border:1px solid var(--line)}
 .ib.on{background:var(--acc);color:var(--accT);border-color:var(--acc)}
 .ib:disabled{opacity:.4;cursor:not-allowed}
-.ib svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ib svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 #pnform{display:flex;flex-direction:column;flex:1;min-height:0}
 .pnb{flex:1;overflow:auto;padding:4px 16px 16px}
 .pnb h4{margin:16px 0 2px;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--mute)}
@@ -287,7 +289,7 @@ select{width:100%}
 
 <aside id="pn" hidden aria-label="Detalle del registro">
   <div class="pnh">
-    <div class="pnt"><div><h3 id="pnt"></h3><small id="pns"></small></div><button class="sec x" id="pnx" type="button" aria-label="Cerrar panel">&#10005;</button></div>
+    <div class="pnt"><span class="pni" id="pni" role="img"></span><div><h3 id="pnt"></h3><small id="pns"></small></div><button class="sec x" id="pnx" type="button" aria-label="Cerrar panel">&#10005;</button></div>
     <div class="ibs" role="toolbar" aria-label="Acciones">
       <button type="button" class="ib on" id="ibm" aria-pressed="true" title="Modificar" aria-label="Modificar"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg></button>
       <button type="button" class="ib" id="ibt" aria-pressed="false" title="Cambio de titular" aria-label="Cambio de titular"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></button>
@@ -404,7 +406,7 @@ select{width:100%}
 
 <script>
 // Versión visible en la pantalla de carga. Sube 0,1 en cada entrega del HTML (1.0, 1.1, 1.2…).
-const VERSION = '3.2';
+const VERSION = '3.3';
 // Para usar el escudo oficial en lugar del logotipo dibujado: guarda la imagen junto a este HTML y pon aquí su nombre (ej. 'escudo.png').
 const LOGO_SRC = '';
 const API_URL = 'https://script.google.com/macros/s/AKfycbywcJXtUPfuBJbbPzNYOqz10G4tyFGvHKN-PrENIPYy8R8amdFb_bOdnlwMeSXwZjGA/exec';
@@ -735,6 +737,12 @@ function cargarCat() {
     cat = r; return r;
   }).catch(e => { catP = null; throw e; }));
 }
+// Icono del sector comercial junto al título del panel (verde = activo; rojo y tachado = cerrado)
+function iconoPanel(r, abierto) {
+  const s = iSect >= 0 ? String(r[iSect] || '').trim() : '', ab = abierto !== undefined ? abierto : !(iEst >= 0 && String(r[iEst]).trim() === '0');
+  const e = $('pni'); e.innerHTML = svgEstado(iconoSector(s), ab);
+  const t = (s ? s + ' · ' : '') + (ab ? 'Activo' : 'Cerrado'); e.title = t; e.setAttribute('aria-label', t);
+}
 function msg(t, tipo) { $('pnm').textContent = t || ''; $('pnm').className = tipo || ''; }
 
 // Proceso en curso = alta, cambio de titular o cambio de actividad (Modificar no cuenta). Salir de uno pide confirmación en un cuadro modal.
@@ -787,7 +795,7 @@ function pintaPanel() {
   $('pnt').textContent = (iNC >= 0 && r[iNC]) || 'Registro';
   $('pns').textContent = [r[iMun], r[iLoc]].filter(Boolean).join(' · ');
   $('pnf').innerHTML = '<h4>Datos del registro</h4><p class="nota">Los campos en gris no se pueden modificar.</p><div class="g2">' + vis.map(i => f(i) + MAPA_TRAS(i)).join('') + '</div>';
-  $('pnf').scrollTop = 0; msg('La fecha de modificación se actualiza sola al guardar.');
+  $('pnf').scrollTop = 0; msg('La fecha de modificación se actualiza sola al guardar.'); iconoPanel(r);
   mapKey = ''; actualizaMapa();
   snap = formVals(); toolbar();
 }
@@ -1203,7 +1211,7 @@ function pintaTitular() {
     $('pns').textContent = (iNC >= 0 && r[iNC]) || '';
   }
   $('pnf').innerHTML = aviso + '<h4>' + h4 + '</h4><p class="nota">Los campos en gris se mantienen y no se pueden modificar.</p><div class="g2">' + lista.map(i => f(i) + MAPA_TRAS(i)).join('') + '</div>';
-  $('pnf').scrollTop = 0; msg('');
+  $('pnf').scrollTop = 0; msg(''); iconoPanel(r, al ? true : undefined);
   mapKey = ''; actualizaMapa();
   snap = formVals(); toolbar();
 }
