@@ -565,7 +565,11 @@
         <svg id="icon-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
         <svg id="icon-compress" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
       </button>
-      <button class="btn btn-primary" id="btn-datasource" title="Volver a pedir los datos a Google Sheets">
+      <a class="btn btn-ghost" id="btn-home" href="index.html" title="Volver a la página de inicio" style="text-decoration:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg>
+        Inicio
+      </a>
+      <button class="btn btn-primary" id="btn-datasource" title="Volver a cargar los datos publicados">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
         Actualizar datos
       </button>
@@ -1005,7 +1009,7 @@
 
   </div>
 
-  <footer>Panel generado a partir de <span id="foot-n"></span> registros de la base de datos conectada a Google Sheets.</footer>
+  <footer>Panel generado a partir de <span id="foot-n"></span> registros de la base de datos de comercio.</footer>
 
 </main>
 
@@ -1105,13 +1109,14 @@
 (function(){
 
 /* ==========================================================================
- * FUENTE DE DATOS — URL y token fijos de la app de Apps Script conectada a
- * Google Sheets, única fuente de datos del dashboard (no se pide nunca la
- * URL ni el token al usuario: el panel se conecta solo al arrancar).
+ * FUENTE DE DATOS — JSON estático publicado en GitHub por el Apps Script al
+ * editar la hoja (data/comercio.json). La ruta es relativa a esta página, así
+ * que el HTML debe estar en la raíz del mismo repositorio (junto a la carpeta
+ * data/). No hace falta token. El panel se conecta solo al arrancar.
  * ========================================================================== */
 const DEFAULT_SOURCE = {
-  url: 'https://script.google.com/macros/s/AKfycbzIDSnSb4C0J2fO5AKLHdllWVexLMSKZ1Gxyp4Hs5IqNsMJAhzzxaPSG5YIB_RGNu1m/exec',
-  token: '64d1a9a2-fcfc-4932-bb4a-4698982eb1ef'
+  url: 'data/comercio.json',
+  token: ''
 };
 
 /* ==========================================================================
@@ -1857,7 +1862,7 @@ function renderMapModalDetails(i){
     detailItem('Provincia', provincia),
     detailItem('Población del municipio', mun ? fmt(mun.h) : ''),
     detailItem('Sector comercial', sector),
-    detailItem('Teléfono', tel, tel ? {href:'tel:'+tel.replace(/\s+/g,'')} : {}),
+    detailItem('Teléfono', tel, /\d{6,}/.test(tel) ? {href:'tel:'+tel.replace(/\s+/g,'')} : {}),
     detailItem('Web', web, webHref ? {href:webHref} : {}),
     detailItem('Última modificación', strOr(r.fmodi[i]))
   ].join('');
@@ -2768,7 +2773,7 @@ const COMPARATIVA_METRICS = [
   { key:'pctEstTotal',     label:'% establecimientos (total) sobre CyL',        fmt:(v)=> fmtDec(v,2)+'%' },
   { key:'pctEstActivos',   label:'% establecimientos activos sobre CyL',        fmt:(v)=> fmtDec(v,2)+'%' },
   { key:'pctHab',          label:'% habitantes sobre CyL',                      fmt:(v)=> fmtDec(v,2)+'%' },
-  { key:'pctAlimCosm',     label:'% Producto cotidiano',                        fmt:(v)=> fmtDec(v,2)+'%' },
+  { key:'pctAlimCosm',     label:'% Producto cotidiano', fmt:(v)=> fmtDec(v,2)+'%' },
   { key:'pctRopaCalz',     label:'% Prendas de vestir y calzado sobre el total', fmt:(v)=> fmtDec(v,2)+'%' },
 ];
 
@@ -2815,8 +2820,8 @@ function renderComparativa(){
   }).join('');
 }
 
-/* Sectores que forman la medida agregada "Producto cotidiano"
-   (alimentación + cosméticos/higiene) en la pestaña Comparativa. Comparación por nombre tolerante
+/* Sectores que forman la medida agregada "Alimentación y Productos
+   Cosméticos" en la pestaña Comparativa. Comparación por nombre tolerante
    a mayúsculas/tildes (normalizeHeader), por si el nombre exacto del
    sector en los datos varía ligeramente. */
 const ALIM_COSM_SECTORES_NORM = [
@@ -3274,6 +3279,7 @@ function parseApiPayload(json){
     throw new Error('Respuesta de la API con formato inesperado.');
   }
   const dataset = buildDatasetFromRows(json.columnas, json.filas);
+  if(typeof json.generado === 'string' && json.generado) dataset.meta.generado = json.generado;
   dataset.distancias = (json.distancias && Array.isArray(json.distancias.columnas) && Array.isArray(json.distancias.filas))
     ? parseDistanciasPayload(json.distancias)
     : [];
@@ -3421,7 +3427,7 @@ async function reloadSource(){
   setStatus('Actualizando datos…');
   try{
     const newData = await fetchFromApi(src.url, src.token);
-    onDataLoaded(newData, `Conectado a Google Sheets · ${newData.meta.n} registros · ${new Date().toLocaleString('es-ES')}`);
+    onDataLoaded(newData, `Datos cargados · ${newData.meta.n} registros · ${new Date().toLocaleString('es-ES')}`);
   }catch(err){
     console.error(err);
     setStatus('Error al actualizar: '+err.message);
@@ -3438,10 +3444,10 @@ async function initialLoad(){
   const src = DEFAULT_SOURCE;
   try{
     const newData = await fetchFromApi(src.url, src.token, {silent:true});
-    onDataLoaded(newData, `Conectado a Google Sheets · ${newData.meta.n} registros · ${new Date().toLocaleString('es-ES')}`);
+    onDataLoaded(newData, `Datos cargados · ${newData.meta.n} registros · ${new Date().toLocaleString('es-ES')}`);
   }catch(err){
     console.error(err);
-    showNoDataState('No se pudo conectar con Google Sheets: '+err.message);
+    showNoDataState('No se pudo cargar el archivo de datos: '+err.message);
   }
 }
 
