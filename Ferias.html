@@ -127,7 +127,7 @@ const nq=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowe
 const cmp=(a,b)=>String(a).localeCompare(String(b),'es',{sensitivity:'base',numeric:true});
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const sum=(d,f)=>d.reduce((s,r)=>s+f(r),0);
-let ED={},LBL={},YR={},ORD=[],CUR='',ACT='',D=[],PG=0,charts={},LAST='',LISTA=[];
+let ED={},LBL={},YR={},ORD=[],CUR='',ACT='',D=[],PG=0,charts={},LAST='',LISTA=[],TOT=0;
 
 function pd(v){if(!v)return null;const s=String(v).trim();let m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if(m)return new Date(+m[1],m[2]-1,+m[3]);m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/);return m?new Date(+m[3],m[2]-1,+m[1]):null}
@@ -150,7 +150,8 @@ $('th').onclick=()=>{const n=document.documentElement.dataset.theme==='light'?'d
 const busy=on=>$('load').hidden=!on;
 function fail(m){$('ban').hidden=!m;$('ban').textContent=m||''}
 function apply(j){LAST=j.ts||'';ACT=j.actual;ED={};LBL={};YR={};
-  Object.keys(j.hojas).forEach(k=>{ED[k]=prep(j.hojas[k].cols,j.hojas[k].rows);
+  TOT=0;Object.keys(j.hojas).forEach(k=>{ED[k]=prep(j.hojas[k].cols,j.hojas[k].rows);
+    if(k===ACT){TOT=ED[k].length;ED[k]=ED[k].filter(o=>String(o.r.fecha_inclusion_modificacion||'').trim()!=='')}
     if(k===ACT){YR[k]=ANIO_ACTUAL;LBL[k]='Actual ('+ANIO_ACTUAL+')'}else{YR[k]=+k;LBL[k]=k}});
   ORD=Object.keys(ED).sort((a,b)=>(a===ACT?-1:b===ACT?1:YR[b]-YR[a]));
   $('badge').textContent='Edición '+ANIO_ACTUAL}
@@ -170,7 +171,7 @@ function fill(id,vals,lab){const s=$(id),v=s.value;s.innerHTML=`<option value=""
 function init(){const d=ED[ACT]||[];
   for(const [id,k] of Object.entries(F)){if(id==='fLoc'){const p=$('fProv').value;fill(id,[...new Set(d.filter(r=>!p||r.prov===p).map(r=>r.loc))].sort(cmp),TODO[id])}else fill(id,[...new Set(d.map(r=>r[k]))].sort(cmp),TODO[id])}
   fill('fMes',MESES.map((m,i)=>[String(i),m]),TODO.fMes);
-  $('meta').textContent=LBL[ACT]+' · '+fmt(d.length)+' ferias'+(LAST?' · Datos: '+new Date(LAST).toLocaleString('es-ES',{dateStyle:'short',timeStyle:'short'}):'');
+  $('meta').textContent=LBL[ACT]+' · '+fmt(d.length)+' ferias (de '+fmt(TOT)+' en la hoja)'+(LAST?' · Datos: '+new Date(LAST).toLocaleString('es-ES',{dateStyle:'short',timeStyle:'short'}):'');
   render();years()}
 function get(){const q=nq($('fQ').value),m=$('fMes').value;
   return (ED[ACT]||[]).filter(r=>(!q||r.txt.includes(q))&&Object.entries(F).every(([id,k])=>!$(id).value||r[k]===$(id).value)&&(m===''||r.mes===+m))}
@@ -211,9 +212,10 @@ function agenda(){let h='',m=-2;LISTA.forEach((r,i)=>{if(r.mes!==m){m=r.mes;h+=`
   h+=`<div class="ev" data-i="${i}"><span>${fd(r.fi)}${r.ff&&+r.ff!==+r.fi?' – '+fd(r.ff):''}</span><span><b>${esc(r.nom)}</b><small>${esc(r.loc)} (${esc(r.prov)}) · ${esc(r.tipo)}</small></span><span class="tag">${esc(r.amb)}</span></div>`});
   $('agenda').innerHTML=h||'Sin resultados'}
 $('agenda').onclick=e=>{const t=e.target.closest('.ev');if(t)detail(LISTA[+t.dataset.i])};
+const url=u=>{u=String(u).trim();return /^[a-z][a-z0-9+.-]*:/i.test(u)?u:'https://'+u.replace(/^\/+/,'')};
 function detail(o){const r=o.r,L=[['Edición',r.edicion],['Fechas',fd(o.fi)+(o.ff?' – '+fd(o.ff):'')],['Horario',r.horario],['Lugar',r.lugar_realizacion],['Localidad',o.loc+' ('+o.prov+')'],['Ámbito / periodicidad',o.amb+' · '+o.per],['Tipo',o.tipo],
   ['Visitantes',o.vis?fmt(o.vis)+' ('+o.car+')':o.car],['Expositores',`${fmt(num(r.n_expositores_espanoles))} españoles · ${fmt(num(r.n_expositores_extranjeros))} extranjeros`],['Organizador',r.entidad_organizadora],['NIF',r.nif_entidad_organizadora],
-  ['Dirección',[r.direccion_entidad_organizadora,r.c_p,r.localidad_entidad_organizadora,r.provincia_entidad_org].filter(Boolean).join(', ')],['Contacto',[r.e_mail,r.telefono].filter(Boolean).join(' · ')],['Web',r.pagina_web?`<a href="${esc(r.pagina_web)}" target="_blank" rel="noopener">${esc(r.pagina_web)}</a>`:'']];
+  ['Dirección',[r.direccion_entidad_organizadora,r.c_p,r.localidad_entidad_organizadora,r.provincia_entidad_org].filter(Boolean).join(', ')],['Web',r.pagina_web?`<a href="${esc(url(r.pagina_web))}" target="_blank" rel="noopener">${esc(r.pagina_web)}</a>`:'']];
   $('dg').innerHTML=`<h2 style="margin:0">${esc(o.nom)}</h2><dl>${L.filter(x=>x[1]).map(x=>`<dt>${x[0]}</dt><dd>${x[0]==='Web'?x[1]:esc(x[1])}</dd>`).join('')}</dl><button class="btn" onclick="dg.close()">Cerrar</button>`;$('dg').showModal()}
 
 // ---- años anteriores ----
