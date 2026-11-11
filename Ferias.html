@@ -128,7 +128,7 @@ function prep(cols,rows){return rows.map(a=>{const r={};cols.forEach((k,i)=>r[k]
   o.mes=o.fi?o.fi.getMonth():-1;o.txt=nq([o.nom,o.loc,t('entidad_organizadora'),o.tipo].join(' '));return o})}
 
 // ---- tema ----
-function chartDefaults(){const d=Chart.defaults;d.font.family="'DM Sans',sans-serif";d.color=css('--mute');d.borderColor=css('--grid');
+function chartDefaults(){if(typeof Chart==='undefined')return;const d=Chart.defaults;d.font.family="'DM Sans',sans-serif";d.color=css('--mute');d.borderColor=css('--grid');
   d.plugins.legend.labels.color=css('--ink');const t=d.plugins.tooltip;t.backgroundColor=css('--tt');t.titleColor=css('--ink');t.bodyColor=css('--mute');t.borderColor=css('--line');t.borderWidth=1}
 function theme(t,redraw){document.documentElement.dataset.theme=t;$('th').textContent=t==='light'?'Modo oscuro':'Modo claro';chartDefaults();
   if(redraw){Object.values(charts).forEach(c=>c.destroy());charts={};if(ORD.length){render();years()}}}
@@ -146,18 +146,19 @@ function apply(j){LAST=j.ts||'';ACT=j.actual;ED={};LBL={};YR={};
   if(!ED[CUR])CUR=ACT;
   $('ed').innerHTML=ORD.map(k=>`<option value="${esc(k)}">${esc(LBL[k])}</option>`).join('');$('ed').value=CUR}
 async function load(n=0,refresh=false){
-  if(n===0&&!refresh){try{const c=JSON.parse(localStorage.getItem(KEY)||'null');if(c){apply(c);init()}}catch(e){}}
-  busy(true);fail('');
-  try{const r=await fetch(SOURCE.url+'?token='+encodeURIComponent(SOURCE.token)+(refresh?'&refresh=1':''));const j=await r.json();if(j.error)throw Error(j.error);
-    try{localStorage.setItem(KEY,JSON.stringify(j))}catch(e){}apply(j);init();busy(false)}
-  catch(e){if(n<3)setTimeout(()=>load(n+1,refresh),1500*(n+1));else{busy(false);if(!ORD.length)fail('No se pudieron cargar los datos: '+e.message)}}}
+  if(n===0&&!refresh){try{const c=JSON.parse(localStorage.getItem(KEY)||'null');if(c){apply(c);init()}}catch(e){console.error(e)}}
+  busy(true);fail('');let j;
+  try{const r=await fetch(SOURCE.url+'?token='+encodeURIComponent(SOURCE.token)+(refresh?'&refresh=1':''));j=await r.json();if(j.error)throw Error(j.error)}
+  catch(e){if(n<3){setTimeout(()=>load(n+1,refresh),1500*(n+1));return}busy(false);if(!ORD.length)fail('No se pudieron cargar los datos: '+e.message);return}
+  busy(false);try{localStorage.setItem(KEY,JSON.stringify(j))}catch(e){}
+  try{apply(j);init()}catch(e){console.error(e);fail('Error al mostrar los datos: '+e.message)}}
 $('rl').onclick=()=>load(0,true);
 $('ed').onchange=e=>{CUR=e.target.value;init()};
 
 // ---- filtros ----
 const F={fProv:'prov',fLoc:'loc',fTipo:'tipo',fAmb:'amb',fPer:'per',fCar:'car'};
 const TODO={fProv:'Todas',fLoc:'Todas',fTipo:'Todos',fAmb:'Todos',fPer:'Todas',fCar:'Todos',fMes:'Todos'};
-function fill(id,vals,lab){const s=$(id),v=s.value;s.innerHTML=`<option value="">${lab}</option>`+vals.map(x=>`<option value="${esc(x[0]??x)}">${esc(x[1]??x)}</option>`).join('');if([...s.options].some(o=>o.value===v))s.value=v}
+function fill(id,vals,lab){const s=$(id),v=s.value;s.innerHTML=`<option value="">${lab}</option>`+vals.map(x=>Array.isArray(x)?`<option value="${esc(x[0])}">${esc(x[1])}</option>`:`<option value="${esc(x)}">${esc(x)}</option>`).join('');if([...s.options].some(o=>o.value===v))s.value=v}
 function init(){const d=ED[CUR]||[];
   for(const [id,k] of Object.entries(F)){if(id==='fLoc'){const p=$('fProv').value;fill(id,[...new Set(d.filter(r=>!p||r.prov===p).map(r=>r.loc))].sort(cmp),TODO[id])}else fill(id,[...new Set(d.map(r=>r[k]))].sort(cmp),TODO[id])}
   fill('fMes',MESES.map((m,i)=>[String(i),m]),TODO.fMes);
@@ -217,7 +218,8 @@ function years(){const ks=ORD.slice().sort((a,b)=>YR[a]-YR[b]);
   const draw=()=>{const q=nq($('yQ').value);$('ym').innerHTML=rows.filter(r=>!q||nq(r.n).includes(q)).slice(0,300).map(r=>`<tr style="cursor:default"><td>${esc(r.n)}</td>${ks.map(k=>`<td class="num">${r.y[k]?(r.y[k]==='✓'?'✓':fmt(r.y[k])):'–'}</td>`).join('')}</tr>`).join('')};
   $('yQ').oninput=draw;draw()}
 
-try{theme(localStorage.getItem(TK)||'light',false)}catch(e){theme('light',false)}
+try{theme(localStorage.getItem(TK)||'light',false)}catch(e){document.documentElement.dataset.theme='light'}
+if(typeof Chart==='undefined')fail('No se ha podido cargar la librería de gráficos (Chart.js). Revisa la conexión o los bloqueadores del navegador.');
 load();
 </script>
 </body>
