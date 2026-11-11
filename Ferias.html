@@ -17,7 +17,7 @@ h1{margin:0;font-size:26px;letter-spacing:-.3px}h1 span{color:var(--acc)}
 .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .btn,select,input{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
 .btn{cursor:pointer;font-weight:600}.btn:hover{border-color:var(--acc)}.btn.p{background:var(--acc);border-color:var(--acc);color:#fff}
-main{max-width:1280px;margin:0 auto;padding:20px 24px 50px}
+main{max-width:1640px;margin:0 auto;padding:20px 24px 50px}
 .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:18px;flex-wrap:wrap}
 .tab{background:none;border:0;padding:10px 16px;font:600 14px 'DM Sans';color:var(--mute);cursor:pointer;border-bottom:3px solid transparent}
 .tab.on{color:var(--acc);border-color:var(--acc)}
@@ -44,6 +44,12 @@ dialog{border:1px solid var(--line);border-radius:16px;background:var(--card);co
 dialog::backdrop{background:rgba(0,0,0,.45)}dl{display:grid;grid-template-columns:150px 1fr;gap:6px 12px;margin:12px 0}dt{color:var(--mute);font-size:12px;font-weight:700;text-transform:uppercase}dd{margin:0}
 a{color:var(--acc)}.ban{background:var(--acc-soft);border:1px solid var(--acc);border-radius:10px;padding:10px 14px;margin-bottom:14px}
 .load{height:3px;background:linear-gradient(90deg,transparent,var(--acc),transparent);background-size:200% 100%;animation:l 1s linear infinite;position:fixed;top:0;left:0;right:0;z-index:50}@keyframes l{to{background-position:-200% 0}}
+.badge{background:var(--acc);color:#fff;border-radius:99px;padding:7px 16px;font-weight:700}
+.chips{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0 18px}
+.chip{border:2px solid var(--acc);background:var(--card);color:var(--acc);border-radius:14px;padding:12px 28px;font:700 26px 'Fraunces',serif;cursor:pointer;display:flex;flex-direction:column;align-items:center;line-height:1.1}
+.chip small{font:600 11px 'DM Sans';color:var(--mute);margin-top:4px}.chip:hover{background:var(--acc-soft)}
+.chip.on{background:var(--acc);color:#fff;box-shadow:var(--shadow)}.chip.on small{color:#fff}
+.ts{max-height:400px;overflow:auto}.ts th{position:sticky;top:0;background:var(--card)}.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(460px,1fr));gap:14px;margin-top:14px}
 [hidden]{display:none!important}
 @media(max-width:640px){.ev{grid-template-columns:1fr}main{padding:14px}}
 </style>
@@ -53,7 +59,7 @@ a{color:var(--acc)}.ban{background:var(--acc-soft);border:1px solid var(--acc);b
 <header>
   <div><h1>Ferias de <span>Castilla y León</span></h1><div class="sub" id="meta"></div></div>
   <div class="bar">
-    <select id="ed" title="Edición (hoja del Google Sheet)"></select>
+    <span class="badge" id="badge"></span>
     <button class="btn" id="th">Modo oscuro</button>
     <button class="btn p" id="rl">Actualizar datos</button>
   </div>
@@ -81,17 +87,22 @@ a{color:var(--acc)}.ban{background:var(--acc-soft);border:1px solid var(--acc);b
     <div class="kpis" id="kpis"></div>
     <div class="grid">
       <div class="card"><h2>Ferias por provincia</h2><div class="cv"><canvas id="cProv"></canvas></div></div>
-      <div class="card"><h2>Ferias por mes de inicio</h2><div class="cv"><canvas id="cMes"></canvas></div></div>
       <div class="card"><h2>Tipo de feria</h2><div class="cv"><canvas id="cTipo"></canvas></div></div>
       <div class="card"><h2>Ámbito territorial</h2><div class="cv"><canvas id="cAmb"></canvas></div></div>
-      <div class="card wide"><h2>Las 10 ferias con más visitantes</h2><div class="cv"><canvas id="cTop"></canvas></div></div>
+    </div>
+    <div class="g2">
+      <div class="card"><h2 id="hE">Entidades organizadoras</h2><div class="ts"><table><thead><tr><th>Entidad organizadora</th><th class="num">Ferias</th></tr></thead><tbody id="tE"></tbody></table></div></div>
+      <div class="card"><h2 id="hL">Localidades de celebración</h2><div class="ts"><table><thead><tr><th>Localidad</th><th>Provincia</th><th class="num">Ferias</th></tr></thead><tbody id="tL"></tbody></table></div></div>
     </div>
   </section>
   <section id="t-age" hidden><div class="card" id="agenda"></div></section>
   <section id="t-lis" hidden><div class="card"><div class="sc"><table><thead><tr><th>Inicio</th><th>Fin</th><th>Feria</th><th>Localidad</th><th>Provincia</th><th>Tipo</th><th class="num">Visitantes</th><th class="num">Expositores</th></tr></thead><tbody id="tb"></tbody></table></div>
     <div class="pg"><span id="pi"></span><button class="btn" id="pp">‹</button><button class="btn" id="pn">›</button></div></div></section>
   <section id="t-ani" hidden>
-    <div class="grid">
+    <div class="card"><h2>Consulta un año anterior</h2><p class="sub">Elige el año para ver sus ferias.</p><div class="chips" id="chips"></div>
+      <div class="kpis" id="ykp"></div><input id="sQ" placeholder="Buscar en este año…" style="margin-bottom:10px;width:300px">
+      <div class="ts" style="max-height:480px"><table><thead><tr><th>Inicio</th><th>Fin</th><th>Feria</th><th>Localidad</th><th>Provincia</th><th>Tipo</th><th class="num">Visitantes</th><th class="num">Expositores</th></tr></thead><tbody id="sb"></tbody></table></div></div>
+    <div class="grid" style="margin-top:14px">
       <div class="card"><h2>Ferias por año</h2><div class="cv"><canvas id="yN"></canvas></div></div>
       <div class="card"><h2>Visitantes y expositores por año</h2><div class="cv"><canvas id="yV"></canvas></div></div>
       <div class="card wide"><h2>Resumen por año</h2><div class="sc"><table><thead><tr><th>Edición</th><th class="num">Ferias</th><th class="num">Localidades</th><th class="num">Visitantes</th><th class="num">Expositores</th><th class="num">Media visit./feria</th></tr></thead><tbody id="ys"></tbody></table></div></div>
@@ -104,6 +115,7 @@ a{color:var(--acc)}.ban{background:var(--acc-soft);border:1px solid var(--acc);b
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script>
 // ====== CONFIGURACIÓN: URL de la Web App de Apps Script y token ======
+const ANIO_ACTUAL=2027; // año de la edición que está en 'Hoja 1' (cámbialo cada año)
 const SOURCE={url:'https://script.google.com/macros/s/AKfycbxHpXTX0P-KzOLVmmcg72-n5WiATPv0XWr9YtptuICnUuynXi7S1UcA0W7Ej-NYol6N7A/exec',token:'ActuacionesComercio26'};
 // =====================================================================
 const PAL=['#B8461B','#2F5D50','#D9A441','#7A2E3A','#3E5C76','#8A9A5B','#C97B63','#5B4B8A'];
@@ -139,12 +151,9 @@ const busy=on=>$('load').hidden=!on;
 function fail(m){$('ban').hidden=!m;$('ban').textContent=m||''}
 function apply(j){LAST=j.ts||'';ACT=j.actual;ED={};LBL={};YR={};
   Object.keys(j.hojas).forEach(k=>{ED[k]=prep(j.hojas[k].cols,j.hojas[k].rows);
-    if(/^\d{4}$/.test(k)){YR[k]=+k;LBL[k]=k}
-    else{const c={};ED[k].forEach(r=>{if(r.fi)c[r.fi.getFullYear()]=(c[r.fi.getFullYear()]||0)+1});
-      const y=Object.keys(c).sort((a,b)=>c[b]-c[a])[0];YR[k]=y?+y:9999;LBL[k]='Actual'+(y?' ('+y+')':'')}});
+    if(k===ACT){YR[k]=ANIO_ACTUAL;LBL[k]='Actual ('+ANIO_ACTUAL+')'}else{YR[k]=+k;LBL[k]=k}});
   ORD=Object.keys(ED).sort((a,b)=>(a===ACT?-1:b===ACT?1:YR[b]-YR[a]));
-  if(!ED[CUR])CUR=ACT;
-  $('ed').innerHTML=ORD.map(k=>`<option value="${esc(k)}">${esc(LBL[k])}</option>`).join('');$('ed').value=CUR}
+  $('badge').textContent='Edición '+ANIO_ACTUAL}
 async function load(n=0,refresh=false){
   if(n===0&&!refresh){try{const c=JSON.parse(localStorage.getItem(KEY)||'null');if(c){apply(c);init()}}catch(e){console.error(e)}}
   busy(true);fail('');let j;
@@ -153,21 +162,20 @@ async function load(n=0,refresh=false){
   busy(false);try{localStorage.setItem(KEY,JSON.stringify(j))}catch(e){}
   try{apply(j);init()}catch(e){console.error(e);fail('Error al mostrar los datos: '+e.message)}}
 $('rl').onclick=()=>load(0,true);
-$('ed').onchange=e=>{CUR=e.target.value;init()};
 
 // ---- filtros ----
 const F={fProv:'prov',fLoc:'loc',fTipo:'tipo',fAmb:'amb',fPer:'per',fCar:'car'};
 const TODO={fProv:'Todas',fLoc:'Todas',fTipo:'Todos',fAmb:'Todos',fPer:'Todas',fCar:'Todos',fMes:'Todos'};
 function fill(id,vals,lab){const s=$(id),v=s.value;s.innerHTML=`<option value="">${lab}</option>`+vals.map(x=>Array.isArray(x)?`<option value="${esc(x[0])}">${esc(x[1])}</option>`:`<option value="${esc(x)}">${esc(x)}</option>`).join('');if([...s.options].some(o=>o.value===v))s.value=v}
-function init(){const d=ED[CUR]||[];
+function init(){const d=ED[ACT]||[];
   for(const [id,k] of Object.entries(F)){if(id==='fLoc'){const p=$('fProv').value;fill(id,[...new Set(d.filter(r=>!p||r.prov===p).map(r=>r.loc))].sort(cmp),TODO[id])}else fill(id,[...new Set(d.map(r=>r[k]))].sort(cmp),TODO[id])}
   fill('fMes',MESES.map((m,i)=>[String(i),m]),TODO.fMes);
-  $('meta').textContent=LBL[CUR]+' · '+fmt(d.length)+' ferias'+(LAST?' · Datos: '+new Date(LAST).toLocaleString('es-ES',{dateStyle:'short',timeStyle:'short'}):'');
+  $('meta').textContent=LBL[ACT]+' · '+fmt(d.length)+' ferias'+(LAST?' · Datos: '+new Date(LAST).toLocaleString('es-ES',{dateStyle:'short',timeStyle:'short'}):'');
   render();years()}
 function get(){const q=nq($('fQ').value),m=$('fMes').value;
-  return (ED[CUR]||[]).filter(r=>(!q||r.txt.includes(q))&&Object.entries(F).every(([id,k])=>!$(id).value||r[k]===$(id).value)&&(m===''||r.mes===+m))}
+  return (ED[ACT]||[]).filter(r=>(!q||r.txt.includes(q))&&Object.entries(F).every(([id,k])=>!$(id).value||r[k]===$(id).value)&&(m===''||r.mes===+m))}
 document.querySelectorAll('#filt select,#filt input').forEach(e=>e.oninput=()=>{if(e.id==='fProv')$('fLoc').value='';if(e.id==='fProv')fillLoc();render()});
-function fillLoc(){const p=$('fProv').value;fill('fLoc',[...new Set((ED[CUR]||[]).filter(r=>!p||r.prov===p).map(r=>r.loc))].sort(cmp),TODO.fLoc)}
+function fillLoc(){const p=$('fProv').value;fill('fLoc',[...new Set((ED[ACT]||[]).filter(r=>!p||r.prov===p).map(r=>r.loc))].sort(cmp),TODO.fLoc)}
 
 // ---- tabs ----
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x===b));
@@ -181,16 +189,18 @@ function ch(id,cfg){if(charts[id]){charts[id].data=cfg.data;charts[id].options=c
 const OPT=(x={})=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},...x});
 const bar=(id,m,h)=>{const e=[...m];ch(id,{type:'bar',data:{labels:e.map(x=>x[0]),datasets:[{data:e.map(x=>x[1]),backgroundColor:PAL[0],borderRadius:5}]},options:OPT({indexAxis:h?'y':'x',scales:{x:{grid:{display:!h}},y:{grid:{display:!!h},beginAtZero:true}}})})};
 const dough=(id,m)=>{const e=topN(m,8);ch(id,{type:'doughnut',data:{labels:e.map(x=>x[0]),datasets:[{data:e.map(x=>x[1]),backgroundColor:PAL,borderColor:css('--card'),borderWidth:2}]},options:OPT({cutout:'58%',plugins:{legend:{display:true,position:'right'}}})})};
+const polar=(id,m)=>{const e=topN(m,8);ch(id,{type:'polarArea',data:{labels:e.map(x=>x[0]),datasets:[{data:e.map(x=>x[1]),backgroundColor:PAL.map(c=>c+'cc'),borderColor:css('--card'),borderWidth:2}]},options:OPT({plugins:{legend:{display:true,position:'right'}},scales:{r:{grid:{color:css('--grid')},ticks:{backdropColor:'transparent'}}}})})};
+function tablas(d){const E=topN(by(d,r=>String(r.r.entidad_organizadora||'Sin dato').trim()),1e9),L=topN(by(d,r=>r.loc+'||'+r.prov),1e9);
+  $('hE').textContent='Entidades organizadoras ('+fmt(E.length)+')';$('hL').textContent='Localidades de celebración ('+fmt(L.length)+')';
+  $('tE').innerHTML=E.map(x=>`<tr style="cursor:default"><td>${esc(x[0])}</td><td class="num"><b>${x[1]}</b></td></tr>`).join('')||'<tr><td colspan="2">Sin resultados</td></tr>';
+  $('tL').innerHTML=L.map(x=>{const p=x[0].split('||');return `<tr style="cursor:default"><td>${esc(p[0])}</td><td>${esc(p[1])}</td><td class="num"><b>${x[1]}</b></td></tr>`}).join('')||'<tr><td colspan="3">Sin resultados</td></tr>'}
 function render(){const d=D=get(),hoy=new Date();hoy.setHours(0,0,0,0);
   const k=(t,v,f)=>`<div class="kpi"><div class="kl">${t}</div><div class="kv">${v}</div><div class="kf">${f}</div></div>`;
   const pr=d.filter(r=>r.fi&&r.fi>=hoy).length;
-  $('kpis').innerHTML=k('Ferias',fmt(d.length),'de '+fmt((ED[CUR]||[]).length)+' de la edición')+k('Visitantes',fmt(sum(d,r=>r.vis)),'suma declarada')+
+  $('kpis').innerHTML=k('Ferias',fmt(d.length),'de '+fmt((ED[ACT]||[]).length)+' de la edición')+k('Visitantes',fmt(sum(d,r=>r.vis)),'suma declarada')+
     k('Expositores',fmt(sum(d,r=>r.exp)),'españoles + extranjeros')+k('Localidades',fmt(new Set(d.map(r=>r.loc)).size),'sedes distintas')+
     k('Organizadores',fmt(new Set(d.map(r=>r.r.nif_entidad_organizadora||r.r.entidad_organizadora)).size),'entidades')+k('Por celebrar',fmt(pr),'desde hoy');
-  bar('cProv',[...by(d,r=>r.prov)].sort((a,b)=>b[1]-a[1]));
-  bar('cMes',MESES.map((m,i)=>[m.slice(0,3),d.filter(r=>r.mes===i).length]));
-  dough('cTipo',by(d,r=>r.tipo));dough('cAmb',by(d,r=>r.amb));
-  bar('cTop',d.filter(r=>r.vis).sort((a,b)=>b.vis-a.vis).slice(0,10).map(r=>[r.nom.length>45?r.nom.slice(0,44)+'…':r.nom,r.vis]),true);
+  bar('cProv',[...by(d,r=>r.prov)].sort((a,b)=>b[1]-a[1]));dough('cTipo',by(d,r=>r.tipo));polar('cAmb',by(d,r=>r.amb));tablas(d);
   LISTA=d.slice().sort((a,b)=>(a.fi||1e15)-(b.fi||1e15)||cmp(a.nom,b.nom));PG=0;list();agenda()}
 function list(){const n=LISTA.length,pg=Math.max(1,Math.ceil(n/PS));PG=Math.min(PG,pg-1);
   $('tb').innerHTML=LISTA.slice(PG*PS,PG*PS+PS).map(r=>`<tr data-i="${LISTA.indexOf(r)}"><td>${fd(r.fi)}</td><td>${fd(r.ff)}</td><td><b>${esc(r.nom)}</b></td><td>${esc(r.loc)}</td><td>${esc(r.prov)}</td><td><span class="tag">${esc(r.tipo)}</span></td><td class="num">${r.vis?fmt(r.vis):'–'}</td><td class="num">${r.exp?fmt(r.exp):'–'}</td></tr>`).join('')||'<tr><td colspan="8">Sin resultados</td></tr>';
@@ -207,7 +217,17 @@ function detail(o){const r=o.r,L=[['Edición',r.edicion],['Fechas',fd(o.fi)+(o.f
   $('dg').innerHTML=`<h2 style="margin:0">${esc(o.nom)}</h2><dl>${L.filter(x=>x[1]).map(x=>`<dt>${x[0]}</dt><dd>${x[0]==='Web'?x[1]:esc(x[1])}</dd>`).join('')}</dl><button class="btn" onclick="dg.close()">Cerrar</button>`;$('dg').showModal()}
 
 // ---- años anteriores ----
-function years(){const ks=ORD.slice().sort((a,b)=>YR[a]-YR[b]);
+let SEL='',YL=[];
+function chips(){const past=ORD.filter(k=>k!==ACT);if(!past.includes(SEL))SEL=past[0]||'';
+  $('chips').innerHTML=past.map(k=>`<button class="chip" data-k="${esc(k)}">${esc(LBL[k])}<small>${ED[k].length} ferias</small></button>`).join('')||'<span class="sub">Todavía no hay años anteriores.</span>';ylist()}
+function ylist(){document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c.dataset.k===SEL));
+  const d=ED[SEL]||[],q=nq($('sQ').value),kp=(t,v)=>`<div class="kpi"><div class="kl">${t}</div><div class="kv">${v}</div></div>`;
+  YL=d.filter(r=>!q||r.txt.includes(q)).sort((a,b)=>(a.fi||1e15)-(b.fi||1e15)||cmp(a.nom,b.nom));
+  $('ykp').innerHTML=kp('Ferias',fmt(d.length))+kp('Visitantes',fmt(sum(d,r=>r.vis)))+kp('Expositores',fmt(sum(d,r=>r.exp)))+kp('Localidades',fmt(new Set(d.map(r=>r.loc)).size));
+  $('sb').innerHTML=YL.map((r,i)=>`<tr data-i="${i}"><td>${fd(r.fi)}</td><td>${fd(r.ff)}</td><td><b>${esc(r.nom)}</b></td><td>${esc(r.loc)}</td><td>${esc(r.prov)}</td><td><span class="tag">${esc(r.tipo)}</span></td><td class="num">${r.vis?fmt(r.vis):'–'}</td><td class="num">${r.exp?fmt(r.exp):'–'}</td></tr>`).join('')||'<tr><td colspan="8">Sin resultados</td></tr>'}
+$('chips').onclick=e=>{const c=e.target.closest('.chip');if(c){SEL=c.dataset.k;ylist()}};$('sQ').oninput=ylist;
+$('sb').onclick=e=>{const t=e.target.closest('tr');if(t&&t.dataset.i)detail(YL[+t.dataset.i])};
+function years(){chips();const ks=ORD.slice().sort((a,b)=>YR[a]-YR[b]);
   const st=ks.map(k=>({k,l:LBL[k],n:ED[k].length,v:sum(ED[k],r=>r.vis),e:sum(ED[k],r=>r.exp),loc:new Set(ED[k].map(r=>r.loc)).size}));
   ch('yN',{type:'bar',data:{labels:st.map(s=>s.l),datasets:[{data:st.map(s=>s.n),backgroundColor:PAL[1],borderRadius:5}]},options:OPT({scales:{y:{beginAtZero:true}}})});
   ch('yV',{type:'bar',data:{labels:st.map(s=>s.l),datasets:[{label:'Visitantes',data:st.map(s=>s.v),backgroundColor:PAL[0],borderRadius:5},{label:'Expositores',data:st.map(s=>s.e),backgroundColor:PAL[2],borderRadius:5}]},options:OPT({plugins:{legend:{display:true}},scales:{y:{beginAtZero:true}}})});
