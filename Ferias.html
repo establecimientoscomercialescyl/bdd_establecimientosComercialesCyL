@@ -46,7 +46,7 @@ tbody tr{cursor:pointer;transition:background .12s}tbody tr:hover{background:var
 .mes{font-size:19px;font-weight:800;color:var(--acc);margin:24px 0 8px;padding-bottom:6px;border-bottom:2px solid var(--acc-soft)}
 .ev{display:grid;grid-template-columns:190px 1fr auto;gap:14px;padding:12px 10px;border-radius:12px;cursor:pointer;transition:.12s}.ev:hover{background:var(--acc-soft)}
 .ev>span:first-child{font-weight:700;color:var(--acc);font-variant-numeric:tabular-nums}.ev b{display:block}.ev small{color:var(--mute);display:flex;align-items:center}
-dialog{border:1px solid var(--line);border-radius:24px;background:var(--card);color:var(--ink);max-width:660px;width:92%;padding:26px;box-shadow:0 30px 80px rgba(0,0,0,.35)}
+dialog{border:1px solid var(--line);border-radius:24px;background:var(--card);color:var(--ink);max-width:780px;width:92%;padding:26px;box-shadow:0 30px 80px rgba(0,0,0,.35)}
 dialog::backdrop{background:rgba(20,14,8,.5);backdrop-filter:blur(3px)}dl{display:grid;grid-template-columns:150px 1fr;gap:8px 14px;margin:14px 0}dt{color:var(--mute);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;padding-top:2px}dd{margin:0}
 a{color:var(--acc)}.ban{background:var(--acc-soft);border:1px solid var(--acc);border-radius:14px;padding:12px 16px;margin-bottom:16px}
 .load{height:3px;background:linear-gradient(90deg,transparent,var(--acc),transparent);background-size:200% 100%;animation:l 1s linear infinite;position:fixed;top:0;left:0;right:0;z-index:50}@keyframes l{to{background-position:-200% 0}}
@@ -59,6 +59,7 @@ a{color:var(--acc)}.ban{background:var(--acc-soft);border:1px solid var(--acc);b
 th[data-k]{cursor:pointer;user-select:none}th[data-k]:hover{color:var(--acc)}th[data-o=asc]::after{content:' ▲';color:var(--acc)}th[data-o=desc]::after{content:' ▼';color:var(--acc)}
 .ti{width:15px;height:15px;margin-right:6px;flex:none}small .ti{width:13px;height:13px;margin:0 5px 0 0}
 @media(min-width:901px){.g2c{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.mapw{border-radius:16px;overflow:hidden;border:1px solid var(--line);margin:6px 0 14px;background:var(--card2)}.mapw iframe{width:100%;height:300px;border:0;display:block}
 [hidden]{display:none!important}
 @media(max-width:700px){.ev{grid-template-columns:1fr}main{padding:16px}header{padding:12px 16px}.grid,.g2{grid-template-columns:1fr}.kv{font-size:30px}}
 </style>
@@ -245,10 +246,11 @@ function agenda(){let h='',m=-2;AG.forEach((r,i)=>{if(r.mes!==m){m=r.mes;h+=`<di
   $('agenda').innerHTML=h||'Sin resultados'}
 $('agenda').onclick=e=>{const t=e.target.closest('.ev');if(t)detail(AG[+t.dataset.i])};
 const url=u=>{u=String(u).trim();return /^[a-z][a-z0-9+.-]*:/i.test(u)?u:'https://'+u.replace(/^\/+/,'')};
+const mq=o=>[o.r.lugar_realizacion,o.loc,o.prov,'España'].map(x=>String(x||'').trim()).filter(x=>x&&x!=='Sin dato').join(', ');
 function detail(o){const r=o.r,L=[['Edición',r.edicion],['Fechas',fd(o.fi)+(o.ff?' – '+fd(o.ff):'')],['Horario',r.horario],['Lugar',r.lugar_realizacion],['Localidad',o.loc+' ('+o.prov+')'],['Ámbito / periodicidad',o.amb+' · '+o.per],['Tipo',ico(o.tipo)+esc(o.tipo)],
   ['Visitantes',o.vis?fmt(o.vis)+' ('+o.car+')':o.car],['Expositores',`${fmt(num(r.n_expositores_espanoles))} españoles · ${fmt(num(r.n_expositores_extranjeros))} extranjeros`],['Organizador',r.entidad_organizadora],['NIF',r.nif_entidad_organizadora],
   ['Dirección',[r.direccion_entidad_organizadora,r.c_p,r.localidad_entidad_organizadora,r.provincia_entidad_org].filter(Boolean).join(', ')],['Web',r.pagina_web?`<a href="${esc(url(r.pagina_web))}" target="_blank" rel="noopener">${esc(r.pagina_web)}</a>`:'']];
-  $('dg').innerHTML=`<h2 style="margin:0">${esc(o.nom)}</h2><dl>${L.filter(x=>x[1]).map(x=>`<dt>${x[0]}</dt><dd>${['Web','Tipo'].includes(x[0])?x[1]:esc(x[1])}</dd>`).join('')}</dl><button class="btn" onclick="dg.close()">Cerrar</button>`;$('dg').showModal()}
+  $('dg').innerHTML=`<h2 style="margin:0">${esc(o.nom)}</h2><dl>${L.filter(x=>x[1]).map(x=>`<dt>${x[0]}</dt><dd>${['Web','Tipo'].includes(x[0])?x[1]:esc(x[1])}</dd>`).join('')}</dl><div class="mapw"><iframe src="https://www.google.com/maps?q=${encodeURIComponent(mq(o))}&output=embed&hl=es" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Mapa de la feria"></iframe></div><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn" onclick="dg.close()">Cerrar</button><a class="btn" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mq(o))}" target="_blank" rel="noopener">Abrir en Google Maps</a></div>`;$('dg').showModal()}
 
 // ---- años anteriores ----
 let SEL='',YL=[];
