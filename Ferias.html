@@ -176,11 +176,11 @@ document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelect
 
 // ---- render ----
 const by=(d,f)=>{const m=new Map();d.forEach(r=>{const k=f(r);m.set(k,(m.get(k)||0)+1)});return m};
-const top=(m,n)=>[...m].sort((a,b)=>b[1]-a[1]).slice(0,n);
+const topN=(m,n)=>[...m].sort((a,b)=>b[1]-a[1]).slice(0,n);
 function ch(id,cfg){if(charts[id]){charts[id].data=cfg.data;charts[id].options=cfg.options;charts[id].update()}else charts[id]=new Chart($(id),cfg)}
 const OPT=(x={})=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},...x});
 const bar=(id,m,h)=>{const e=[...m];ch(id,{type:'bar',data:{labels:e.map(x=>x[0]),datasets:[{data:e.map(x=>x[1]),backgroundColor:PAL[0],borderRadius:5}]},options:OPT({indexAxis:h?'y':'x',scales:{x:{grid:{display:!h}},y:{grid:{display:!!h},beginAtZero:true}}})})};
-const dough=(id,m)=>{const e=top(m,8);ch(id,{type:'doughnut',data:{labels:e.map(x=>x[0]),datasets:[{data:e.map(x=>x[1]),backgroundColor:PAL,borderColor:css('--card'),borderWidth:2}]},options:OPT({cutout:'58%',plugins:{legend:{display:true,position:'right'}}})})};
+const dough=(id,m)=>{const e=topN(m,8);ch(id,{type:'doughnut',data:{labels:e.map(x=>x[0]),datasets:[{data:e.map(x=>x[1]),backgroundColor:PAL,borderColor:css('--card'),borderWidth:2}]},options:OPT({cutout:'58%',plugins:{legend:{display:true,position:'right'}}})})};
 function render(){const d=D=get(),hoy=new Date();hoy.setHours(0,0,0,0);
   const k=(t,v,f)=>`<div class="kpi"><div class="kl">${t}</div><div class="kv">${v}</div><div class="kf">${f}</div></div>`;
   const pr=d.filter(r=>r.fi&&r.fi>=hoy).length;
