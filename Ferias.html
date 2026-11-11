@@ -1,41 +1,224 @@
-<!doctype html>
-<html lang="es">
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Ferias Comerciales · Castilla y León</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ferias de Castilla y León</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--ink:#14302b;--mut:#5d7570;--pine:#0f766e;--card:#fff;--line:#dbe4e2}
-*{box-sizing:border-box}
-html,body{height:100%}
-body{margin:0;font:16px/1.5 Manrope,system-ui,sans-serif;color:var(--ink);
-  background:radial-gradient(1100px 550px at 15% -10%,#d6efeb 0,transparent 60%),radial-gradient(900px 480px at 100% 110%,#f6e6c8 0,transparent 55%),#eef2f1;
-  display:flex;align-items:center;justify-content:center;padding:24px}
-.box{background:var(--card);border-radius:22px;box-shadow:0 10px 30px rgba(20,48,43,.10);padding:44px 40px;max-width:480px;text-align:center}
-.ico{width:78px;height:78px;margin:0 auto 18px}
-h1{margin:0 0 10px;font-size:24px;font-weight:800}
-p{margin:0 0 26px;color:var(--mut);font-size:15.5px}
-a.btn{display:inline-flex;align-items:center;gap:8px;background:var(--pine);color:#fff;text-decoration:none;font-weight:600;padding:11px 20px;border-radius:12px}
-a.btn:hover{filter:brightness(1.08)}
-a.btn svg{width:16px;height:16px}
+:root{--bg:#F5EFE3;--card:#FFFBF4;--card2:#F0E8D8;--line:#E3D8C3;--ink:#2B2118;--mute:#7A6C5B;--acc:#B8461B;--acc2:#2F5D50;--acc-soft:rgba(184,70,27,.12);--shadow:0 1px 2px rgba(60,40,20,.06),0 8px 22px rgba(60,40,20,.07);--grid:rgba(43,33,24,.09);--tt:#FFFBF4}
+html[data-theme="dark"]{--bg:#17130F;--card:#221C16;--card2:#2C241C;--line:#3A3025;--ink:#F3EBDC;--mute:#A99A85;--acc:#E8794A;--acc2:#6FB39F;--acc-soft:rgba(232,121,74,.16);--shadow:0 8px 26px rgba(0,0,0,.4);--grid:rgba(243,235,220,.09);--tt:#2C241C}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 'DM Sans',system-ui,sans-serif}
+h1,h2,.kv{font-family:'Fraunces',Georgia,serif}
+header{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--line);padding:14px 24px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+h1{margin:0;font-size:26px;letter-spacing:-.3px}h1 span{color:var(--acc)}
+.sub{color:var(--mute);font-size:12px;margin-top:2px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn,select,input{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+.btn{cursor:pointer;font-weight:600}.btn:hover{border-color:var(--acc)}.btn.p{background:var(--acc);border-color:var(--acc);color:#fff}
+main{max-width:1280px;margin:0 auto;padding:20px 24px 50px}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:18px;flex-wrap:wrap}
+.tab{background:none;border:0;padding:10px 16px;font:600 14px 'DM Sans';color:var(--mute);cursor:pointer;border-bottom:3px solid transparent}
+.tab.on{color:var(--acc);border-color:var(--acc)}
+.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:18px}
+.filters label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);display:block;margin-bottom:3px}
+.filters select,.filters input{width:100%}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:18px}
+.kpi{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--acc);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow)}
+.kpi:nth-child(even){border-left-color:var(--acc2)}
+.kl{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);font-weight:700}
+.kv{font-size:30px;font-weight:700;line-height:1.15}.kf{font-size:12px;color:var(--mute)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:var(--shadow)}
+.card h2{margin:0 0 10px;font-size:17px}.cv{position:relative;height:270px}.wide{grid-column:1/-1}
+table{width:100%;border-collapse:collapse}th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--mute);text-align:left;padding:8px;border-bottom:2px solid var(--line);white-space:nowrap}
+td{padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:top}tbody tr{cursor:pointer}tbody tr:hover{background:var(--acc-soft)}
+.num{text-align:right;font-variant-numeric:tabular-nums}.sc{overflow-x:auto}
+.tag{display:inline-block;padding:2px 8px;border-radius:99px;background:var(--acc-soft);color:var(--acc);font-size:11px;font-weight:700}
+.pg{display:flex;gap:10px;align-items:center;justify-content:flex-end;margin-top:12px;color:var(--mute)}
+.mes{font-family:'Fraunces',serif;font-size:19px;color:var(--acc);margin:18px 0 8px;border-bottom:1px solid var(--line)}
+.ev{display:grid;grid-template-columns:130px 1fr auto;gap:12px;padding:8px 4px;border-bottom:1px dashed var(--line);cursor:pointer}.ev:hover{background:var(--acc-soft)}
+.ev b{display:block}.ev small{color:var(--mute)}
+dialog{border:1px solid var(--line);border-radius:16px;background:var(--card);color:var(--ink);max-width:620px;width:92%;padding:22px}
+dialog::backdrop{background:rgba(0,0,0,.45)}dl{display:grid;grid-template-columns:150px 1fr;gap:6px 12px;margin:12px 0}dt{color:var(--mute);font-size:12px;font-weight:700;text-transform:uppercase}dd{margin:0}
+a{color:var(--acc)}.ban{background:var(--acc-soft);border:1px solid var(--acc);border-radius:10px;padding:10px 14px;margin-bottom:14px}
+.load{height:3px;background:linear-gradient(90deg,transparent,var(--acc),transparent);background-size:200% 100%;animation:l 1s linear infinite;position:fixed;top:0;left:0;right:0;z-index:50}@keyframes l{to{background-position:-200% 0}}
+[hidden]{display:none!important}
+@media(max-width:640px){.ev{grid-template-columns:1fr}main{padding:14px}}
 </style>
 </head>
 <body>
-<div class="box">
-  <svg class="ico" viewBox="0 0 80 80" role="img" aria-label="Icono de feria comercial">
-    <defs><linearGradient id="t1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d08a1f"/><stop offset="1" stop-color="#b4432f"/></linearGradient>
-    <linearGradient id="t2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0f766e"/><stop offset="1" stop-color="#0b5c55"/></linearGradient></defs>
-    <path d="M8 34 24 12l16 22z" fill="url(#t1)"/><path d="M40 34 56 12l16 22z" fill="url(#t2)"/>
-    <rect x="12" y="34" width="24" height="30" rx="2" fill="#fff" stroke="#dbe4e2" stroke-width="2"/>
-    <rect x="44" y="34" width="24" height="30" rx="2" fill="#fff" stroke="#dbe4e2" stroke-width="2"/>
-    <rect x="18" y="46" width="12" height="18" fill="#d6efeb"/><rect x="50" y="46" width="12" height="18" fill="#f6e6c8"/>
-    <circle cx="24" cy="26" r="2" fill="#fff"/><circle cx="56" cy="26" r="2" fill="#fff"/>
-  </svg>
-  <h1>Ferias Comerciales</h1>
-  <p>Estamos trabajando en el proyecto. Muy pronto podrás consultar aquí el visualizador de ferias comerciales de Castilla y León.</p>
-  <a class="btn" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>Volver al inicio</a>
-</div>
+<div class="load" id="load" hidden></div>
+<header>
+  <div><h1>Ferias de <span>Castilla y León</span></h1><div class="sub" id="meta"></div></div>
+  <div class="bar">
+    <select id="ed" title="Edición (hoja del Google Sheet)"></select>
+    <button class="btn" id="th">Modo oscuro</button>
+    <button class="btn p" id="rl">Actualizar datos</button>
+  </div>
+</header>
+<main>
+  <div class="ban" id="ban" hidden></div>
+  <nav class="tabs">
+    <button class="tab on" data-t="pan">Panorama</button>
+    <button class="tab" data-t="age">Calendario</button>
+    <button class="tab" data-t="lis">Listado</button>
+    <button class="tab" data-t="ani">Años anteriores</button>
+  </nav>
+  <section id="filt" class="filters">
+    <div><label>Buscar</label><input id="fQ" placeholder="Feria, localidad, organizador…"></div>
+    <div><label>Provincia</label><select id="fProv"></select></div>
+    <div><label>Localidad</label><select id="fLoc"></select></div>
+    <div><label>Tipo de feria</label><select id="fTipo"></select></div>
+    <div><label>Ámbito</label><select id="fAmb"></select></div>
+    <div><label>Periodicidad</label><select id="fPer"></select></div>
+    <div><label>Visitantes</label><select id="fCar"></select></div>
+    <div><label>Mes de inicio</label><select id="fMes"></select></div>
+  </section>
+
+  <section id="t-pan">
+    <div class="kpis" id="kpis"></div>
+    <div class="grid">
+      <div class="card"><h2>Ferias por provincia</h2><div class="cv"><canvas id="cProv"></canvas></div></div>
+      <div class="card"><h2>Ferias por mes de inicio</h2><div class="cv"><canvas id="cMes"></canvas></div></div>
+      <div class="card"><h2>Tipo de feria</h2><div class="cv"><canvas id="cTipo"></canvas></div></div>
+      <div class="card"><h2>Ámbito territorial</h2><div class="cv"><canvas id="cAmb"></canvas></div></div>
+      <div class="card wide"><h2>Las 10 ferias con más visitantes</h2><div class="cv"><canvas id="cTop"></canvas></div></div>
+    </div>
+  </section>
+  <section id="t-age" hidden><div class="card" id="agenda"></div></section>
+  <section id="t-lis" hidden><div class="card"><div class="sc"><table><thead><tr><th>Inicio</th><th>Fin</th><th>Feria</th><th>Localidad</th><th>Provincia</th><th>Tipo</th><th class="num">Visitantes</th><th class="num">Expositores</th></tr></thead><tbody id="tb"></tbody></table></div>
+    <div class="pg"><span id="pi"></span><button class="btn" id="pp">‹</button><button class="btn" id="pn">›</button></div></div></section>
+  <section id="t-ani" hidden>
+    <div class="grid">
+      <div class="card"><h2>Ferias por año</h2><div class="cv"><canvas id="yN"></canvas></div></div>
+      <div class="card"><h2>Visitantes y expositores por año</h2><div class="cv"><canvas id="yV"></canvas></div></div>
+      <div class="card wide"><h2>Resumen por año</h2><div class="sc"><table><thead><tr><th>Edición</th><th class="num">Ferias</th><th class="num">Localidades</th><th class="num">Visitantes</th><th class="num">Expositores</th><th class="num">Media visit./feria</th></tr></thead><tbody id="ys"></tbody></table></div></div>
+      <div class="card wide"><h2>Evolución de cada feria</h2><p class="sub">Visitantes por edición (✓ = celebrada, sin dato de visitantes).</p><input id="yQ" placeholder="Filtrar feria…" style="margin-bottom:10px;width:280px"><div class="sc"><table><thead id="yh"></thead><tbody id="ym"></tbody></table></div></div>
+    </div>
+  </section>
+</main>
+<dialog id="dg"></dialog>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+// ====== CONFIGURACIÓN: URL de la Web App de Apps Script y token ======
+const SOURCE={url:'https://script.google.com/macros/s/AKfycbxHpXTX0P-KzOLVmmcg72-n5WiATPv0XWr9YtptuICnUuynXi7S1UcA0W7Ej-NYol6N7A/exec',token:'ActuacionesComercio26'};
+// =====================================================================
+const PAL=['#B8461B','#2F5D50','#D9A441','#7A2E3A','#3E5C76','#8A9A5B','#C97B63','#5B4B8A'];
+const KEY='ferias_cache_v1',TK='ferias-cyl-theme',PS=15,MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const $=id=>document.getElementById(id);
+const fmt=n=>Number(n).toLocaleString('es-ES');
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const nq=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+const cmp=(a,b)=>String(a).localeCompare(String(b),'es',{sensitivity:'base',numeric:true});
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const sum=(d,f)=>d.reduce((s,r)=>s+f(r),0);
+let ED={},LBL={},YR={},ORD=[],CUR='',ACT='',D=[],PG=0,charts={},LAST='',LISTA=[];
+
+function pd(v){if(!v)return null;const s=String(v).trim();let m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m)return new Date(+m[1],m[2]-1,+m[3]);m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/);return m?new Date(+m[3],m[2]-1,+m[1]):null}
+const num=v=>typeof v==='number'?v:(Number(String(v||'').replace(/\./g,'').replace(',','.'))||0);
+const fd=d=>d?d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'}):'';
+function prep(cols,rows){return rows.map(a=>{const r={};cols.forEach((k,i)=>r[k]=a[i]);const t=k=>String(r[k]||'').trim();
+  const o={r,nom:t('denominacion_de_la_feria')||'(sin nombre)',prov:t('provincia')||'Sin dato',loc:t('localidad_de_celebracion')||'Sin dato',tipo:t('tipo_de_feria')||'Sin dato',
+   amb:t('ambito_territorial')||'Sin dato',per:t('periodicidad')||'Sin dato',car:t('caracter_visitantes')||'Sin dato',vis:num(r.n_visitantes),
+   exp:num(r.n_expositores_espanoles)+num(r.n_expositores_extranjeros),fi:pd(r.fecha_inicio),ff:pd(r.fecha_finalizacion)};
+  o.mes=o.fi?o.fi.getMonth():-1;o.txt=nq([o.nom,o.loc,t('entidad_organizadora'),o.tipo].join(' '));return o})}
+
+// ---- tema ----
+function chartDefaults(){const d=Chart.defaults;d.font.family="'DM Sans',sans-serif";d.color=css('--mute');d.borderColor=css('--grid');
+  d.plugins.legend.labels.color=css('--ink');const t=d.plugins.tooltip;t.backgroundColor=css('--tt');t.titleColor=css('--ink');t.bodyColor=css('--mute');t.borderColor=css('--line');t.borderWidth=1}
+function theme(t,redraw){document.documentElement.dataset.theme=t;$('th').textContent=t==='light'?'Modo oscuro':'Modo claro';chartDefaults();
+  if(redraw){Object.values(charts).forEach(c=>c.destroy());charts={};if(ORD.length){render();years()}}}
+$('th').onclick=()=>{const n=document.documentElement.dataset.theme==='light'?'dark':'light';try{localStorage.setItem(TK,n)}catch(e){}theme(n,true)};
+
+// ---- carga ----
+const busy=on=>$('load').hidden=!on;
+function fail(m){$('ban').hidden=!m;$('ban').textContent=m||''}
+function apply(j){LAST=j.ts||'';ACT=j.actual;ED={};LBL={};YR={};
+  Object.keys(j.hojas).forEach(k=>{ED[k]=prep(j.hojas[k].cols,j.hojas[k].rows);
+    if(/^\d{4}$/.test(k)){YR[k]=+k;LBL[k]=k}
+    else{const c={};ED[k].forEach(r=>{if(r.fi)c[r.fi.getFullYear()]=(c[r.fi.getFullYear()]||0)+1});
+      const y=Object.keys(c).sort((a,b)=>c[b]-c[a])[0];YR[k]=y?+y:9999;LBL[k]='Actual'+(y?' ('+y+')':'')}});
+  ORD=Object.keys(ED).sort((a,b)=>(a===ACT?-1:b===ACT?1:YR[b]-YR[a]));
+  if(!ED[CUR])CUR=ACT;
+  $('ed').innerHTML=ORD.map(k=>`<option value="${esc(k)}">${esc(LBL[k])}</option>`).join('');$('ed').value=CUR}
+async function load(n=0,refresh=false){
+  if(n===0&&!refresh){try{const c=JSON.parse(localStorage.getItem(KEY)||'null');if(c){apply(c);init()}}catch(e){}}
+  busy(true);fail('');
+  try{const r=await fetch(SOURCE.url+'?token='+encodeURIComponent(SOURCE.token)+(refresh?'&refresh=1':''));const j=await r.json();if(j.error)throw Error(j.error);
+    try{localStorage.setItem(KEY,JSON.stringify(j))}catch(e){}apply(j);init();busy(false)}
+  catch(e){if(n<3)setTimeout(()=>load(n+1,refresh),1500*(n+1));else{busy(false);if(!ORD.length)fail('No se pudieron cargar los datos: '+e.message)}}}
+$('rl').onclick=()=>load(0,true);
+$('ed').onchange=e=>{CUR=e.target.value;init()};
+
+// ---- filtros ----
+const F={fProv:'prov',fLoc:'loc',fTipo:'tipo',fAmb:'amb',fPer:'per',fCar:'car'};
+const TODO={fProv:'Todas',fLoc:'Todas',fTipo:'Todos',fAmb:'Todos',fPer:'Todas',fCar:'Todos',fMes:'Todos'};
+function fill(id,vals,lab){const s=$(id),v=s.value;s.innerHTML=`<option value="">${lab}</option>`+vals.map(x=>`<option value="${esc(x[0]??x)}">${esc(x[1]??x)}</option>`).join('');if([...s.options].some(o=>o.value===v))s.value=v}
+function init(){const d=ED[CUR]||[];
+  for(const [id,k] of Object.entries(F)){if(id==='fLoc'){const p=$('fProv').value;fill(id,[...new Set(d.filter(r=>!p||r.prov===p).map(r=>r.loc))].sort(cmp),TODO[id])}else fill(id,[...new Set(d.map(r=>r[k]))].sort(cmp),TODO[id])}
+  fill('fMes',MESES.map((m,i)=>[String(i),m]),TODO.fMes);
+  $('meta').textContent=LBL[CUR]+' · '+fmt(d.length)+' ferias'+(LAST?' · Datos: '+new Date(LAST).toLocaleString('es-ES',{dateStyle:'short',timeStyle:'short'}):'');
+  render();years()}
+function get(){const q=nq($('fQ').value),m=$('fMes').value;
+  return (ED[CUR]||[]).filter(r=>(!q||r.txt.includes(q))&&Object.entries(F).every(([id,k])=>!$(id).value||r[k]===$(id).value)&&(m===''||r.mes===+m))}
+document.querySelectorAll('#filt select,#filt input').forEach(e=>e.oninput=()=>{if(e.id==='fProv')$('fLoc').value='';if(e.id==='fProv')fillLoc();render()});
+function fillLoc(){const p=$('fProv').value;fill('fLoc',[...new Set((ED[CUR]||[]).filter(r=>!p||r.prov===p).map(r=>r.loc))].sort(cmp),TODO.fLoc)}
+
+// ---- tabs ----
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x===b));
+  ['pan','age','lis','ani'].forEach(t=>$('t-'+t).hidden=t!==b.dataset.t);$('filt').hidden=b.dataset.t==='ani';
+  Object.values(charts).forEach(c=>c.resize())});
+
+// ---- render ----
+const by=(d,f)=>{const m=new Map();d.forEach(r=>{const k=f(r);m.set(k,(m.get(k)||0)+1)});return m};
+const top=(m,n)=>[...m].sort((a,b)=>b[1]-a[1]).slice(0,n);
+function ch(id,cfg){if(charts[id]){charts[id].data=cfg.data;charts[id].options=cfg.options;charts[id].update()}else charts[id]=new Chart($(id),cfg)}
+const OPT=(x={})=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},...x});
+const bar=(id,m,h)=>{const e=[...m];ch(id,{type:'bar',data:{labels:e.map(x=>x[0]),datasets:[{data:e.map(x=>x[1]),backgroundColor:PAL[0],borderRadius:5}]},options:OPT({indexAxis:h?'y':'x',scales:{x:{grid:{display:!h}},y:{grid:{display:!!h},beginAtZero:true}}})})};
+const dough=(id,m)=>{const e=top(m,8);ch(id,{type:'doughnut',data:{labels:e.map(x=>x[0]),datasets:[{data:e.map(x=>x[1]),backgroundColor:PAL,borderColor:css('--card'),borderWidth:2}]},options:OPT({cutout:'58%',plugins:{legend:{display:true,position:'right'}}})})};
+function render(){const d=D=get(),hoy=new Date();hoy.setHours(0,0,0,0);
+  const k=(t,v,f)=>`<div class="kpi"><div class="kl">${t}</div><div class="kv">${v}</div><div class="kf">${f}</div></div>`;
+  const pr=d.filter(r=>r.fi&&r.fi>=hoy).length;
+  $('kpis').innerHTML=k('Ferias',fmt(d.length),'de '+fmt((ED[CUR]||[]).length)+' de la edición')+k('Visitantes',fmt(sum(d,r=>r.vis)),'suma declarada')+
+    k('Expositores',fmt(sum(d,r=>r.exp)),'españoles + extranjeros')+k('Localidades',fmt(new Set(d.map(r=>r.loc)).size),'sedes distintas')+
+    k('Organizadores',fmt(new Set(d.map(r=>r.r.nif_entidad_organizadora||r.r.entidad_organizadora)).size),'entidades')+k('Por celebrar',fmt(pr),'desde hoy');
+  bar('cProv',[...by(d,r=>r.prov)].sort((a,b)=>b[1]-a[1]));
+  bar('cMes',MESES.map((m,i)=>[m.slice(0,3),d.filter(r=>r.mes===i).length]));
+  dough('cTipo',by(d,r=>r.tipo));dough('cAmb',by(d,r=>r.amb));
+  bar('cTop',d.filter(r=>r.vis).sort((a,b)=>b.vis-a.vis).slice(0,10).map(r=>[r.nom.length>45?r.nom.slice(0,44)+'…':r.nom,r.vis]),true);
+  LISTA=d.slice().sort((a,b)=>(a.fi||1e15)-(b.fi||1e15)||cmp(a.nom,b.nom));PG=0;list();agenda()}
+function list(){const n=LISTA.length,pg=Math.max(1,Math.ceil(n/PS));PG=Math.min(PG,pg-1);
+  $('tb').innerHTML=LISTA.slice(PG*PS,PG*PS+PS).map(r=>`<tr data-i="${LISTA.indexOf(r)}"><td>${fd(r.fi)}</td><td>${fd(r.ff)}</td><td><b>${esc(r.nom)}</b></td><td>${esc(r.loc)}</td><td>${esc(r.prov)}</td><td><span class="tag">${esc(r.tipo)}</span></td><td class="num">${r.vis?fmt(r.vis):'–'}</td><td class="num">${r.exp?fmt(r.exp):'–'}</td></tr>`).join('')||'<tr><td colspan="8">Sin resultados</td></tr>';
+  $('pi').textContent=`Página ${PG+1} de ${pg} · ${fmt(n)} ferias`;$('pp').disabled=PG===0;$('pn').disabled=PG>=pg-1}
+$('pp').onclick=()=>{PG--;list()};$('pn').onclick=()=>{PG++;list()};
+$('tb').onclick=e=>{const t=e.target.closest('tr');if(t&&t.dataset.i)detail(LISTA[+t.dataset.i])};
+function agenda(){let h='',m=-2;LISTA.forEach((r,i)=>{if(r.mes!==m){m=r.mes;h+=`<div class="mes">${m<0?'Sin fecha':MESES[m]}</div>`}
+  h+=`<div class="ev" data-i="${i}"><span>${fd(r.fi)}${r.ff&&+r.ff!==+r.fi?' – '+fd(r.ff):''}</span><span><b>${esc(r.nom)}</b><small>${esc(r.loc)} (${esc(r.prov)}) · ${esc(r.tipo)}</small></span><span class="tag">${esc(r.amb)}</span></div>`});
+  $('agenda').innerHTML=h||'Sin resultados'}
+$('agenda').onclick=e=>{const t=e.target.closest('.ev');if(t)detail(LISTA[+t.dataset.i])};
+function detail(o){const r=o.r,L=[['Edición',r.edicion],['Fechas',fd(o.fi)+(o.ff?' – '+fd(o.ff):'')],['Horario',r.horario],['Lugar',r.lugar_realizacion],['Localidad',o.loc+' ('+o.prov+')'],['Ámbito / periodicidad',o.amb+' · '+o.per],['Tipo',o.tipo],
+  ['Visitantes',o.vis?fmt(o.vis)+' ('+o.car+')':o.car],['Expositores',`${fmt(num(r.n_expositores_espanoles))} españoles · ${fmt(num(r.n_expositores_extranjeros))} extranjeros`],['Organizador',r.entidad_organizadora],['NIF',r.nif_entidad_organizadora],
+  ['Dirección',[r.direccion_entidad_organizadora,r.c_p,r.localidad_entidad_organizadora,r.provincia_entidad_org].filter(Boolean).join(', ')],['Contacto',[r.e_mail,r.telefono].filter(Boolean).join(' · ')],['Web',r.pagina_web?`<a href="${esc(r.pagina_web)}" target="_blank" rel="noopener">${esc(r.pagina_web)}</a>`:'']];
+  $('dg').innerHTML=`<h2 style="margin:0">${esc(o.nom)}</h2><dl>${L.filter(x=>x[1]).map(x=>`<dt>${x[0]}</dt><dd>${x[0]==='Web'?x[1]:esc(x[1])}</dd>`).join('')}</dl><button class="btn" onclick="dg.close()">Cerrar</button>`;$('dg').showModal()}
+
+// ---- años anteriores ----
+function years(){const ks=ORD.slice().sort((a,b)=>YR[a]-YR[b]);
+  const st=ks.map(k=>({k,l:LBL[k],n:ED[k].length,v:sum(ED[k],r=>r.vis),e:sum(ED[k],r=>r.exp),loc:new Set(ED[k].map(r=>r.loc)).size}));
+  ch('yN',{type:'bar',data:{labels:st.map(s=>s.l),datasets:[{data:st.map(s=>s.n),backgroundColor:PAL[1],borderRadius:5}]},options:OPT({scales:{y:{beginAtZero:true}}})});
+  ch('yV',{type:'bar',data:{labels:st.map(s=>s.l),datasets:[{label:'Visitantes',data:st.map(s=>s.v),backgroundColor:PAL[0],borderRadius:5},{label:'Expositores',data:st.map(s=>s.e),backgroundColor:PAL[2],borderRadius:5}]},options:OPT({plugins:{legend:{display:true}},scales:{y:{beginAtZero:true}}})});
+  $('ys').innerHTML=st.slice().reverse().map(s=>`<tr><td><b>${esc(s.l)}</b></td><td class="num">${fmt(s.n)}</td><td class="num">${fmt(s.loc)}</td><td class="num">${fmt(s.v)}</td><td class="num">${fmt(s.e)}</td><td class="num">${s.n?fmt(Math.round(s.v/s.n)):'–'}</td></tr>`).join('');
+  const M=new Map();ks.forEach(k=>ED[k].forEach(r=>{const q=nq(r.nom).replace(/\s+/g,' ').trim();if(!M.has(q))M.set(q,{n:r.nom,y:{}});M.get(q).y[k]=r.vis||'✓'}));
+  const rows=[...M.values()].sort((a,b)=>Object.keys(b.y).length-Object.keys(a.y).length||cmp(a.n,b.n));
+  $('yh').innerHTML='<tr><th>Feria</th>'+ks.map(k=>`<th class="num">${esc(LBL[k])}</th>`).join('')+'</tr>';
+  const draw=()=>{const q=nq($('yQ').value);$('ym').innerHTML=rows.filter(r=>!q||nq(r.n).includes(q)).slice(0,300).map(r=>`<tr style="cursor:default"><td>${esc(r.n)}</td>${ks.map(k=>`<td class="num">${r.y[k]?(r.y[k]==='✓'?'✓':fmt(r.y[k])):'–'}</td>`).join('')}</tr>`).join('')};
+  $('yQ').oninput=draw;draw()}
+
+try{theme(localStorage.getItem(TK)||'light',false)}catch(e){theme('light',false)}
+load();
+</script>
 </body>
 </html>
