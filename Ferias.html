@@ -5,55 +5,62 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ferias de Castilla y León</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#F5EFE3;--card:#FFFBF4;--card2:#F0E8D8;--line:#E3D8C3;--ink:#2B2118;--mute:#7A6C5B;--acc:#B8461B;--acc2:#2F5D50;--acc-soft:rgba(184,70,27,.12);--shadow:0 1px 2px rgba(60,40,20,.06),0 8px 22px rgba(60,40,20,.07);--grid:rgba(43,33,24,.09);--tt:#FFFBF4}
-html[data-theme="dark"]{--bg:#17130F;--card:#221C16;--card2:#2C241C;--line:#3A3025;--ink:#F3EBDC;--mute:#A99A85;--acc:#E8794A;--acc2:#6FB39F;--acc-soft:rgba(232,121,74,.16);--shadow:0 8px 26px rgba(0,0,0,.4);--grid:rgba(243,235,220,.09);--tt:#2C241C}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 'DM Sans',system-ui,sans-serif}
-h1,h2,.kv{font-family:'Fraunces',Georgia,serif}
-header{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--line);padding:14px 24px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
-h1{margin:0;font-size:26px;letter-spacing:-.3px}h1 span{color:var(--acc)}
-.sub{color:var(--mute);font-size:12px;margin-top:2px}
-.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.btn,select,input{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
-.btn{cursor:pointer;font-weight:600}.btn:hover{border-color:var(--acc)}.btn.p{background:var(--acc);border-color:var(--acc);color:#fff}
-main{max-width:1640px;margin:0 auto;padding:20px 24px 50px}
-.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:18px;flex-wrap:wrap}
-.tab{background:none;border:0;padding:10px 16px;font:600 14px 'DM Sans';color:var(--mute);cursor:pointer;border-bottom:3px solid transparent}
-.tab.on{color:var(--acc);border-color:var(--acc)}
-.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:18px}
-.filters label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);display:block;margin-bottom:3px}
-.filters select,.filters input{width:100%}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:18px}
-.kpi{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--acc);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow)}
-.kpi:nth-child(even){border-left-color:var(--acc2)}
-.kl{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);font-weight:700}
-.kv{font-size:30px;font-weight:700;line-height:1.15}.kf{font-size:12px;color:var(--mute)}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:var(--shadow)}
-.card h2{margin:0 0 10px;font-size:17px}.cv{position:relative;height:270px}.wide{grid-column:1/-1}
-table{width:100%;border-collapse:collapse}th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--mute);text-align:left;padding:8px;border-bottom:2px solid var(--line);white-space:nowrap}
-td{padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:top}tbody tr{cursor:pointer}tbody tr:hover{background:var(--acc-soft)}
+:root{--bg:#F6F1E8;--card:#FFFFFF;--card2:#EFE7D9;--line:#E9DFCE;--ink:#241B14;--mute:#7B6D5C;--acc:#C2410C;--acc2:#2F6B58;--acc-soft:rgba(194,65,12,.1);--acc2-soft:rgba(47,107,88,.13);--shadow:0 1px 2px rgba(60,40,20,.05),0 12px 32px rgba(60,40,20,.07);--grid:rgba(36,27,20,.08);--tt:#FFFFFF;--glass:rgba(246,241,232,.78);--r:20px}
+html[data-theme="dark"]{--bg:#14110D;--card:#1E1912;--card2:#292116;--line:#33291C;--ink:#F4ECDD;--mute:#A99A85;--acc:#F0824F;--acc2:#6FB39F;--acc-soft:rgba(240,130,79,.15);--acc2-soft:rgba(111,179,159,.16);--shadow:0 1px 2px rgba(0,0,0,.3),0 14px 34px rgba(0,0,0,.35);--grid:rgba(244,236,221,.08);--tt:#292116;--glass:rgba(20,17,13,.78)}
+*{box-sizing:border-box;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+body{margin:0;color:var(--ink);font:14px/1.5 'Plus Jakarta Sans',system-ui,sans-serif;background:radial-gradient(1100px 520px at 88% -8%,var(--acc-soft),transparent 62%),radial-gradient(900px 480px at -5% 105%,var(--acc2-soft),transparent 60%),var(--bg);background-attachment:fixed;min-height:100vh}
+h1,h2{font-weight:800;letter-spacing:-.02em}
+header{position:sticky;top:0;z-index:20;background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line);padding:14px 36px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+h1{margin:0;font-size:25px}h1 span{background:linear-gradient(90deg,var(--acc),#E0A030);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--mute);font-size:12.5px;margin-top:2px}
+.bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn,select,input{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 14px;transition:.15s}
+.btn{cursor:pointer;font-weight:700;text-decoration:none;display:inline-flex;align-items:center}.btn:hover{border-color:var(--acc);transform:translateY(-1px)}
+.btn.p{background:linear-gradient(135deg,var(--acc),#E0702A);border-color:transparent;color:#fff;box-shadow:0 6px 16px var(--acc-soft)}
+select:focus,input:focus{outline:0;border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-soft)}
+main{width:100%;max-width:2000px;margin:0 auto;padding:24px 36px 60px}
+.tabs{display:inline-flex;gap:4px;background:var(--card2);padding:5px;border-radius:999px;margin-bottom:22px;flex-wrap:wrap}
+.tab{background:none;border:0;padding:9px 22px;border-radius:999px;font:700 14px 'Plus Jakarta Sans',sans-serif;color:var(--mute);cursor:pointer;transition:.15s}
+.tab:hover{color:var(--ink)}.tab.on{background:var(--card);color:var(--acc);box-shadow:var(--shadow)}
+.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:22px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;box-shadow:var(--shadow)}
+.filters label{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--mute);display:block;margin-bottom:4px}
+.filters select,.filters input{width:100%;background:var(--bg)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-bottom:22px}
+.kpi{position:relative;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;box-shadow:var(--shadow);transition:.18s}.kpi:hover{transform:translateY(-2px)}
+.ki{position:absolute;right:16px;top:16px;width:40px;height:40px;border-radius:13px;background:var(--acc-soft);color:var(--acc);display:grid;place-items:center}
+.kpi:nth-child(even) .ki{background:var(--acc2-soft);color:var(--acc2)}.ki svg{width:20px;height:20px}
+.kl{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--mute);font-weight:800;max-width:70%}
+.kv{font-size:36px;font-weight:800;letter-spacing:-.03em;line-height:1.15;margin-top:6px;font-variant-numeric:tabular-nums}.kf{font-size:12px;color:var(--mute)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:20px 22px;box-shadow:var(--shadow)}
+.card h2{margin:0 0 12px;font-size:17px}.cv{position:relative;height:300px}.wide{grid-column:1/-1}
+table{width:100%;border-collapse:collapse}
+th{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--mute);text-align:left;padding:10px;border-bottom:1px solid var(--line);white-space:nowrap;font-weight:800}
+td{padding:11px 10px;border-bottom:1px solid var(--line);vertical-align:top}tbody tr:last-child td{border-bottom:0}
+tbody tr{cursor:pointer;transition:background .12s}tbody tr:hover{background:var(--acc-soft)}
 .num{text-align:right;font-variant-numeric:tabular-nums}.sc{overflow-x:auto}
-.tag{display:inline-block;padding:2px 8px;border-radius:99px;background:var(--acc-soft);color:var(--acc);font-size:11px;font-weight:700}
-.pg{display:flex;gap:10px;align-items:center;justify-content:flex-end;margin-top:12px;color:var(--mute)}
-.mes{font-family:'Fraunces',serif;font-size:19px;color:var(--acc);margin:18px 0 8px;border-bottom:1px solid var(--line)}
-.ev{display:grid;grid-template-columns:130px 1fr auto;gap:12px;padding:8px 4px;border-bottom:1px dashed var(--line);cursor:pointer}.ev:hover{background:var(--acc-soft)}
-.ev b{display:block}.ev small{color:var(--mute)}
-dialog{border:1px solid var(--line);border-radius:16px;background:var(--card);color:var(--ink);max-width:620px;width:92%;padding:22px}
-dialog::backdrop{background:rgba(0,0,0,.45)}dl{display:grid;grid-template-columns:150px 1fr;gap:6px 12px;margin:12px 0}dt{color:var(--mute);font-size:12px;font-weight:700;text-transform:uppercase}dd{margin:0}
-a{color:var(--acc)}.ban{background:var(--acc-soft);border:1px solid var(--acc);border-radius:10px;padding:10px 14px;margin-bottom:14px}
+.tag{display:inline-flex;align-items:center;padding:3px 11px;border-radius:99px;background:var(--acc-soft);color:var(--acc);font-size:11.5px;font-weight:700;white-space:nowrap}
+.pg{display:flex;gap:10px;align-items:center;justify-content:flex-end;margin-top:14px;color:var(--mute)}
+.mes{font-size:19px;font-weight:800;color:var(--acc);margin:24px 0 8px;padding-bottom:6px;border-bottom:2px solid var(--acc-soft)}
+.ev{display:grid;grid-template-columns:190px 1fr auto;gap:14px;padding:12px 10px;border-radius:12px;cursor:pointer;transition:.12s}.ev:hover{background:var(--acc-soft)}
+.ev>span:first-child{font-weight:700;color:var(--acc);font-variant-numeric:tabular-nums}.ev b{display:block}.ev small{color:var(--mute);display:flex;align-items:center}
+dialog{border:1px solid var(--line);border-radius:24px;background:var(--card);color:var(--ink);max-width:660px;width:92%;padding:26px;box-shadow:0 30px 80px rgba(0,0,0,.35)}
+dialog::backdrop{background:rgba(20,14,8,.5);backdrop-filter:blur(3px)}dl{display:grid;grid-template-columns:150px 1fr;gap:8px 14px;margin:14px 0}dt{color:var(--mute);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;padding-top:2px}dd{margin:0}
+a{color:var(--acc)}.ban{background:var(--acc-soft);border:1px solid var(--acc);border-radius:14px;padding:12px 16px;margin-bottom:16px}
 .load{height:3px;background:linear-gradient(90deg,transparent,var(--acc),transparent);background-size:200% 100%;animation:l 1s linear infinite;position:fixed;top:0;left:0;right:0;z-index:50}@keyframes l{to{background-position:-200% 0}}
-.badge{background:var(--acc);color:#fff;border-radius:99px;padding:7px 16px;font-weight:700}
-.chips{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0 18px}
-.chip{border:2px solid var(--acc);background:var(--card);color:var(--acc);border-radius:14px;padding:12px 28px;font:700 26px 'Fraunces',serif;cursor:pointer;display:flex;flex-direction:column;align-items:center;line-height:1.1}
-.chip small{font:600 11px 'DM Sans';color:var(--mute);margin-top:4px}.chip:hover{background:var(--acc-soft)}
-.chip.on{background:var(--acc);color:#fff;box-shadow:var(--shadow)}.chip.on small{color:#fff}
-.ts{max-height:400px;overflow:auto}.ts th{position:sticky;top:0;background:var(--card)}.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(460px,1fr));gap:14px;margin-top:14px}
+.badge{background:var(--acc-soft);color:var(--acc);border-radius:99px;padding:8px 16px;font-weight:800}
+.chips{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0 20px}
+.chip{border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:18px;padding:12px 30px;font:800 26px 'Plus Jakarta Sans',sans-serif;letter-spacing:-.02em;cursor:pointer;display:flex;flex-direction:column;align-items:center;line-height:1.1;transition:.15s}
+.chip small{font:700 11px 'Plus Jakarta Sans',system-ui,sans-serif;color:var(--mute);margin-top:5px;letter-spacing:0}.chip:hover{border-color:var(--acc);transform:translateY(-2px)}
+.chip.on{background:linear-gradient(135deg,var(--acc),#E0702A);border-color:transparent;color:#fff;box-shadow:0 10px 24px var(--acc-soft)}.chip.on small{color:#fff;opacity:.9}
+.ts{max-height:460px;overflow:auto}.ts th{position:sticky;top:0;background:var(--card);z-index:1}.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(520px,1fr));gap:18px;margin-top:18px}
 th[data-k]{cursor:pointer;user-select:none}th[data-k]:hover{color:var(--acc)}th[data-o=asc]::after{content:' ▲';color:var(--acc)}th[data-o=desc]::after{content:' ▼';color:var(--acc)}
-.tag{display:inline-flex;align-items:center}.ti{width:15px;height:15px;margin-right:6px;flex:none;vertical-align:-3px}small .ti{width:13px;height:13px;margin:0 4px 0 0}
+.ti{width:15px;height:15px;margin-right:6px;flex:none}small .ti{width:13px;height:13px;margin:0 5px 0 0}
+@media(min-width:901px){.g2c{grid-template-columns:repeat(2,minmax(0,1fr))}}
 [hidden]{display:none!important}
-@media(max-width:640px){.ev{grid-template-columns:1fr}main{padding:14px}}
+@media(max-width:700px){.ev{grid-template-columns:1fr}main{padding:16px}header{padding:12px 16px}.grid,.g2{grid-template-columns:1fr}.kv{font-size:30px}}
 </style>
 </head>
 <body>
@@ -105,7 +112,7 @@ th[data-k]{cursor:pointer;user-select:none}th[data-k]:hover{color:var(--acc)}th[
     <div class="card"><h2>Consulta un año anterior</h2><p class="sub">Elige el año para ver sus ferias.</p><div class="chips" id="chips"></div>
       <div class="kpis" id="ykp"></div><input id="sQ" placeholder="Buscar en este año…" style="margin-bottom:10px;width:300px">
       <div class="ts" style="max-height:480px"><table data-s="ani"><thead><tr><th data-k="fi">Inicio</th><th data-k="ff">Fin</th><th data-k="nom">Feria</th><th data-k="loc">Localidad</th><th data-k="prov">Provincia</th><th data-k="tipo">Tipo</th><th data-k="vis" class="num">Visitantes</th><th data-k="exp" class="num">Expositores</th></tr></thead><tbody id="sb"></tbody></table></div></div>
-    <div class="grid" style="margin-top:14px">
+    <div class="grid g2c" style="margin-top:18px">
       <div class="card"><h2>Ferias por año</h2><div class="cv"><canvas id="yN"></canvas></div></div>
       <div class="card"><h2>Visitantes y expositores por año</h2><div class="cv"><canvas id="yV"></canvas></div></div>
       <div class="card wide"><h2>Resumen por año</h2><div class="sc"><table data-s="res"><thead><tr><th data-k="y">Edición</th><th data-k="n" class="num">Ferias</th><th data-k="loc" class="num">Localidades</th><th data-k="v" class="num">Visitantes</th><th data-k="e" class="num">Expositores</th><th data-k="m" class="num">Media visit./feria</th></tr></thead><tbody id="ys"></tbody></table></div></div>
@@ -136,6 +143,9 @@ const IM=[[/libro|lectur|editor/,'libro'],[/artesan|ceramic|alfarer/,'vaso'],[/g
  [/turis|viaj|ocio/,'pin'],[/antigu|colecc|filatel|numism|anticuar/,'gema'],[/moda|textil|calzado|ropa|novia|boda/,'camisa'],[/music|teatro|cultur|festival|\barte/,'nota'],
  [/stock|outlet|ocasion|mercadillo|oportunid|rebaja/,'etiqueta'],[/inmobil|vivienda|hogar|decor/,'casa']];
 const ico=t=>{const q=nq(t),k=(IM.find(m=>m[0].test(q))||[0,'tienda'])[1];return `<svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${IP[k]}</svg>`};
+const KI={Ferias:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',Visitantes:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6M16 4.5a3.5 3.5 0 0 1 0 7M18 14c2.5.8 3.5 3 3.5 6"/>',Expositores:IP.tienda,Localidades:IP.pin,
+ Organizadores:'<path d="M4 21V4a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v17M15 9h4a1 1 0 0 1 1 1v11M2 21h20M8 7h3M8 11h3M8 15h3"/>','Por celebrar':'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'};
+const kic=t=>`<span class="ki"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${KI[t]||''}</svg></span>`;
 const KEY='ferias_cache_v1',TK='ferias-cyl-theme',PS=15,MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const $=id=>document.getElementById(id);
 const fmt=n=>Number(n).toLocaleString('es-ES');
@@ -160,7 +170,7 @@ function prep(cols,rows){return rows.map(a=>{const r={};cols.forEach((k,i)=>r[k]
   o.mes=o.fi?o.fi.getMonth():-1;o.txt=nq([o.nom,o.loc,t('entidad_organizadora'),o.tipo].join(' '));return o})}
 
 // ---- tema ----
-function chartDefaults(){if(typeof Chart==='undefined')return;const d=Chart.defaults;d.font.family="'DM Sans',sans-serif";d.color=css('--mute');d.borderColor=css('--grid');
+function chartDefaults(){if(typeof Chart==='undefined')return;const d=Chart.defaults;d.font.family="'Plus Jakarta Sans',sans-serif";d.color=css('--mute');d.borderColor=css('--grid');
   d.plugins.legend.labels.color=css('--ink');const t=d.plugins.tooltip;t.backgroundColor=css('--tt');t.titleColor=css('--ink');t.bodyColor=css('--mute');t.borderColor=css('--line');t.borderWidth=1}
 function theme(t,redraw){document.documentElement.dataset.theme=t;$('th').textContent=t==='light'?'Modo oscuro':'Modo claro';chartDefaults();
   if(redraw){Object.values(charts).forEach(c=>c.destroy());charts={};if(ORD.length){render();years()}}}
@@ -208,8 +218,8 @@ const by=(d,f)=>{const m=new Map();d.forEach(r=>{const k=f(r);m.set(k,(m.get(k)|
 const topN=(m,n)=>[...m].sort((a,b)=>b[1]-a[1]).slice(0,n);
 function ch(id,cfg){if(charts[id]){charts[id].data=cfg.data;charts[id].options=cfg.options;charts[id].update()}else charts[id]=new Chart($(id),cfg)}
 const OPT=(x={})=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},...x});
-const bar=(id,m,h)=>{const e=[...m];ch(id,{type:'bar',data:{labels:e.map(x=>x[0]),datasets:[{data:e.map(x=>x[1]),backgroundColor:PAL[0],borderRadius:5}]},options:OPT({indexAxis:h?'y':'x',scales:{x:{grid:{display:!h}},y:{grid:{display:!!h},beginAtZero:true}}})})};
-const dough=(id,m)=>{const e=topN(m,8);ch(id,{type:'doughnut',data:{labels:e.map(x=>x[0]),datasets:[{data:e.map(x=>x[1]),backgroundColor:PAL,borderColor:css('--card'),borderWidth:2}]},options:OPT({cutout:'58%',plugins:{legend:{display:true,position:'right'}}})})};
+const bar=(id,m,h)=>{const e=[...m];ch(id,{type:'bar',data:{labels:e.map(x=>x[0]),datasets:[{data:e.map(x=>x[1]),backgroundColor:PAL[0],borderRadius:8}]},options:OPT({indexAxis:h?'y':'x',scales:{x:{grid:{display:!h}},y:{grid:{display:!!h},beginAtZero:true}}})})};
+const dough=(id,m)=>{const e=topN(m,8);ch(id,{type:'doughnut',data:{labels:e.map(x=>x[0]),datasets:[{data:e.map(x=>x[1]),backgroundColor:PAL,borderColor:css('--card'),borderWidth:2}]},options:OPT({cutout:'66%',plugins:{legend:{display:true,position:'right'}}})})};
 const polar=(id,m)=>{const e=topN(m,8);ch(id,{type:'polarArea',data:{labels:e.map(x=>x[0]),datasets:[{data:e.map(x=>x[1]),backgroundColor:PAL.map(c=>c+'cc'),borderColor:css('--card'),borderWidth:2}]},options:OPT({plugins:{legend:{display:true,position:'right'}},scales:{r:{grid:{color:css('--grid')},ticks:{backdropColor:'transparent'}}}})})};
 function tablas(d){const E=[...by(d,r=>String(r.r.entidad_organizadora||'Sin dato').trim())].map(x=>({n:x[0],c:x[1]})),
   L=[...by(d,r=>r.loc+'||'+r.prov)].map(x=>{const p=x[0].split('||');return{n:p[0],p:p[1],c:x[1]}});
@@ -218,7 +228,7 @@ function tablas(d){const E=[...by(d,r=>String(r.r.entidad_organizadora||'Sin dat
   $('tE').innerHTML=E.map(x=>`<tr style="cursor:default"><td>${esc(x.n)}</td><td class="num"><b>${x.c}</b></td></tr>`).join('')||'<tr><td colspan="2">Sin resultados</td></tr>';
   $('tL').innerHTML=L.map(x=>`<tr style="cursor:default"><td>${esc(x.n)}</td><td>${esc(x.p)}</td><td class="num"><b>${x.c}</b></td></tr>`).join('')||'<tr><td colspan="3">Sin resultados</td></tr>'}
 function render(){const d=D=get(),hoy=new Date();hoy.setHours(0,0,0,0);
-  const k=(t,v,f)=>`<div class="kpi"><div class="kl">${t}</div><div class="kv">${v}</div><div class="kf">${f}</div></div>`;
+  const k=(t,v,f)=>`<div class="kpi">${kic(t)}<div class="kl">${t}</div><div class="kv">${v}</div><div class="kf">${f}</div></div>`;
   const pr=d.filter(r=>r.fi&&r.fi>=hoy).length;
   $('kpis').innerHTML=k('Ferias',fmt(d.length),'de '+fmt((ED[ACT]||[]).length)+' de la edición')+k('Visitantes',fmt(sum(d,r=>r.vis)),'suma declarada')+
     k('Expositores',fmt(sum(d,r=>r.exp)),'españoles + extranjeros')+k('Localidades',fmt(new Set(d.map(r=>r.loc)).size),'sedes distintas')+
@@ -245,7 +255,7 @@ let SEL='',YL=[];
 function chips(){const past=ORD.filter(k=>k!==ACT);if(!past.includes(SEL))SEL=past[0]||'';
   $('chips').innerHTML=past.map(k=>`<button class="chip" data-k="${esc(k)}">${esc(LBL[k])}<small>${ED[k].length} ferias</small></button>`).join('')||'<span class="sub">Todavía no hay años anteriores.</span>';ylist()}
 function ylist(){document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c.dataset.k===SEL));
-  const d=ED[SEL]||[],q=nq($('sQ').value),kp=(t,v)=>`<div class="kpi"><div class="kl">${t}</div><div class="kv">${v}</div></div>`;
+  const d=ED[SEL]||[],q=nq($('sQ').value),kp=(t,v)=>`<div class="kpi">${kic(t)}<div class="kl">${t}</div><div class="kv">${v}</div></div>`;
   YL=sortRows(d.filter(r=>!q||r.txt.includes(q)),SRT.ani);
   $('ykp').innerHTML=kp('Ferias',fmt(d.length))+kp('Visitantes',fmt(sum(d,r=>r.vis)))+kp('Expositores',fmt(sum(d,r=>r.exp)))+kp('Localidades',fmt(new Set(d.map(r=>r.loc)).size));
   $('sb').innerHTML=YL.map((r,i)=>`<tr data-i="${i}"><td>${fd(r.fi)}</td><td>${fd(r.ff)}</td><td><b>${esc(r.nom)}</b></td><td>${esc(r.loc)}</td><td>${esc(r.prov)}</td><td><span class="tag">${ico(r.tipo)}${esc(r.tipo)}</span></td><td class="num">${r.vis?fmt(r.vis):'–'}</td><td class="num">${r.exp?fmt(r.exp):'–'}</td></tr>`).join('')||'<tr><td colspan="8">Sin resultados</td></tr>'}
@@ -254,8 +264,8 @@ $('sb').onclick=e=>{const t=e.target.closest('tr');if(t&&t.dataset.i)detail(YL[+
 let ST=[],MR=[],MK=[];
 function years(){chips();const ks=ORD.slice().sort((a,b)=>YR[a]-YR[b]);MK=ks;
   ST=ks.map(k=>{const n=ED[k].length,v=sum(ED[k],r=>r.vis);return{k,y:YR[k],l:LBL[k],n,v,e:sum(ED[k],r=>r.exp),loc:new Set(ED[k].map(r=>r.loc)).size,m:n?Math.round(v/n):0}});
-  ch('yN',{type:'bar',data:{labels:ST.map(s=>s.l),datasets:[{data:ST.map(s=>s.n),backgroundColor:PAL[1],borderRadius:5}]},options:OPT({scales:{y:{beginAtZero:true}}})});
-  ch('yV',{type:'bar',data:{labels:ST.map(s=>s.l),datasets:[{label:'Visitantes',data:ST.map(s=>s.v),backgroundColor:PAL[0],borderRadius:5},{label:'Expositores',data:ST.map(s=>s.e),backgroundColor:PAL[2],borderRadius:5}]},options:OPT({plugins:{legend:{display:true}},scales:{y:{beginAtZero:true}}})});
+  ch('yN',{type:'bar',data:{labels:ST.map(s=>s.l),datasets:[{data:ST.map(s=>s.n),backgroundColor:PAL[1],borderRadius:8}]},options:OPT({scales:{y:{beginAtZero:true}}})});
+  ch('yV',{type:'bar',data:{labels:ST.map(s=>s.l),datasets:[{label:'Visitantes',data:ST.map(s=>s.v),backgroundColor:PAL[0],borderRadius:8},{label:'Expositores',data:ST.map(s=>s.e),backgroundColor:PAL[2],borderRadius:8}]},options:OPT({plugins:{legend:{display:true}},scales:{y:{beginAtZero:true}}})});
   ysum();
   const M=new Map();ks.forEach(k=>ED[k].forEach(r=>{const q=nq(r.nom).replace(/\s+/g,' ').trim();if(!M.has(q))M.set(q,{n:r.nom,y:{}});M.get(q).y[k]=r.vis||'✓'}));
   MR=[...M.values()].map(r=>({...r,cnt:Object.keys(r.y).length}));
