@@ -61,6 +61,9 @@ th[data-k]{cursor:pointer;user-select:none}th[data-k]:hover{color:var(--acc)}th[
 @media(min-width:901px){.g2c{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .mapw{border-radius:16px;overflow:hidden;border:1px solid var(--line);margin:6px 0 14px;background:var(--card2)}.mapw iframe{width:100%;height:300px;border:0;display:block}
 .hb{display:grid;gap:7px;margin:10px 0 16px}.hr{display:grid;grid-template-columns:120px 1fr 30px;gap:12px;align-items:center}.hr i{display:block;height:10px;border-radius:99px;background:linear-gradient(90deg,var(--acc),#E0A030)}.hr b{text-align:right}
+.xw{position:relative}.pop{position:absolute;right:0;top:calc(100% + 10px);width:310px;background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 24px 60px rgba(0,0,0,.28);padding:16px 18px;z-index:40}
+.pop label{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--mute);display:block;margin:10px 0 5px}.pop label:first-child{margin-top:0}.pop select{width:100%}
+.xf{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.xf .btn{justify-content:center}.xf .btn:disabled{opacity:.5;cursor:wait}
 [hidden]{display:none!important}
 @media(max-width:700px){.ev{grid-template-columns:1fr}main{padding:16px}header{padding:12px 16px}.grid,.g2{grid-template-columns:1fr}.kv{font-size:30px}}
 </style>
@@ -71,6 +74,10 @@ th[data-k]{cursor:pointer;user-select:none}th[data-k]:hover{color:var(--acc)}th[
   <div><h1>Ferias de <span>Castilla y León</span></h1><div class="sub" id="meta"></div></div>
   <div class="bar">
     <a class="btn" href="index.html" title="Volver a la página de inicio (index.html)">← Menú principal</a>
+    <div class="xw"><button class="btn" id="xb">⭳ Exportar datos ▾</button>
+      <div class="pop" id="xp" hidden><label>Año a exportar</label><select id="xY"></select><label>Formato</label>
+        <div class="xf"><button class="btn" data-f="csv">CSV</button><button class="btn" data-f="xlsx">Excel</button><button class="btn" data-f="pdf">PDF</button></div>
+        <p class="sub" id="xS" style="margin:12px 0 0">Los datos se exportan sin correos ni teléfonos.</p></div></div>
     <span class="badge" id="badge"></span>
     <button class="btn" id="th">Modo oscuro</button>
     <button class="btn p" id="rl">Actualizar datos</button>
@@ -156,7 +163,7 @@ const nq=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowe
 const cmp=(a,b)=>String(a).localeCompare(String(b),'es',{sensitivity:'base',numeric:true});
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const sum=(d,f)=>d.reduce((s,r)=>s+f(r),0);
-let ED={},LBL={},YR={},ORD=[],CUR='',ACT='',D=[],PG=0,charts={},LAST='',LISTA=[],TOT=0,AG=[],EL=[];
+let ED={},LBL={},YR={},ORD=[],CUR='',ACT='',D=[],PG=0,charts={},LAST='',LISTA=[],TOT=0,AG=[],EL=[],CL={};
 const SRT={lis:{k:'fi',d:1},ani:{k:'fi',d:1},ent:{k:'c',d:-1},loc:{k:'c',d:-1},res:{k:'y',d:-1},mat:{k:'cnt',d:-1}};
 const SK={fi:r=>r.fi?+r.fi:null,ff:r=>r.ff?+r.ff:null,vis:r=>r.vis,exp:r=>r.exp};
 function sortRows(a,st){const f=SK[st.k]||(r=>r[st.k]);return a.slice().sort((x,y)=>{const u=f(x),v=f(y);if(u==null&&v==null)return cmp(x.nom,y.nom);if(u==null)return 1;if(v==null)return -1;return((typeof u==='number'?u-v:cmp(u,v))*st.d)||cmp(x.nom,y.nom)})}
@@ -182,11 +189,11 @@ $('th').onclick=()=>{const n=document.documentElement.dataset.theme==='light'?'d
 const busy=on=>$('load').hidden=!on;
 function fail(m){$('ban').hidden=!m;$('ban').textContent=m||''}
 function apply(j){LAST=j.ts||'';ACT=j.actual;ED={};LBL={};YR={};
-  TOT=0;Object.keys(j.hojas).forEach(k=>{ED[k]=prep(j.hojas[k].cols,j.hojas[k].rows);
+  TOT=0;Object.keys(j.hojas).forEach(k=>{CL[k]=j.hojas[k].cols;ED[k]=prep(j.hojas[k].cols,j.hojas[k].rows);
     if(k===ACT){TOT=ED[k].length;ED[k]=ED[k].filter(o=>String(o.r.fecha_inclusion_modificacion||'').trim()!=='')}
     if(k===ACT){YR[k]=ANIO_ACTUAL;LBL[k]='Actual ('+ANIO_ACTUAL+')'}else{YR[k]=+k;LBL[k]=k}});
   ORD=Object.keys(ED).sort((a,b)=>(a===ACT?-1:b===ACT?1:YR[b]-YR[a]));
-  $('badge').textContent='Edición '+ANIO_ACTUAL}
+  $('badge').textContent='Edición '+ANIO_ACTUAL;fillExp()}
 async function load(n=0,refresh=false){
   if(n===0&&!refresh){try{const c=JSON.parse(localStorage.getItem(KEY)||'null');if(c){apply(c);init()}}catch(e){console.error(e)}}
   busy(true);fail('');let j;
@@ -314,6 +321,40 @@ document.addEventListener('click',e=>{const th=e.target.closest('th[data-k]');if
   if(st.k===k)st.d*=-1;else{st.k=k;st.d=(id==='lis'||id==='ani')?(['vis','exp'].includes(k)?-1:1):(id==='ent'||id==='loc')?(k==='c'?-1:1):id==='res'?-1:(k==='n'?1:-1)}
   REF[id]();mark(id)});
 Object.keys(SRT).forEach(mark);
+
+// ---- exportar datos (sin correos ni teléfonos) ----
+const HN={id:'ID',nif_entidad_organizadora:'NIF ENTIDAD ORGANIZADORA',entidad_organizadora:'ENTIDAD ORGANIZADORA',direccion_entidad_organizadora:'DIRECCIÓN ENTIDAD ORGANIZADORA',provincia_entidad_org:'PROVINCIA ENTIDAD ORG.',localidad_entidad_organizadora:'LOCALIDAD ENTIDAD ORGANIZADORA',c_p:'C.P.',denominacion_de_la_feria:'DENOMINACIÓN DE LA FERIA',edicion:'EDICIÓN',fecha_inicio:'FECHA INICIO',fecha_finalizacion:'FECHA FINALIZACIÓN',horario:'HORARIO',lugar_realizacion:'LUGAR REALIZACIÓN',provincia:'PROVINCIA',localidad_de_celebracion:'LOCALIDAD DE CELEBRACIÓN',ambito_territorial:'ÁMBITO TERRITORIAL',periodicidad:'PERIODICIDAD',pagina_web:'PÁGINA WEB',tipo_de_feria:'TIPO DE FERIA',n_visitantes:'Nº. VISITANTES',n_expositores_espanoles:'Nº. EXPOSITORES ESPAÑOLES',n_expositores_extranjeros:'Nº. EXPOSITORES EXTRANJEROS',caracter_visitantes:'CARÁCTER VISITANTES',fecha_inclusion_modificacion:'FECHA INCLUSIÓN / MODIFICACIÓN',provincia_ord:'PROVINCIA_ORD'};
+const PH={fecha_inicio:'Inicio',fecha_finalizacion:'Fin',denominacion_de_la_feria:'Feria',entidad_organizadora:'Entidad organizadora',localidad_de_celebracion:'Localidad',provincia:'Provincia',tipo_de_feria:'Tipo',ambito_territorial:'Ámbito',n_visitantes:'Visitantes',n_expositores_espanoles:'Exp. esp.',n_expositores_extranjeros:'Exp. extr.'};
+const LIB={x:'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',p:'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',t:'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js'},LP={};
+const need=u=>LP[u]||(LP[u]=new Promise((ok,ko)=>{const e=document.createElement('script');e.src=u;e.onload=ok;e.onerror=()=>{delete LP[u];ko(Error('No se pudo cargar una librería externa. Revisa la conexión.'))};document.head.appendChild(e)}));
+const keep=cols=>cols.filter(c=>!/mail|telef|movil|tlf/.test(c)),hn=c=>HN[c]||c.toUpperCase().replace(/_/g,' ');
+const cell=(r,c)=>{let v=r[c];if(v==null)return '';if(c.startsWith('fecha')){const d=pd(v);return d?fd(d):String(v)}if(/^n_(visit|expos)/.test(c))return v===''?'':num(v);return typeof v==='string'?v.trim():v};
+function datos(ks,cols,hdr){const all=ks.length>1,rows=[];ks.forEach(k=>ED[k].forEach(o=>rows.push((all?[YR[k]]:[]).concat(cols.map(c=>cell(o.r,c))))));return{hd:(all?['AÑO']:[]).concat(cols.map(c=>hdr?hdr[c]||hn(c):hn(c))),rows}}
+function dl(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.addEventListener('click',e=>e.stopPropagation());document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
+function fillExp(){const v=$('xY').value;$('xY').innerHTML=ORD.map(k=>`<option value="${esc(k)}">${k===ACT?'Edición actual ('+ANIO_ACTUAL+')':esc(LBL[k])}</option>`).join('')+'<option value="all">Todos los años</option>';if([...$('xY').options].some(o=>o.value===v))$('xY').value=v}
+async function exportar(f){const v=$('xY').value,ks=v==='all'?ORD.slice():[v],cols=keep(CL[ACT]||[]),nm=v==='all'?'ferias_todos_los_anios':'ferias_'+YR[v],S=$('xS'),bs=document.querySelectorAll('.xf .btn');
+  if(!ks.length||!ED[ks[0]])return;bs.forEach(b=>b.disabled=true);S.textContent='Generando '+(f==='xlsx'?'Excel':f.toUpperCase())+'…';
+  try{
+    if(f==='csv'){const {hd,rows}=datos(ks,cols),q=x=>{x=String(x);return /[";\r\n]/.test(x)?'"'+x.replace(/"/g,'""')+'"':x};
+      dl(new Blob(['\ufeff'+[hd].concat(rows).map(r=>r.map(q).join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'}),nm+'.csv')}
+    else if(f==='xlsx'){await need(LIB.x);const wb=XLSX.utils.book_new();
+      ks.forEach(k=>{const {hd,rows}=datos([k],cols),ws=XLSX.utils.aoa_to_sheet([hd].concat(rows));ws['!cols']=hd.map((h,i)=>({wch:Math.min(48,Math.max(h.length,...rows.slice(0,200).map(r=>String(r[i]).length))+2)}));ws['!autofilter']={ref:ws['!ref']};XLSX.utils.book_append_sheet(wb,ws,String(YR[k]))});
+      XLSX.writeFile(wb,nm+'.xlsx')}
+    else{await need(LIB.p);await need(LIB.t);const pk=Object.keys(PH).filter(c=>cols.includes(c)),{hd,rows}=datos(ks,pk,PH),off=hd.length-pk.length;
+      const fr=rows.map(r=>r.map((x,i)=>typeof x==='number'&&i>=off&&/^n_/.test(pk[i-off])?fmt(x):x)),cs={};pk.forEach((c,i)=>{if(/^n_/.test(c))cs[i+off]={halign:'right'}});
+      const doc=new window.jspdf.jsPDF({orientation:'landscape',unit:'pt',format:'a4'});
+      doc.setFontSize(15);doc.setTextColor(194,65,12);doc.text('Ferias de Castilla y León',30,34);doc.setFontSize(10);doc.setTextColor(90);
+      doc.text((v==='all'?'Todos los años':'Edición '+YR[v])+' · '+fmt(rows.length)+' ferias · Generado el '+new Date().toLocaleDateString('es-ES'),30,50);
+      doc.autoTable({startY:62,head:[hd],body:fr,styles:{fontSize:7,cellPadding:3,overflow:'linebreak'},headStyles:{fillColor:[194,65,12],textColor:255},alternateRowStyles:{fillColor:[250,244,236]},margin:{left:30,right:30,bottom:30},columnStyles:cs});
+      const n=doc.getNumberOfPages();for(let i=1;i<=n;i++){doc.setPage(i);doc.setFontSize(8);doc.setTextColor(120);doc.text('Página '+i+' de '+n,doc.internal.pageSize.getWidth()-30,doc.internal.pageSize.getHeight()-14,{align:'right'})}
+      doc.save(nm+'.pdf')}
+    S.textContent='Descarga lista. Sin correos ni teléfonos.'
+  }catch(e){console.error(e);S.textContent='Error: '+e.message}
+  finally{bs.forEach(b=>b.disabled=false)}}
+$('xb').onclick=e=>{e.stopPropagation();$('xp').hidden=!$('xp').hidden};
+document.addEventListener('click',e=>{if(e.isTrusted&&!e.target.closest('.xw'))$('xp').hidden=true});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$('xp').hidden=true});
+document.querySelectorAll('.xf .btn').forEach(b=>b.onclick=()=>exportar(b.dataset.f));
 
 try{theme(localStorage.getItem(TK)||'light',false)}catch(e){document.documentElement.dataset.theme='light'}
 if(typeof Chart==='undefined')fail('No se ha podido cargar la librería de gráficos (Chart.js). Revisa la conexión o los bloqueadores del navegador.');
