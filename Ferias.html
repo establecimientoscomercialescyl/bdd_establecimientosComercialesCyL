@@ -65,6 +65,7 @@ th[data-k]{cursor:pointer;user-select:none}th[data-k]:hover{color:var(--acc)}th[
 .pop label{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--mute);display:block;margin:10px 0 5px}.pop label:first-child{margin-top:0}.pop select{width:100%}
 .pop label.ck{display:flex;gap:10px;align-items:flex-start;text-transform:none;letter-spacing:0;font-size:13px;font-weight:700;color:var(--ink);margin:14px 0 4px;cursor:pointer;line-height:1.35}.ck input{width:18px;height:18px;padding:0;margin:1px 0 0;flex:none;accent-color:var(--acc)}.ck small{display:block;color:var(--mute);font-weight:500;font-size:12px;margin-top:2px}
 .xf{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.xf .btn{justify-content:center}.xf .btn:disabled{opacity:.5;cursor:wait}
+#xS:empty{display:none}
 [hidden]{display:none!important}
 @media(max-width:700px){.ev{grid-template-columns:1fr}main{padding:16px}header{padding:12px 16px}.grid,.g2{grid-template-columns:1fr}.kv{font-size:30px}}
 </style>
@@ -78,7 +79,7 @@ th[data-k]{cursor:pointer;user-select:none}th[data-k]:hover{color:var(--acc)}th[
     <div class="xw"><button class="btn" id="xb">⭳ Exportar datos ▾</button>
       <div class="pop" id="xp" hidden><label>Año a exportar</label><select id="xY"></select><label class="ck"><input type="checkbox" id="xF"><span>Aplicar los filtros actuales a la exportación<small id="xN"></small></span></label><label>Formato</label>
         <div class="xf"><button class="btn" data-f="csv">CSV</button><button class="btn" data-f="xlsx">Excel</button><button class="btn" data-f="pdf">PDF</button></div>
-        <p class="sub" id="xS" style="margin:12px 0 0">Los datos se exportan sin correos ni teléfonos.</p></div></div>
+        <p class="sub" id="xS" style="margin:12px 0 0"></p></div></div>
     <span class="badge" id="badge"></span>
     <button class="btn" id="th">Modo oscuro</button>
     <button class="btn p" id="rl">Actualizar datos</button>
@@ -135,7 +136,7 @@ th[data-k]{cursor:pointer;user-select:none}th[data-k]:hover{color:var(--acc)}th[
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script>
 // ====== CONFIGURACIÓN: URL de la Web App de Apps Script y token ======
-const ANIO_ACTUAL=2027; // año de la edición que está en 'Hoja 1' (cámbialo cada año)
+let ANIO_ACTUAL=2027; // valor de respaldo: el año se detecta solo por las fechas de 'Hoja 1'
 const SOURCE={url:'https://script.google.com/macros/s/AKfycbxHpXTX0P-KzOLVmmcg72-n5WiATPv0XWr9YtptuICnUuynXi7S1UcA0W7Ej-NYol6N7A/exec',token:'ActuacionesComercio26'};
 // =====================================================================
 const PAL=['#B8461B','#2F5D50','#D9A441','#7A2E3A','#3E5C76','#8A9A5B','#C97B63','#5B4B8A'];
@@ -191,7 +192,7 @@ const busy=on=>$('load').hidden=!on;
 function fail(m){$('ban').hidden=!m;$('ban').textContent=m||''}
 function apply(j){LAST=j.ts||'';ACT=j.actual;ED={};LBL={};YR={};
   TOT=0;Object.keys(j.hojas).forEach(k=>{CL[k]=j.hojas[k].cols;ED[k]=prep(j.hojas[k].cols,j.hojas[k].rows);
-    if(k===ACT){TOT=ED[k].length;ED[k]=ED[k].filter(o=>String(o.r.fecha_inclusion_modificacion||'').trim()!=='')}
+    if(k===ACT){TOT=ED[k].length;{const c={};ED[k].forEach(o=>{if(o.fi){const y=o.fi.getFullYear();c[y]=(c[y]||0)+1}});const ys=Object.keys(c).sort((a,b)=>c[b]-c[a]);if(ys.length)ANIO_ACTUAL=+ys[0]}ED[k]=ED[k].filter(o=>String(o.r.fecha_inclusion_modificacion||'').trim()!=='')}
     if(k===ACT){YR[k]=ANIO_ACTUAL;LBL[k]='Actual ('+ANIO_ACTUAL+')'}else{YR[k]=+k;LBL[k]=k}});
   ORD=Object.keys(ED).sort((a,b)=>(a===ACT?-1:b===ACT?1:YR[b]-YR[a]));
   $('badge').textContent='Edición '+ANIO_ACTUAL;fillExp()}
@@ -211,7 +212,7 @@ function fill(id,vals,lab){const s=$(id),v=s.value;s.innerHTML=`<option value=""
 function init(){const d=ED[ACT]||[];
   for(const [id,k] of Object.entries(F))fill(id,[...new Set(d.map(r=>r[k]))].sort(cmp),TODO[id]);fillLoc();
   fill('fMes',MESES.map((m,i)=>[String(i),m]),TODO.fMes);
-  $('meta').textContent=LBL[ACT]+' · '+fmt(d.length)+' ferias (de '+fmt(TOT)+' en la hoja)'+(LAST?' · Datos: '+new Date(LAST).toLocaleString('es-ES',{dateStyle:'short',timeStyle:'short'}):'');
+  $('meta').textContent=LBL[ACT]+' · '+fmt(d.length)+' ferias inscritas a fecha '+new Date().toLocaleDateString('es-ES');
   render();years()}
 function pred(){const q=nq($('fQ').value),m=$('fMes').value,l=nq($('fLoc').value.trim()),ex=!!l&&(ED[ACT]||[]).some(r=>nq(r.loc)===l),fs=Object.entries(F).filter(([id])=>$(id).value).map(([id,k])=>[k,$(id).value]);
   return r=>(!q||r.txt.includes(q))&&(!l||(ex?nq(r.loc)===l:nq(r.loc).includes(l)))&&fs.every(([k,v])=>r[k]===v)&&(m===''||r.mes===+m)}
@@ -351,7 +352,7 @@ async function exportar(f){XP=$('xF').checked&&nFil()?pred():null;const v=$('xY'
       doc.autoTable({startY:62,head:[hd],body:fr,styles:{fontSize:7,cellPadding:3,overflow:'linebreak'},headStyles:{fillColor:[194,65,12],textColor:255},alternateRowStyles:{fillColor:[250,244,236]},margin:{left:30,right:30,bottom:30},columnStyles:cs});
       const n=doc.getNumberOfPages();for(let i=1;i<=n;i++){doc.setPage(i);doc.setFontSize(8);doc.setTextColor(120);doc.text('Página '+i+' de '+n,doc.internal.pageSize.getWidth()-30,doc.internal.pageSize.getHeight()-14,{align:'right'})}
       doc.save(nm+'.pdf')}
-    S.textContent='Descarga lista ('+fmt(tot)+' ferias). Sin correos ni teléfonos.'
+    S.textContent='Descarga lista ('+fmt(tot)+' ferias).'
   }catch(e){console.error(e);S.textContent='Error: '+e.message}
   finally{bs.forEach(b=>b.disabled=false)}}
 const xInfo=()=>{const n=nFil();$('xN').textContent=n?n+(n>1?' filtros activos':' filtro activo')+' ahora mismo':'No hay filtros activos ahora mismo'};
