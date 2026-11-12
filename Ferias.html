@@ -60,6 +60,7 @@ th[data-k]{cursor:pointer;user-select:none}th[data-k]:hover{color:var(--acc)}th[
 .ti{width:15px;height:15px;margin-right:6px;flex:none}small .ti{width:13px;height:13px;margin:0 5px 0 0}
 @media(min-width:901px){.g2c{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .mapw{border-radius:16px;overflow:hidden;border:1px solid var(--line);margin:6px 0 14px;background:var(--card2)}.mapw iframe{width:100%;height:300px;border:0;display:block}
+.hb{display:grid;gap:7px;margin:10px 0 16px}.hr{display:grid;grid-template-columns:120px 1fr 30px;gap:12px;align-items:center}.hr i{display:block;height:10px;border-radius:99px;background:linear-gradient(90deg,var(--acc),#E0A030)}.hr b{text-align:right}
 [hidden]{display:none!important}
 @media(max-width:700px){.ev{grid-template-columns:1fr}main{padding:16px}header{padding:12px 16px}.grid,.g2{grid-template-columns:1fr}.kv{font-size:30px}}
 </style>
@@ -155,7 +156,7 @@ const nq=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowe
 const cmp=(a,b)=>String(a).localeCompare(String(b),'es',{sensitivity:'base',numeric:true});
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const sum=(d,f)=>d.reduce((s,r)=>s+f(r),0);
-let ED={},LBL={},YR={},ORD=[],CUR='',ACT='',D=[],PG=0,charts={},LAST='',LISTA=[],TOT=0,AG=[];
+let ED={},LBL={},YR={},ORD=[],CUR='',ACT='',D=[],PG=0,charts={},LAST='',LISTA=[],TOT=0,AG=[],EL=[];
 const SRT={lis:{k:'fi',d:1},ani:{k:'fi',d:1},ent:{k:'c',d:-1},loc:{k:'c',d:-1},res:{k:'y',d:-1},mat:{k:'cnt',d:-1}};
 const SK={fi:r=>r.fi?+r.fi:null,ff:r=>r.ff?+r.ff:null,vis:r=>r.vis,exp:r=>r.exp};
 function sortRows(a,st){const f=SK[st.k]||(r=>r[st.k]);return a.slice().sort((x,y)=>{const u=f(x),v=f(y);if(u==null&&v==null)return cmp(x.nom,y.nom);if(u==null)return 1;if(v==null)return -1;return((typeof u==='number'?u-v:cmp(u,v))*st.d)||cmp(x.nom,y.nom)})}
@@ -226,7 +227,7 @@ function tablas(d){const E=[...by(d,r=>String(r.r.entidad_organizadora||'Sin dat
   L=[...by(d,r=>r.loc+'||'+r.prov)].map(x=>{const p=x[0].split('||');return{n:p[0],p:p[1],c:x[1]}});
   const so=(a,st)=>a.sort((x,y)=>((st.k==='c'?x.c-y.c:cmp(x[st.k],y[st.k]))*st.d)||cmp(x.n,y.n));so(E,SRT.ent);so(L,SRT.loc);
   $('hE').textContent='Entidades organizadoras ('+fmt(E.length)+')';$('hL').textContent='Localidades de celebración ('+fmt(L.length)+')';
-  $('tE').innerHTML=E.map(x=>`<tr style="cursor:default"><td>${esc(x.n)}</td><td class="num"><b>${x.c}</b></td></tr>`).join('')||'<tr><td colspan="2">Sin resultados</td></tr>';
+  EL=E;$('tE').innerHTML=E.map((x,i)=>`<tr data-i="${i}" title="Ver histórico de esta entidad"><td>${esc(x.n)}</td><td class="num"><b>${x.c}</b></td></tr>`).join('')||'<tr><td colspan="2">Sin resultados</td></tr>';
   $('tL').innerHTML=L.map(x=>`<tr style="cursor:default"><td>${esc(x.n)}</td><td>${esc(x.p)}</td><td class="num"><b>${x.c}</b></td></tr>`).join('')||'<tr><td colspan="3">Sin resultados</td></tr>'}
 function render(){const d=D=get(),hoy=new Date();hoy.setHours(0,0,0,0);
   const k=(t,v,f)=>`<div class="kpi">${kic(t)}<div class="kl">${t}</div><div class="kv">${v}</div><div class="kf">${f}</div></div>`;
@@ -246,6 +247,18 @@ function agenda(){let h='',m=-2;AG.forEach((r,i)=>{if(r.mes!==m){m=r.mes;h+=`<di
   $('agenda').innerHTML=h||'Sin resultados'}
 $('agenda').onclick=e=>{const t=e.target.closest('.ev');if(t)detail(AG[+t.dataset.i])};
 const url=u=>{u=String(u).trim();return /^[a-z][a-z0-9+.-]*:/i.test(u)?u:'https://'+u.replace(/^\/+/,'')};
+const kn=s=>nq(s).replace(/\s+/g,' ').trim();
+function entidad(i){const e=EL[i];if(!e)return;const k=kn(e.n);
+  const per=ORD.slice().sort((a,b)=>YR[b]-YR[a]).map(y=>({y,l:LBL[y],rows:sortRows(ED[y].filter(r=>kn(r.r.entidad_organizadora||'Sin dato')===k),{k:'fi',d:1})})),
+    act=per.filter(p=>p.y===ACT)[0].rows.length,prev=sum(per.filter(p=>p.y!==ACT),p=>p.rows.length),mx=Math.max(1,...per.map(p=>p.rows.length)),
+    pill=(t,v)=>`<div class="kpi" style="padding:12px 16px"><div class="kl" style="max-width:none">${t}</div><div class="kv" style="font-size:28px">${v}</div></div>`;
+  $('dg').innerHTML=`<h2 style="margin:0">${esc(e.n)}</h2><p class="sub">Entidad organizadora</p>
+  <div class="kpis" style="grid-template-columns:repeat(3,1fr);margin:12px 0 4px">${pill('Edición '+ANIO_ACTUAL,act)+pill('Años anteriores',prev)+pill('Total',act+prev)}</div>
+  <h2 style="font-size:15px;margin:14px 0 0">Histórico por año</h2>
+  <div class="hb">${per.slice().reverse().map(p=>`<div class="hr"><span>${esc(p.l)}</span><i style="width:${p.rows.length/mx*100}%"></i><b>${p.rows.length}</b></div>`).join('')}</div>
+  <div class="ts" style="max-height:300px"><table><thead><tr><th>Edición</th><th>Inicio</th><th>Feria</th><th>Localidad</th><th class="num">Visitantes</th></tr></thead><tbody>${per.flatMap(p=>p.rows.map(r=>`<tr style="cursor:default"><td><b>${esc(p.l)}</b></td><td>${fd(r.fi)}</td><td>${esc(r.nom)}</td><td>${esc(r.loc)}</td><td class="num">${r.vis?fmt(r.vis):'–'}</td></tr>`)).join('')}</tbody></table></div>
+  <div style="margin-top:14px"><button class="btn" onclick="dg.close()">Cerrar</button></div>`;$('dg').showModal()}
+$('tE').onclick=e=>{const t=e.target.closest('tr');if(t&&t.dataset.i)entidad(+t.dataset.i)};
 const mq=o=>[o.r.lugar_realizacion,o.loc,o.prov,'España'].map(x=>String(x||'').trim()).filter(x=>x&&x!=='Sin dato').join(', ');
 function detail(o){const r=o.r,L=[['Edición',r.edicion],['Fechas',fd(o.fi)+(o.ff?' – '+fd(o.ff):'')],['Horario',r.horario],['Lugar',r.lugar_realizacion],['Localidad',o.loc+' ('+o.prov+')'],['Ámbito / periodicidad',o.amb+' · '+o.per],['Tipo',ico(o.tipo)+esc(o.tipo)],
   ['Visitantes',o.vis?fmt(o.vis)+' ('+o.car+')':o.car],['Expositores',`${fmt(num(r.n_expositores_espanoles))} españoles · ${fmt(num(r.n_expositores_extranjeros))} extranjeros`],['Organizador',r.entidad_organizadora],['NIF',r.nif_entidad_organizadora],
