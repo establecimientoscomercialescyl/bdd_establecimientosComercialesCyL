@@ -87,7 +87,7 @@ th[data-k]{cursor:pointer;user-select:none}th[data-k]:hover{color:var(--acc)}th[
   <section id="filt" class="filters">
     <div><label>Buscar</label><input id="fQ" placeholder="Feria, localidad, organizador…"></div>
     <div><label>Provincia</label><select id="fProv"></select></div>
-    <div><label>Localidad</label><select id="fLoc"></select></div>
+    <div><label>Localidad</label><input id="fLoc" type="search" list="dlLoc" placeholder="Escribe para buscar…" autocomplete="off"><datalist id="dlLoc"></datalist></div>
     <div><label>Tipo de feria</label><select id="fTipo"></select></div>
     <div><label>Ámbito</label><select id="fAmb"></select></div>
     <div><label>Periodicidad</label><select id="fPer"></select></div>
@@ -197,18 +197,18 @@ async function load(n=0,refresh=false){
 $('rl').onclick=()=>load(0,true);
 
 // ---- filtros ----
-const F={fProv:'prov',fLoc:'loc',fTipo:'tipo',fAmb:'amb',fPer:'per',fCar:'car'};
+const F={fProv:'prov',fTipo:'tipo',fAmb:'amb',fPer:'per',fCar:'car'};
 const TODO={fProv:'Todas',fLoc:'Todas',fTipo:'Todos',fAmb:'Todos',fPer:'Todas',fCar:'Todos',fMes:'Todos'};
 function fill(id,vals,lab){const s=$(id),v=s.value;s.innerHTML=`<option value="">${lab}</option>`+vals.map(x=>Array.isArray(x)?`<option value="${esc(x[0])}">${esc(x[1])}</option>`:`<option value="${esc(x)}">${esc(x)}</option>`).join('');if([...s.options].some(o=>o.value===v))s.value=v}
 function init(){const d=ED[ACT]||[];
-  for(const [id,k] of Object.entries(F)){if(id==='fLoc'){const p=$('fProv').value;fill(id,[...new Set(d.filter(r=>!p||r.prov===p).map(r=>r.loc))].sort(cmp),TODO[id])}else fill(id,[...new Set(d.map(r=>r[k]))].sort(cmp),TODO[id])}
+  for(const [id,k] of Object.entries(F))fill(id,[...new Set(d.map(r=>r[k]))].sort(cmp),TODO[id]);fillLoc();
   fill('fMes',MESES.map((m,i)=>[String(i),m]),TODO.fMes);
   $('meta').textContent=LBL[ACT]+' · '+fmt(d.length)+' ferias (de '+fmt(TOT)+' en la hoja)'+(LAST?' · Datos: '+new Date(LAST).toLocaleString('es-ES',{dateStyle:'short',timeStyle:'short'}):'');
   render();years()}
-function get(){const q=nq($('fQ').value),m=$('fMes').value;
-  return (ED[ACT]||[]).filter(r=>(!q||r.txt.includes(q))&&Object.entries(F).every(([id,k])=>!$(id).value||r[k]===$(id).value)&&(m===''||r.mes===+m))}
+function get(){const q=nq($('fQ').value),m=$('fMes').value,l=nq($('fLoc').value.trim()),ex=!!l&&(ED[ACT]||[]).some(r=>nq(r.loc)===l);
+  return (ED[ACT]||[]).filter(r=>(!q||r.txt.includes(q))&&(!l||(ex?nq(r.loc)===l:nq(r.loc).includes(l)))&&Object.entries(F).every(([id,k])=>!$(id).value||r[k]===$(id).value)&&(m===''||r.mes===+m))}
 document.querySelectorAll('#filt select,#filt input').forEach(e=>e.oninput=()=>{if(e.id==='fProv')$('fLoc').value='';if(e.id==='fProv')fillLoc();render()});
-function fillLoc(){const p=$('fProv').value;fill('fLoc',[...new Set((ED[ACT]||[]).filter(r=>!p||r.prov===p).map(r=>r.loc))].sort(cmp),TODO.fLoc)}
+function fillLoc(){const p=$('fProv').value;$('dlLoc').innerHTML=[...new Set((ED[ACT]||[]).filter(r=>!p||r.prov===p).map(r=>r.loc))].sort(cmp).map(x=>`<option value="${esc(x)}">`).join('')}
 
 // ---- tabs ----
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x===b));
