@@ -24,7 +24,7 @@ main{width:100%;max-width:2000px;margin:0 auto;padding:24px 36px 60px}
 .tabs{display:inline-flex;gap:4px;background:var(--card2);padding:5px;border-radius:999px;margin-bottom:22px;flex-wrap:wrap}
 .tab{background:none;border:0;padding:9px 22px;border-radius:999px;font:700 14px 'Plus Jakarta Sans',sans-serif;color:var(--mute);cursor:pointer;transition:.15s}
 .tab:hover{color:var(--ink)}.tab.on{background:var(--card);color:var(--acc);box-shadow:var(--shadow)}
-.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:22px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;box-shadow:var(--shadow)}
+.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(136px,1fr));gap:12px;margin-bottom:22px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;box-shadow:var(--shadow)}
 .filters label{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--mute);display:block;margin-bottom:4px}
 .filters select,.filters input{width:100%;background:var(--bg)}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-bottom:22px}
@@ -68,12 +68,46 @@ th[data-k]{cursor:pointer;user-select:none}th[data-k]:hover{color:var(--acc)}th[
 #xS:empty{display:none}
 .btn:disabled{opacity:.5;cursor:default;transform:none}
 .seg{display:inline-flex;background:var(--card2);padding:3px;border-radius:99px}.seg button{border:0;background:none;padding:5px 13px;border-radius:99px;font:700 12px 'Plus Jakarta Sans',system-ui,sans-serif;color:var(--mute);cursor:pointer}.seg button:hover{color:var(--ink)}.seg button.on{background:var(--card);color:var(--acc);box-shadow:var(--shadow)}
+/* menú lateral, tarjetas compactas */
+.app{display:flex;min-height:100vh}.content{flex:1;min-width:0}
+.side{position:sticky;top:0;align-self:flex-start;height:100vh;width:236px;flex:none;background:var(--card);border-right:1px solid var(--line);padding:14px 12px;display:flex;flex-direction:column;gap:6px;transition:width .2s;z-index:25;overflow:hidden}
+.app.col .side{width:72px}
+.sb-t{display:flex;align-items:center;gap:12px;width:100%;border:0;background:none;color:var(--mute);font:700 13px 'Plus Jakarta Sans',system-ui,sans-serif;padding:10px 14px;border-radius:14px;cursor:pointer;margin-bottom:8px;white-space:nowrap}
+.sb-t:hover{background:var(--card2);color:var(--ink)}.sb-t svg{transition:transform .2s}.app.col .sb-t svg{transform:rotate(180deg)}
+.tabs{display:flex;flex-direction:column;gap:4px;background:none;padding:0;margin:0;border-radius:0}
+.tab{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:11px 14px;border-radius:14px;white-space:nowrap}
+.tab svg,.sb-t svg{width:20px;height:20px;flex:none}
+.tab:hover{background:var(--card2);color:var(--ink)}.tab.on{background:var(--acc-soft);color:var(--acc);box-shadow:none}
+.app.col .tl{display:none}.app.col .tab,.app.col .sb-t{justify-content:center;padding-left:0;padding-right:0}
+header{padding:10px 28px}main{padding:16px 32px 48px}.filters{margin-bottom:16px;padding:12px 14px}
+.kpis{gap:12px;margin-bottom:16px;grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+.kpi{padding:11px 16px}.ki{right:12px;top:11px;width:32px;height:32px;border-radius:10px}.ki svg{width:17px;height:17px}
+.kv{font-size:27px;margin-top:1px;line-height:1.15}.kl{font-size:10.5px}.kf{font-size:11.5px;line-height:1.25}
+.calh{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}.calh h2{margin:0}
+.calnav{display:flex;align-items:center;gap:6px}.calnav b{min-width:136px;text-align:center}.calnav .btn{padding:3px 12px;font-size:16px;line-height:1.2}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}.cal .wd{font-size:10.5px;font-weight:800;color:var(--mute);text-align:center;padding:2px 0}
+.cd{height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;position:relative;font-weight:600;font-size:12.5px}
+.cd.has{background:var(--acc-soft);color:var(--acc);font-weight:800;cursor:pointer}.cd.has:hover{background:var(--acc);color:#fff}.cd.sel{background:var(--acc);color:#fff}
+.cd.today{box-shadow:inset 0 0 0 2px var(--acc2)}.cd s{position:absolute;right:4px;top:1px;font-size:9px;text-decoration:none;font-weight:800}
+.cl{max-height:112px;overflow:auto}.ci{display:grid;grid-template-columns:96px 1fr;gap:10px;padding:5px 6px;border-radius:8px;cursor:pointer}.ci:hover{background:var(--acc-soft)}
+.ci span{color:var(--acc);font-weight:700;font-size:12px;white-space:nowrap}.ci div{font-size:12.5px;line-height:1.3}
 [hidden]{display:none!important}
-@media(max-width:700px){.ev{grid-template-columns:1fr}main{padding:16px}header{padding:12px 16px}.grid,.g2{grid-template-columns:1fr}.kv{font-size:30px}}
+@media(max-width:700px){.ev{grid-template-columns:1fr}main{padding:14px}header{padding:10px 14px}.grid,.g2{grid-template-columns:1fr}.kv{font-size:24px}.side{padding:10px 6px}.app.col .side{width:56px}}
 </style>
 </head>
 <body>
 <div class="load" id="load" hidden></div>
+<div class="app" id="app">
+<aside class="side" id="side">
+  <button class="sb-t" id="sbT" title="Contraer menú"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg><span class="tl">Contraer menú</span></button>
+  <nav class="tabs">
+    <button class="tab on" data-t="pan" title="Inicio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8v10H3z"/><path d="M9 21v-6h6v6"/></svg><span class="tl">Inicio</span></button>
+    <button class="tab" data-t="age" title="Calendario"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span class="tl">Calendario</span></button>
+    <button class="tab" data-t="lis" title="Listado"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span class="tl">Listado</span></button>
+    <button class="tab" data-t="ani" title="Años anteriores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg><span class="tl">Años anteriores</span></button>
+  </nav>
+</aside>
+<div class="content">
 <header>
   <div><h1>Ferias de <span>Castilla y León</span></h1><div class="sub" id="meta"></div></div>
   <div class="bar">
@@ -89,12 +123,6 @@ th[data-k]{cursor:pointer;user-select:none}th[data-k]:hover{color:var(--acc)}th[
 </header>
 <main>
   <div class="ban" id="ban" hidden></div>
-  <nav class="tabs">
-    <button class="tab on" data-t="pan">Inicio</button>
-    <button class="tab" data-t="age">Calendario</button>
-    <button class="tab" data-t="lis">Listado</button>
-    <button class="tab" data-t="ani">Años anteriores</button>
-  </nav>
   <section id="filt" class="filters">
     <div><label>Buscar</label><input id="fQ" placeholder="Feria, localidad, organizador…"></div>
     <div><label>Provincia</label><select id="fProv"></select></div>
@@ -109,8 +137,10 @@ th[data-k]{cursor:pointer;user-select:none}th[data-k]:hover{color:var(--acc)}th[
 
   <section id="t-pan">
     <div class="kpis" id="kpis"></div>
-    <div class="grid">
+    <div class="grid g2c">
       <div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px"><h2 style="margin:0">Ferias por provincia</h2><div class="seg" id="sP" title="Ordenar el gráfico"><button data-o="n" class="on">Nº de ferias</button><button data-o="a">Provincia A-Z</button></div></div><div class="cv"><canvas id="cProv"></canvas></div></div>
+      <div class="card"><div class="calh"><h2>Calendario de ferias</h2><div class="calnav"><button class="btn" id="cP" title="Mes anterior">‹</button><b id="cT"></b><button class="btn" id="cN" title="Mes siguiente">›</button></div></div>
+        <div class="cal" id="cal"></div><div class="sub" id="cH" style="margin:10px 0 4px;font-weight:700"></div><div class="cl" id="cLs"></div></div>
       <div class="card"><h2>Tipo de feria</h2><div class="cv"><canvas id="cTipo"></canvas></div></div>
       <div class="card"><h2>Ámbito territorial</h2><div class="cv"><canvas id="cAmb"></canvas></div></div>
     </div>
@@ -134,6 +164,7 @@ th[data-k]{cursor:pointer;user-select:none}th[data-k]:hover{color:var(--acc)}th[
     </div>
   </section>
 </main>
+</div></div>
 <dialog id="dg"></dialog>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
@@ -206,7 +237,7 @@ function apply(j){LAST=j.ts||'';ACT=j.actual;ED={};LBL={};YR={};
       if(ANIO_FIJO)ANIO_ACTUAL=ANIO_FIJO;else{const c={};let n=0;ED[k].forEach(o=>{if(o.fi){const y=o.fi.getFullYear();c[y]=(c[y]||0)+1;n++}});const ys=Object.keys(c).map(Number).filter(y=>c[y]>=Math.max(1,.1*n)).sort((a,b)=>b-a);if(ys.length)ANIO_ACTUAL=ys[0]}}
     if(k===ACT){YR[k]=ANIO_ACTUAL;LBL[k]=String(ANIO_ACTUAL)}else{YR[k]=+k;LBL[k]=k}});
   ORD=Object.keys(ED).sort((a,b)=>(a===ACT?-1:b===ACT?1:YR[b]-YR[a]));
-  $('badge').textContent='Edición '+ANIO_ACTUAL;fillExp()}
+  $('badge').textContent='Edición '+ANIO_ACTUAL;fillExp();if(!CALU){CY=ANIO_ACTUAL;CM=new Date().getMonth();CD=null}}
 async function load(n=0,refresh=false){
   if(n===0&&!refresh){try{const c=JSON.parse(localStorage.getItem(KEY)||'null');if(c){apply(c);init()}}catch(e){console.error(e)}}
   busy(true);fail('');let j;
@@ -252,6 +283,21 @@ function tablas(d){const E=[...by(d,r=>String(r.r.entidad_organizadora||'Sin dat
   $('hE').textContent='Entidades organizadoras ('+fmt(E.length)+')';$('hL').textContent='Localidades de celebración ('+fmt(L.length)+')';
   EL=E;$('tE').innerHTML=E.map((x,i)=>`<tr data-i="${i}" title="Ver histórico de esta entidad"><td>${esc(x.n)}</td><td class="num"><b>${x.c}</b></td></tr>`).join('')||'<tr><td colspan="2">Sin resultados</td></tr>';
   $('tL').innerHTML=L.map(x=>`<tr style="cursor:default"><td>${esc(x.n)}</td><td>${esc(x.p)}</td><td class="num"><b>${x.c}</b></td></tr>`).join('')||'<tr><td colspan="3">Sin resultados</td></tr>'}
+let CY=2027,CM=0,CD=null,CALU=false,CALL=[];
+function cal(){const first=new Date(CY,CM,1),dim=new Date(CY,CM+1,0).getDate(),end=new Date(CY,CM,dim),off=(first.getDay()+6)%7,dm=new Map(),hoy=new Date();
+  D.forEach(r=>{if(!r.fi)return;const e=r.ff&&r.ff>=r.fi?r.ff:r.fi;if(e<first||r.fi>end)return;const a=r.fi<first?1:r.fi.getDate(),z=e>end?dim:e.getDate();for(let d=a;d<=z;d++){if(!dm.has(d))dm.set(d,[]);dm.get(d).push(r)}});
+  $('cT').textContent=MESES[CM]+' '+CY;
+  let h=['L','M','X','J','V','S','D'].map(x=>`<div class="wd">${x}</div>`).join('');
+  for(let i=0;i<42;i++){const d=i-off+1;if(d<1||d>dim){h+='<div></div>';continue}const l=dm.get(d),isT=hoy.getFullYear()===CY&&hoy.getMonth()===CM&&hoy.getDate()===d;
+    h+=l?`<div class="cd has${CD===d?' sel':''}${isT?' today':''}" data-d="${d}" title="${esc(l.slice(0,4).map(r=>r.nom).join('\n'))}${l.length>4?'\n…':''}">${d}<s>${l.length>1?l.length:''}</s></div>`:`<div class="cd${isT?' today':''}">${d}</div>`}
+  $('cal').innerHTML=h;
+  const all=[...new Set([].concat(...dm.values()))].sort((a,b)=>a.fi-b.fi||cmp(a.nom,b.nom));CALL=CD&&dm.get(CD)?dm.get(CD).slice().sort((a,b)=>cmp(a.nom,b.nom)):all;
+  $('cH').textContent=CD&&dm.get(CD)?fmt(CALL.length)+(CALL.length===1?' feria el ':' ferias el ')+String(CD).padStart(2,'0')+'/'+String(CM+1).padStart(2,'0')+'/'+CY+' (pulsa de nuevo el día para ver todo el mes)':(all.length?fmt(all.length)+(all.length===1?' feria en ':' ferias en ')+MESES[CM].toLowerCase()+' de '+CY:'Sin ferias en '+MESES[CM].toLowerCase()+' de '+CY);
+  $('cLs').innerHTML=CALL.map((r,i)=>`<div class="ci" data-i="${i}"><span>${r.fi.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit'})}${r.ff&&+r.ff!==+r.fi?' – '+r.ff.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit'}):''}</span><div><b>${esc(r.nom)}</b> · ${esc(r.loc)}</div></div>`).join('')}
+const calGo=n=>{CALU=true;CD=null;CM+=n;if(CM<0){CM=11;CY--}if(CM>11){CM=0;CY++}cal()};
+$('cP').onclick=()=>calGo(-1);$('cN').onclick=()=>calGo(1);
+$('cal').onclick=e=>{const c=e.target.closest('.cd.has');if(!c)return;CALU=true;CD=CD===+c.dataset.d?null:+c.dataset.d;cal()};
+$('cLs').onclick=e=>{const c=e.target.closest('.ci');if(c)detail(CALL[+c.dataset.i])};
 let ORDP='n';
 const provData=d=>[...by(d,r=>r.prov)].sort((a,b)=>ORDP==='a'?cmp(a[0],b[0]):(b[1]-a[1])||cmp(a[0],b[0]));
 $('sP').onclick=e=>{const b=e.target.closest('button');if(!b)return;ORDP=b.dataset.o;$('sP').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));bar('cProv',provData(D))};
@@ -262,7 +308,7 @@ function render(){const nf=nFil();$('fClr').textContent=nf?'✕ Limpiar filtros 
     k('Expositores',fmt(sum(d,r=>r.exp)),'españoles + extranjeros')+k('Localidades',fmt(new Set(d.map(r=>r.loc)).size),'sedes distintas')+
     k('Organizadores',fmt(new Set(d.map(r=>r.r.nif_entidad_organizadora||r.r.entidad_organizadora)).size),'entidades')+k('Por celebrar',fmt(pr),'desde hoy');
   bar('cProv',provData(d));dough('cTipo',by(d,r=>r.tipo));polar('cAmb',by(d,r=>r.amb));tablas(d);
-  AG=d.slice().sort((a,b)=>(a.fi||1e15)-(b.fi||1e15)||cmp(a.nom,b.nom));LISTA=sortRows(d,SRT.lis);PG=0;list();agenda()}
+  AG=d.slice().sort((a,b)=>(a.fi||1e15)-(b.fi||1e15)||cmp(a.nom,b.nom));LISTA=sortRows(d,SRT.lis);PG=0;list();agenda();cal()}
 function list(){const n=LISTA.length,pg=Math.max(1,Math.ceil(n/PS));PG=Math.min(PG,pg-1);
   $('tb').innerHTML=LISTA.slice(PG*PS,PG*PS+PS).map(r=>`<tr data-i="${LISTA.indexOf(r)}"><td>${fd(r.fi)}</td><td>${fd(r.ff)}</td><td><b>${esc(r.nom)}</b></td><td>${esc(r.loc)}</td><td>${esc(r.prov)}</td><td><span class="tag">${ico(r.tipo)}${esc(r.tipo)}</span></td><td class="num">${r.vis?fmt(r.vis):'–'}</td><td class="num">${r.exp?fmt(r.exp):'–'}</td></tr>`).join('')||'<tr><td colspan="8">Sin resultados</td></tr>';
   $('pi').textContent=`Página ${PG+1} de ${pg} · ${fmt(n)} ferias`;$('pp').disabled=PG===0;$('pn').disabled=PG>=pg-1}
@@ -375,6 +421,12 @@ $('xb').onclick=e=>{e.stopPropagation();$('xp').hidden=!$('xp').hidden;if(!$('xp
 document.addEventListener('click',e=>{if(e.isTrusted&&!e.target.closest('.xw'))$('xp').hidden=true});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')$('xp').hidden=true});
 document.querySelectorAll('.xf .btn').forEach(b=>b.onclick=()=>exportar(b.dataset.f));
+
+// ---- menú lateral plegable ----
+const APP=$('app');
+function setCol(c,save){APP.classList.toggle('col',c);$('sbT').title=c?'Expandir menú':'Contraer menú';if(save){try{localStorage.setItem('ferias-cyl-menu',c?'1':'0')}catch(e){}}setTimeout(()=>Object.values(charts).forEach(x=>x.resize()),260)}
+$('sbT').onclick=()=>setCol(!APP.classList.contains('col'),true);
+{let sv=null;try{sv=localStorage.getItem('ferias-cyl-menu')}catch(e){}setCol(sv==null?innerWidth<900:sv==='1',false)}
 
 try{theme(localStorage.getItem(TK)||'light',false)}catch(e){document.documentElement.dataset.theme='light'}
 if(typeof Chart==='undefined')fail('No se ha podido cargar la librería de gráficos (Chart.js). Revisa la conexión o los bloqueadores del navegador.');
