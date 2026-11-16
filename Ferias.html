@@ -238,7 +238,7 @@ $('th').onclick=()=>{const n=document.documentElement.dataset.theme==='light'?'d
 const busy=on=>$('load').hidden=!on;
 function fail(m){$('ban').hidden=!m;$('ban').textContent=m||''}
 function apply(j){LAST=j.ts||'';ACT=j.actual;ED={};LBL={};YR={};
-  TOT=0;Object.keys(j.hojas).forEach(k=>{CL[k]=j.hojas[k].cols;ED[k]=prep(j.hojas[k].cols,j.hojas[k].rows);
+  TOT=0;Object.keys(j.hojas).forEach(k=>{CL[k]=j.hojas[k].cols;ED[k]=prep(j.hojas[k].cols,j.hojas[k].rows);ED[k].forEach(o=>o.k=k);
     if(k===ACT){TOT=ED[k].length;ED[k]=ED[k].filter(o=>String(o.r.fecha_inclusion_modificacion||'').trim()!=='');
       if(ANIO_FIJO)ANIO_ACTUAL=ANIO_FIJO;else{const c={};let n=0;ED[k].forEach(o=>{if(o.fi){const y=o.fi.getFullYear();c[y]=(c[y]||0)+1;n++}});const ys=Object.keys(c).map(Number).filter(y=>c[y]>=Math.max(1,.1*n)).sort((a,b)=>b-a);if(ys.length)ANIO_ACTUAL=ys[0]}}
     if(k===ACT){YR[k]=ANIO_ACTUAL;LBL[k]=String(ANIO_ACTUAL)}else{YR[k]=+k;LBL[k]=k}});
@@ -290,16 +290,17 @@ function tablas(d){const E=[...by(d,r=>String(r.r.entidad_organizadora||'Sin dat
   EL=E;$('tE').innerHTML=E.map((x,i)=>`<tr data-i="${i}" title="Ver histórico de esta entidad"><td>${esc(x.n)}</td><td class="num"><b>${x.c}</b></td></tr>`).join('')||'<tr><td colspan="2">Sin resultados</td></tr>';
   $('tL').innerHTML=L.map(x=>`<tr style="cursor:default"><td>${esc(x.n)}</td><td>${esc(x.p)}</td><td class="num"><b>${x.c}</b></td></tr>`).join('')||'<tr><td colspan="3">Sin resultados</td></tr>'}
 let CY=2027,CM=0,CD=null,CALU=false,CALL=[];
+const calSrc=()=>{const f=pred();return [].concat(...ORD.map(k=>ED[k].filter(f)))};
 function cal(){const first=new Date(CY,CM,1),dim=new Date(CY,CM+1,0).getDate(),end=new Date(CY,CM,dim),off=(first.getDay()+6)%7,dm=new Map(),hoy=new Date();
-  D.forEach(r=>{if(!r.fi)return;const e=r.ff&&r.ff>=r.fi?r.ff:r.fi;if(e<first||r.fi>end)return;const a=r.fi<first?1:r.fi.getDate(),z=e>end?dim:e.getDate();for(let d=a;d<=z;d++){if(!dm.has(d))dm.set(d,[]);dm.get(d).push(r)}});
+  calSrc().forEach(r=>{if(!r.fi)return;const e=r.ff&&r.ff>=r.fi?r.ff:r.fi;if(e<first||r.fi>end)return;const a=r.fi<first?1:r.fi.getDate(),z=e>end?dim:e.getDate();for(let d=a;d<=z;d++){if(!dm.has(d))dm.set(d,[]);dm.get(d).push(r)}});
   $('cT').textContent=MESES[CM]+' '+CY;
   let h=['L','M','X','J','V','S','D'].map(x=>`<div class="wd">${x}</div>`).join('');
   for(let i=0;i<42;i++){const d=i-off+1;if(d<1||d>dim){h+='<div class="cd emp"></div>';continue}const l=dm.get(d),isT=hoy.getFullYear()===CY&&hoy.getMonth()===CM&&hoy.getDate()===d;
-    h+=l?`<div class="cd has${CD===d?' sel':''}${isT?' today':''}" data-d="${d}" title="${esc(l.slice(0,4).map(r=>r.nom).join('\n'))}${l.length>4?'\n…':''}">${d}<s>${l.length>1?l.length:''}</s></div>`:`<div class="cd${isT?' today':''}">${d}</div>`}
+    h+=l?`<div class="cd has${CD===d?' sel':''}${isT?' today':''}" data-d="${d}" title="${esc(l.slice(0,4).map(r=>r.nom+' ('+LBL[r.k]+')').join('\n'))}${l.length>4?'\n…':''}">${d}<s>${l.length>1?l.length:''}</s></div>`:`<div class="cd${isT?' today':''}">${d}</div>`}
   $('cal').innerHTML=h;
   const all=[...new Set([].concat(...dm.values()))].sort((a,b)=>a.fi-b.fi||cmp(a.nom,b.nom));CALL=CD&&dm.get(CD)?dm.get(CD).slice().sort((a,b)=>cmp(a.nom,b.nom)):all;
   $('cH').textContent=CD&&dm.get(CD)?fmt(CALL.length)+(CALL.length===1?' feria el ':' ferias el ')+String(CD).padStart(2,'0')+'/'+String(CM+1).padStart(2,'0')+'/'+CY+' (pulsa de nuevo el día para ver todo el mes)':(all.length?fmt(all.length)+(all.length===1?' feria en ':' ferias en ')+MESES[CM].toLowerCase()+' de '+CY:'Sin ferias en '+MESES[CM].toLowerCase()+' de '+CY);
-  $('cLs').innerHTML=CALL.map((r,i)=>`<div class="ci" data-i="${i}"><span>${r.fi.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit'})}${r.ff&&+r.ff!==+r.fi?' – '+r.ff.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit'}):''}</span><div><b>${esc(r.nom)}</b> · ${esc(r.loc)}</div></div>`).join('')}
+  $('cLs').innerHTML=CALL.map((r,i)=>`<div class="ci" data-i="${i}"><span>${r.fi.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit'})}${r.ff&&+r.ff!==+r.fi?' – '+r.ff.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit'}):''}</span><div><b>${esc(r.nom)}</b> · ${esc(r.loc)} <span class="tag" style="margin-left:4px;padding:1px 8px;font-size:10.5px${r.k===ACT?'':';background:var(--acc2-soft);color:var(--acc2)'}">Edición ${esc(LBL[r.k])}</span></div></div>`).join('')}
 const calGo=n=>{CALU=true;CD=null;CM+=n;if(CM<0){CM=11;CY--}if(CM>11){CM=0;CY++}cal()};
 $('cY').onclick=()=>{const t=new Date();CALU=false;CD=null;CY=t.getFullYear();CM=t.getMonth();cal()};
 $('cP').onclick=()=>calGo(-1);$('cN').onclick=()=>calGo(1);
@@ -353,7 +354,7 @@ function evol(i){const m=MV[i];if(!m)return;const rows=[];MK.forEach(k=>(m.o[k]|
 $('ym').onclick=e=>{const t=e.target.closest('tr');if(t&&t.dataset.i)evol(+t.dataset.i)};
 $('tE').onclick=e=>{const t=e.target.closest('tr');if(t&&t.dataset.i)entidad(+t.dataset.i)};
 const mq=o=>[o.r.lugar_realizacion,o.loc,o.prov,'España'].map(x=>String(x||'').trim()).filter(x=>x&&x!=='Sin dato').join(', ');
-function detail(o){const r=o.r,L=[['Edición',r.edicion],['Fechas',fd(o.fi)+(o.ff?' – '+fd(o.ff):'')],['Horario',r.horario],['Lugar',r.lugar_realizacion],['Localidad',o.loc+' ('+o.prov+')'],['Ámbito / periodicidad',o.amb+' · '+o.per],['Tipo',ico(o.tipo)+esc(o.tipo)],
+function detail(o){const r=o.r,L=[['Edición',(r.edicion?r.edicion+' · ':'')+'Edición '+LBL[o.k]],['Fechas',fd(o.fi)+(o.ff?' – '+fd(o.ff):'')],['Horario',r.horario],['Lugar',r.lugar_realizacion],['Localidad',o.loc+' ('+o.prov+')'],['Ámbito / periodicidad',o.amb+' · '+o.per],['Tipo',ico(o.tipo)+esc(o.tipo)],
   ['Visitantes',o.vis?fmt(o.vis)+' ('+o.car+')':o.car],['Expositores',`${fmt(num(r.n_expositores_espanoles))} españoles · ${fmt(num(r.n_expositores_extranjeros))} extranjeros`],['Organizador',r.entidad_organizadora],['NIF',r.nif_entidad_organizadora],
   ['Dirección',[r.direccion_entidad_organizadora,r.c_p,r.localidad_entidad_organizadora,r.provincia_entidad_org].filter(Boolean).join(', ')],['Web',r.pagina_web?`<a href="${esc(url(r.pagina_web))}" target="_blank" rel="noopener">${esc(r.pagina_web)}</a>`:'']];
   $('dg').innerHTML=`<h2 style="margin:0">${esc(o.nom)}</h2><dl>${L.filter(x=>x[1]).map(x=>`<dt>${x[0]}</dt><dd>${['Web','Tipo'].includes(x[0])?x[1]:esc(x[1])}</dd>`).join('')}</dl><div class="mapw"><iframe src="https://www.google.com/maps?q=${encodeURIComponent(mq(o))}&output=embed&hl=es" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Mapa de la feria"></iframe></div><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn" onclick="dg.close()">Cerrar</button><a class="btn" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mq(o))}" target="_blank" rel="noopener">Abrir en Google Maps</a></div>`;$('dg').className='';$('dg').showModal()}
