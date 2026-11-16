@@ -184,7 +184,13 @@ function prep(cols,rows){return rows.map(a=>{const r={};cols.forEach((k,i)=>r[k]
   o.mes=o.fi?o.fi.getMonth():-1;o.txt=nq([o.nom,o.loc,t('entidad_organizadora'),o.tipo].join(' '));return o})}
 
 // ---- tema ----
-function chartDefaults(){if(typeof Chart==='undefined')return;const d=Chart.defaults;d.font.family="'Plus Jakarta Sans',sans-serif";d.color=css('--mute');d.borderColor=css('--grid');
+const cmpct=v=>v>=1e5?new Intl.NumberFormat('es-ES',{notation:'compact',maximumFractionDigits:1}).format(v):fmt(v);
+const VL={id:'vals',afterDatasetsDraw(c){const ctx=c.ctx,ty=c.config.type,arc=ty==='doughnut'||ty==='polarArea';ctx.save();ctx.font="700 11px 'Plus Jakarta Sans',system-ui,sans-serif";
+  c.data.datasets.forEach((ds,di)=>{const m=c.getDatasetMeta(di);if(m.hidden)return;m.data.forEach((el,i)=>{const v=ds.data[i];if(v==null||el.hidden)return;const t=cmpct(v);
+    if(arc){if(!v||el.endAngle-el.startAngle<.22)return;const p=el.tooltipPosition();ctx.fillStyle='#fff';ctx.shadowColor='rgba(0,0,0,.55)';ctx.shadowBlur=3;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(t,p.x,p.y)}
+    else{ctx.shadowBlur=0;ctx.fillStyle=css('--ink');if(c.options.indexAxis==='y'){ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(t,el.x+7,el.y)}else{ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText(t,el.x,el.y-6)}}})});ctx.restore()}};
+const GL=c=>{const d=c.data.datasets[0].data;return Chart.overrides[c.config.type].plugins.legend.labels.generateLabels(c).map(x=>({...x,text:x.text+' ('+fmt(d[x.index])+')'}))};
+function chartDefaults(){if(typeof Chart==='undefined')return;if(!chartDefaults.r){Chart.register(VL);chartDefaults.r=1}const d=Chart.defaults;d.font.family="'Plus Jakarta Sans',sans-serif";d.color=css('--mute');d.borderColor=css('--grid');
   d.plugins.legend.labels.color=css('--ink');const t=d.plugins.tooltip;t.backgroundColor=css('--tt');t.titleColor=css('--ink');t.bodyColor=css('--mute');t.borderColor=css('--line');t.borderWidth=1}
 function theme(t,redraw){document.documentElement.dataset.theme=t;$('th').textContent=t==='light'?'Modo oscuro':'Modo claro';chartDefaults();
   if(redraw){Object.values(charts).forEach(c=>c.destroy());charts={};if(ORD.length){render();years()}}}
@@ -235,10 +241,10 @@ document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelect
 const by=(d,f)=>{const m=new Map();d.forEach(r=>{const k=f(r);m.set(k,(m.get(k)||0)+1)});return m};
 const topN=(m,n)=>[...m].sort((a,b)=>b[1]-a[1]).slice(0,n);
 function ch(id,cfg){if(charts[id]){charts[id].data=cfg.data;charts[id].options=cfg.options;charts[id].update()}else charts[id]=new Chart($(id),cfg)}
-const OPT=(x={})=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},...x});
+const OPT=(x={})=>({responsive:true,maintainAspectRatio:false,layout:{padding:{top:22,right:34}},plugins:{legend:{display:false}},...x});
 const bar=(id,m,h)=>{const e=[...m];ch(id,{type:'bar',data:{labels:e.map(x=>x[0]),datasets:[{data:e.map(x=>x[1]),backgroundColor:PAL[0],borderRadius:8}]},options:OPT({indexAxis:h?'y':'x',scales:{x:{grid:{display:!h}},y:{grid:{display:!!h},beginAtZero:true}}})})};
-const dough=(id,m)=>{const e=topN(m,8);ch(id,{type:'doughnut',data:{labels:e.map(x=>x[0]),datasets:[{data:e.map(x=>x[1]),backgroundColor:PAL,borderColor:css('--card'),borderWidth:2}]},options:OPT({cutout:'66%',plugins:{legend:{display:true,position:'right'}}})})};
-const polar=(id,m)=>{const e=topN(m,8);ch(id,{type:'polarArea',data:{labels:e.map(x=>x[0]),datasets:[{data:e.map(x=>x[1]),backgroundColor:PAL.map(c=>c+'cc'),borderColor:css('--card'),borderWidth:2}]},options:OPT({plugins:{legend:{display:true,position:'right'}},scales:{r:{grid:{color:css('--grid')},ticks:{backdropColor:'transparent'}}}})})};
+const dough=(id,m)=>{const e=topN(m,8);ch(id,{type:'doughnut',data:{labels:e.map(x=>x[0]),datasets:[{data:e.map(x=>x[1]),backgroundColor:PAL,borderColor:css('--card'),borderWidth:2}]},options:OPT({cutout:'66%',plugins:{legend:{display:true,position:'right',labels:{generateLabels:GL}}}})})};
+const polar=(id,m)=>{const e=topN(m,8);ch(id,{type:'polarArea',data:{labels:e.map(x=>x[0]),datasets:[{data:e.map(x=>x[1]),backgroundColor:PAL.map(c=>c+'cc'),borderColor:css('--card'),borderWidth:2}]},options:OPT({plugins:{legend:{display:true,position:'right',labels:{generateLabels:GL}}},scales:{r:{grid:{color:css('--grid')},ticks:{display:false}}}})})};
 function tablas(d){const E=[...by(d,r=>String(r.r.entidad_organizadora||'Sin dato').trim())].map(x=>({n:x[0],c:x[1]})),
   L=[...by(d,r=>r.loc+'||'+r.prov)].map(x=>{const p=x[0].split('||');return{n:p[0],p:p[1],c:x[1]}});
   const so=(a,st)=>a.sort((x,y)=>((st.k==='c'?x.c-y.c:cmp(x[st.k],y[st.k]))*st.d)||cmp(x.n,y.n));so(E,SRT.ent);so(L,SRT.loc);
@@ -310,7 +316,7 @@ let ST=[],MR=[],MK=[],MV=[];
 function years(){chips();const ks=ORD.slice().sort((a,b)=>YR[a]-YR[b]);MK=ks;
   ST=ks.map(k=>{const n=ED[k].length,v=sum(ED[k],r=>r.vis);return{k,y:YR[k],l:LBL[k],n,v,e:sum(ED[k],r=>r.exp),loc:new Set(ED[k].map(r=>r.loc)).size,m:n?Math.round(v/n):0}});
   ch('yN',{type:'bar',data:{labels:ST.map(s=>s.l),datasets:[{data:ST.map(s=>s.n),backgroundColor:PAL[1],borderRadius:8}]},options:OPT({scales:{y:{beginAtZero:true}}})});
-  ch('yV',{type:'bar',data:{labels:ST.map(s=>s.l),datasets:[{label:'Visitantes',data:ST.map(s=>s.v),backgroundColor:PAL[0],borderRadius:8},{label:'Expositores',data:ST.map(s=>s.e),backgroundColor:PAL[2],borderRadius:8}]},options:OPT({plugins:{legend:{display:true}},scales:{y:{beginAtZero:true}}})});
+  ch('yV',{type:'bar',data:{labels:ST.map(s=>s.l),datasets:[{label:'Visitantes',data:ST.map(s=>s.v),backgroundColor:PAL[0],borderRadius:8},{label:'Expositores',data:ST.map(s=>s.e),backgroundColor:PAL[2],borderRadius:8}]},options:OPT({plugins:{legend:{display:true}},scales:{y:{beginAtZero:true,ticks:{callback:v=>cmpct(v)}}}})});
   ysum();
   const M=new Map();ks.forEach(k=>ED[k].forEach(r=>{const q=nq(r.nom).replace(/\s+/g,' ').trim();if(!M.has(q))M.set(q,{n:r.nom,y:{},o:{}});const m=M.get(q);m.y[k]=r.vis||'✓';(m.o[k]=m.o[k]||[]).push(r)}));
   MR=[...M.values()].map(r=>({...r,cnt:Object.keys(r.y).length}));
