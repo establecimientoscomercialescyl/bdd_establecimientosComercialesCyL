@@ -91,6 +91,12 @@ header{padding:10px 28px}main{padding:16px 32px 48px}.filters{margin-bottom:16px
 .cd.today{box-shadow:inset 0 0 0 2px var(--acc2)}.cd s{position:absolute;right:4px;top:1px;font-size:9px;text-decoration:none;font-weight:800}
 .cl{max-height:112px;overflow:auto}.ci{display:grid;grid-template-columns:96px 1fr;gap:10px;padding:5px 6px;border-radius:8px;cursor:pointer}.ci:hover{background:var(--acc-soft)}
 .ci span{color:var(--acc);font-weight:700;font-size:12px;white-space:nowrap}.ci div{font-size:12.5px;line-height:1.3}
+/* calendario tradicional: bordes suaves y marca de varias ferias */
+.cal{gap:0;border-right:1px solid var(--line);border-bottom:1px solid var(--line);border-radius:12px;overflow:hidden}
+.cal .wd,.cd{border-left:1px solid var(--line);border-top:1px solid var(--line)}.cal .wd{background:var(--card2);padding:5px 0}
+.cd{height:32px;border-radius:0}.cd.emp{background:color-mix(in srgb,var(--card2) 40%,transparent)}
+.cd s{right:3px;top:3px;min-width:15px;height:15px;padding:0 4px;border-radius:99px;background:#2563EB;color:#fff;font-size:9.5px;font-weight:800;display:grid;place-items:center;line-height:1}
+.cd s:empty{display:none}
 [hidden]{display:none!important}
 @media(max-width:700px){.ev{grid-template-columns:1fr}main{padding:14px}header{padding:10px 14px}.grid,.g2{grid-template-columns:1fr}.kv{font-size:24px}.side{padding:10px 6px}.app.col .side{width:56px}}
 </style>
@@ -139,7 +145,7 @@ header{padding:10px 28px}main{padding:16px 32px 48px}.filters{margin-bottom:16px
     <div class="kpis" id="kpis"></div>
     <div class="grid g2c">
       <div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px"><h2 style="margin:0">Ferias por provincia</h2><div class="seg" id="sP" title="Ordenar el gráfico"><button data-o="n" class="on">Nº de ferias</button><button data-o="a">Provincia A-Z</button></div></div><div class="cv"><canvas id="cProv"></canvas></div></div>
-      <div class="card"><div class="calh"><h2>Calendario de ferias</h2><div class="calnav"><button class="btn" id="cP" title="Mes anterior">‹</button><b id="cT"></b><button class="btn" id="cN" title="Mes siguiente">›</button></div></div>
+      <div class="card"><div class="calh"><h2>Calendario de ferias</h2><div class="calnav"><button class="btn" id="cP" title="Mes anterior">‹</button><b id="cT"></b><button class="btn" id="cN" title="Mes siguiente">›</button><button class="btn" id="cY" title="Volver al mes actual" style="font-size:12px;margin-left:4px">Hoy</button></div></div>
         <div class="cal" id="cal"></div><div class="sub" id="cH" style="margin:10px 0 4px;font-weight:700"></div><div class="cl" id="cLs"></div></div>
       <div class="card"><h2>Tipo de feria</h2><div class="cv"><canvas id="cTipo"></canvas></div></div>
       <div class="card"><h2>Ámbito territorial</h2><div class="cv"><canvas id="cAmb"></canvas></div></div>
@@ -237,7 +243,7 @@ function apply(j){LAST=j.ts||'';ACT=j.actual;ED={};LBL={};YR={};
       if(ANIO_FIJO)ANIO_ACTUAL=ANIO_FIJO;else{const c={};let n=0;ED[k].forEach(o=>{if(o.fi){const y=o.fi.getFullYear();c[y]=(c[y]||0)+1;n++}});const ys=Object.keys(c).map(Number).filter(y=>c[y]>=Math.max(1,.1*n)).sort((a,b)=>b-a);if(ys.length)ANIO_ACTUAL=ys[0]}}
     if(k===ACT){YR[k]=ANIO_ACTUAL;LBL[k]=String(ANIO_ACTUAL)}else{YR[k]=+k;LBL[k]=k}});
   ORD=Object.keys(ED).sort((a,b)=>(a===ACT?-1:b===ACT?1:YR[b]-YR[a]));
-  $('badge').textContent='Edición '+ANIO_ACTUAL;fillExp();if(!CALU){CY=ANIO_ACTUAL;CM=new Date().getMonth();CD=null}}
+  $('badge').textContent='Edición '+ANIO_ACTUAL;fillExp();if(!CALU){CY=new Date().getFullYear();CM=new Date().getMonth();CD=null}}
 async function load(n=0,refresh=false){
   if(n===0&&!refresh){try{const c=JSON.parse(localStorage.getItem(KEY)||'null');if(c){apply(c);init()}}catch(e){console.error(e)}}
   busy(true);fail('');let j;
@@ -288,13 +294,14 @@ function cal(){const first=new Date(CY,CM,1),dim=new Date(CY,CM+1,0).getDate(),e
   D.forEach(r=>{if(!r.fi)return;const e=r.ff&&r.ff>=r.fi?r.ff:r.fi;if(e<first||r.fi>end)return;const a=r.fi<first?1:r.fi.getDate(),z=e>end?dim:e.getDate();for(let d=a;d<=z;d++){if(!dm.has(d))dm.set(d,[]);dm.get(d).push(r)}});
   $('cT').textContent=MESES[CM]+' '+CY;
   let h=['L','M','X','J','V','S','D'].map(x=>`<div class="wd">${x}</div>`).join('');
-  for(let i=0;i<42;i++){const d=i-off+1;if(d<1||d>dim){h+='<div></div>';continue}const l=dm.get(d),isT=hoy.getFullYear()===CY&&hoy.getMonth()===CM&&hoy.getDate()===d;
+  for(let i=0;i<42;i++){const d=i-off+1;if(d<1||d>dim){h+='<div class="cd emp"></div>';continue}const l=dm.get(d),isT=hoy.getFullYear()===CY&&hoy.getMonth()===CM&&hoy.getDate()===d;
     h+=l?`<div class="cd has${CD===d?' sel':''}${isT?' today':''}" data-d="${d}" title="${esc(l.slice(0,4).map(r=>r.nom).join('\n'))}${l.length>4?'\n…':''}">${d}<s>${l.length>1?l.length:''}</s></div>`:`<div class="cd${isT?' today':''}">${d}</div>`}
   $('cal').innerHTML=h;
   const all=[...new Set([].concat(...dm.values()))].sort((a,b)=>a.fi-b.fi||cmp(a.nom,b.nom));CALL=CD&&dm.get(CD)?dm.get(CD).slice().sort((a,b)=>cmp(a.nom,b.nom)):all;
   $('cH').textContent=CD&&dm.get(CD)?fmt(CALL.length)+(CALL.length===1?' feria el ':' ferias el ')+String(CD).padStart(2,'0')+'/'+String(CM+1).padStart(2,'0')+'/'+CY+' (pulsa de nuevo el día para ver todo el mes)':(all.length?fmt(all.length)+(all.length===1?' feria en ':' ferias en ')+MESES[CM].toLowerCase()+' de '+CY:'Sin ferias en '+MESES[CM].toLowerCase()+' de '+CY);
   $('cLs').innerHTML=CALL.map((r,i)=>`<div class="ci" data-i="${i}"><span>${r.fi.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit'})}${r.ff&&+r.ff!==+r.fi?' – '+r.ff.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit'}):''}</span><div><b>${esc(r.nom)}</b> · ${esc(r.loc)}</div></div>`).join('')}
 const calGo=n=>{CALU=true;CD=null;CM+=n;if(CM<0){CM=11;CY--}if(CM>11){CM=0;CY++}cal()};
+$('cY').onclick=()=>{const t=new Date();CALU=false;CD=null;CY=t.getFullYear();CM=t.getMonth();cal()};
 $('cP').onclick=()=>calGo(-1);$('cN').onclick=()=>calGo(1);
 $('cal').onclick=e=>{const c=e.target.closest('.cd.has');if(!c)return;CALU=true;CD=CD===+c.dataset.d?null:+c.dataset.d;cal()};
 $('cLs').onclick=e=>{const c=e.target.closest('.ci');if(c)detail(CALL[+c.dataset.i])};
