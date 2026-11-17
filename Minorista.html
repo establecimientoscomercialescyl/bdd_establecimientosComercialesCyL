@@ -1481,11 +1481,11 @@ function renderKPIs(){
   const kpis = [
     {label:'Establecimientos (filtro)', value: fmt(total), foot: `de ${fmt(r.prov.length)} totales`, icon:'store', bg:'var(--blue-soft)', color:'var(--blue)'},
     {label:'Densidad comercial', value: densidad!==null? densidad.toLocaleString('es-ES',{maximumFractionDigits:1}) : '—', foot:'comercios por 1.000 habitantes', icon:'grid', bg:'var(--teal-soft)', color:'var(--teal)'},
-    {label:'Habitantes por comercio', value: habPorComercio!==null? fmt(Math.round(habPorComercio)) : '—', foot:'población representada / establecimientos', icon:'users', bg:'var(--indigo-soft)', color:'var(--indigo)'},
+    {label:'Habitantes por comercio', value: habPorComercio!==null? fmt(Math.round(habPorComercio)) : '—', foot:'pob. representada / establecimientos', icon:'users', bg:'var(--indigo-soft)', color:'var(--indigo)'},
     {label:'Altas últimos 12 meses', value: fmt(altas12), foot:'sobre el conjunto filtrado', icon:'trend', bg:'var(--green-soft)', color:'var(--green)'},
     {label:'Con email o web', value: total? fmtPct(conContacto/total): '—', foot:'nivel de digitalización', icon:'mail', bg:'var(--orange-soft)', color:'var(--orange)'},
     {label:'Municipios representados', value: fmt(munSeen.size), foot:`de ${fmt(DATA.municipios.length)} municipios`, icon:'map', bg:'var(--pink-soft)', color:'var(--pink)'},
-    {label:'Población', value: fmt(poblacion), foot:'habitantes contados una sola vez por municipio', icon:'population', bg:'var(--purple-soft)', color:'var(--purple)'},
+    {label:'Población', value: fmt(poblacion), foot:'hab.una sola vez por municipio', icon:'population', bg:'var(--purple-soft)', color:'var(--purple)'},
   ];
 
   $('#kpis').innerHTML = kpis.map(k=>`
