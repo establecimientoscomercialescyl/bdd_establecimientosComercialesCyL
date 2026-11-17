@@ -446,15 +446,35 @@
     100%{ left:100%; }
   }
 
-  /* ---------- Tabs ---------- */
-  .tab-nav{ display:flex; gap:6px; margin:28px 0 18px; border-bottom:1px solid var(--border); }
-  .tab-btn{
-    font-family:'Inter',sans-serif; font-weight:600; font-size:13.5px; color:var(--text-mute);
-    background:none; border:none; padding:10px 4px; margin-right:22px; cursor:pointer;
-    border-bottom:2px solid transparent; margin-bottom:-1px;
+  /* ---------- Menú lateral (pestañas) ---------- */
+  .app{ display:flex; min-height:100vh; }
+  .content{ flex:1; min-width:0; }
+  .side{
+    position:sticky; top:0; align-self:flex-start; height:100vh; width:236px; flex:none;
+    background:var(--card); border-right:1px solid var(--border); padding:14px 12px;
+    display:flex; flex-direction:column; gap:6px; transition:width .2s; z-index:25; overflow:hidden;
   }
-  .tab-btn:hover{ color:var(--text); }
-  .tab-btn.active{ color:var(--blue); border-bottom-color:var(--blue); }
+  .app.col .side{ width:72px; }
+  .sb-t{
+    display:flex; align-items:center; gap:12px; width:100%; border:0; background:none; color:var(--text-mute);
+    font-family:'Inter',sans-serif; font-weight:600; font-size:13px; padding:10px 14px; border-radius:12px;
+    cursor:pointer; margin-bottom:8px; white-space:nowrap;
+  }
+  .sb-t:hover{ background:var(--card-2); color:var(--text); }
+  .sb-t svg{ transition:transform .2s; }
+  .app.col .sb-t svg{ transform:rotate(180deg); }
+  .tab-nav{ display:flex; flex-direction:column; gap:4px; margin:0; }
+  .tab-btn{
+    display:flex; align-items:center; gap:12px; width:100%; text-align:left; padding:11px 14px;
+    border:none; border-radius:12px; background:none; cursor:pointer; white-space:nowrap;
+    font-family:'Inter',sans-serif; font-weight:600; font-size:13.5px; color:var(--text-mute);
+  }
+  .tab-btn svg, .sb-t svg{ width:20px; height:20px; flex:none; }
+  .tab-btn:hover{ background:var(--card-2); color:var(--text); }
+  .tab-btn.active{ background:var(--blue-soft); color:var(--blue); }
+  .app.col .tl{ display:none; }
+  .app.col .tab-btn, .app.col .sb-t{ justify-content:center; padding-left:0; padding-right:0; }
+  @media (max-width:700px){ .side{ padding:10px 6px; } .app.col .side{ width:56px; } }
   .tab-panel[hidden]{ display:none; }
 
   /* ---------- Heatmap ---------- */
@@ -545,6 +565,20 @@
 </style>
 </head>
 <body>
+
+<div class="app" id="app">
+<aside class="side" id="side">
+  <button class="sb-t" id="sbT" type="button" title="Contraer menú"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg><span class="tl">Contraer menú</span></button>
+  <nav class="tab-nav" role="tablist" aria-orientation="vertical">
+    <button class="tab-btn active" id="tab-btn-resumen" data-tab="resumen" role="tab" title="Resumen general"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg><span class="tl">Resumen general</span></button>
+    <button class="tab-btn" id="tab-btn-territorial" data-tab="territorial" role="tab" title="Análisis territorial"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6.5v13L9 17l6 3 6-2.5v-13L15 7z"/><path d="M9 4v13M15 7v13"/></svg><span class="tl">Análisis territorial</span></button>
+    <button class="tab-btn" id="tab-btn-distancias" data-tab="distancias" role="tab" title="Distancias"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5"/></svg><span class="tl">Distancias</span></button>
+    <button class="tab-btn" id="tab-btn-estudio" data-tab="estudio" role="tab" title="Estudio de datos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M8 16v-5M13 16V7M18 16v-8"/></svg><span class="tl">Estudio de datos</span></button>
+    <button class="tab-btn" id="tab-btn-comparativa" data-tab="comparativa" role="tab" title="Comparativa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg><span class="tl">Comparativa</span></button>
+    <button class="tab-btn" id="tab-btn-contacto" data-tab="contacto" role="tab" title="Contacto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><span class="tl">Contacto</span></button>
+  </nav>
+</aside>
+<div class="content">
 
 <header class="top">
   <div class="top-row">
@@ -699,15 +733,6 @@
   <div class="section-label" id="kpis-label">Indicadores</div>
   <div class="kpis" id="kpis"></div>
   <div class="kpis" id="kpis-distancias" hidden></div>
-
-  <div class="tab-nav" role="tablist">
-    <button class="tab-btn active" id="tab-btn-resumen" data-tab="resumen" role="tab">Resumen general</button>
-    <button class="tab-btn" id="tab-btn-territorial" data-tab="territorial" role="tab">Análisis territorial</button>
-    <button class="tab-btn" id="tab-btn-distancias" data-tab="distancias" role="tab">Distancias</button>
-    <button class="tab-btn" id="tab-btn-estudio" data-tab="estudio" role="tab">Estudio de datos</button>
-    <button class="tab-btn" id="tab-btn-comparativa" data-tab="comparativa" role="tab">Comparativa</button>
-    <button class="tab-btn" id="tab-btn-contacto" data-tab="contacto" role="tab">Contacto</button>
-  </div>
 
   <div class="tab-panel active" id="tab-resumen">
 
@@ -1012,6 +1037,9 @@
   <footer>Panel generado a partir de <span id="foot-n"></span> registros de la base de datos de comercio.</footer>
 
 </main>
+
+</div><!-- /.content -->
+</div><!-- /.app -->
 
 <div class="modal-overlay" id="map-modal" hidden>
   <div class="modal-panel modal-panel-wide">
@@ -3542,6 +3570,19 @@ function bindEvents(){
   $('#btn-fullscreen').addEventListener('click', toggleFullscreen);
 
   $$('.tab-btn').forEach(btn=> btn.addEventListener('click', ()=> switchTab(btn.dataset.tab)));
+
+  // Menú lateral plegable (se recuerda la elección en este navegador)
+  const APP_EL = $('#app');
+  function setMenuCol(c, save){
+    APP_EL.classList.toggle('col', c);
+    $('#sbT').title = c ? 'Expandir menú' : 'Contraer menú';
+    $('#sbT .tl').textContent = c ? 'Expandir menú' : 'Contraer menú';
+    if(save){ try{ localStorage.setItem('panel-comercio-cyl-menu', c?'1':'0'); }catch(e){} }
+    setTimeout(()=> window.dispatchEvent(new Event('resize')), 260);
+  }
+  $('#sbT').addEventListener('click', ()=> setMenuCol(!APP_EL.classList.contains('col'), true));
+  { let sv=null; try{ sv=localStorage.getItem('panel-comercio-cyl-menu'); }catch(e){}
+    setMenuCol(sv==null ? innerWidth<900 : sv==='1', false); }
 
   $('#comp-a').addEventListener('change', renderComparativa);
   $('#comp-b').addEventListener('change', renderComparativa);
