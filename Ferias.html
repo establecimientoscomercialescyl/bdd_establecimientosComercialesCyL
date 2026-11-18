@@ -165,6 +165,8 @@ header{padding:10px 28px}main{padding:16px 32px 48px}.filters{margin-bottom:16px
     <div class="grid g2c" style="margin-top:18px">
       <div class="card"><h2>Ferias por año</h2><div class="cv"><canvas id="yN"></canvas></div></div>
       <div class="card"><h2>Visitantes y expositores por año</h2><div class="cv"><canvas id="yV"></canvas></div></div>
+      <div class="card"><h2 id="hE2">Entidades organizadoras</h2><div class="ts"><table data-s="ent2"><thead><tr><th data-k="n">Entidad organizadora</th><th class="num" data-k="c">Ferias</th></tr></thead><tbody id="tE2"></tbody></table></div></div>
+      <div class="card"><h2 id="hL2">Localidades de celebración</h2><div class="ts"><table data-s="loc2"><thead><tr><th data-k="n">Localidad</th><th data-k="p">Provincia</th><th class="num" data-k="c">Ferias</th></tr></thead><tbody id="tL2"></tbody></table></div></div>
       <div class="card wide"><h2>Resumen por año</h2><div class="sc"><table data-s="res"><thead><tr><th data-k="y">Edición</th><th data-k="n" class="num">Ferias</th><th data-k="loc" class="num">Localidades</th><th data-k="v" class="num">Visitantes</th><th data-k="e" class="num">Expositores</th><th data-k="m" class="num">Media visit./feria</th></tr></thead><tbody id="ys"></tbody></table></div></div>
       <div class="card wide"><h2>Evolución de cada feria</h2><p class="sub">Visitantes por edición (✓ = celebrada, sin dato de visitantes). Pulsa una feria para ver su evolución detallada.</p><input id="yQ" placeholder="Filtrar feria…" style="margin-bottom:10px;width:280px"><div class="sc"><table data-s="mat"><thead id="yh"></thead><tbody id="ym"></tbody></table></div></div>
     </div>
@@ -206,8 +208,8 @@ const nq=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowe
 const cmp=(a,b)=>String(a).localeCompare(String(b),'es',{sensitivity:'base',numeric:true});
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const sum=(d,f)=>d.reduce((s,r)=>s+f(r),0);
-let ED={},LBL={},YR={},ORD=[],CUR='',ACT='',D=[],PG=0,charts={},LAST='',LISTA=[],TOT=0,AG=[],EL=[],CL={};
-const SRT={lis:{k:'fi',d:1},ani:{k:'fi',d:1},ent:{k:'c',d:-1},loc:{k:'c',d:-1},res:{k:'y',d:-1},mat:{k:'cnt',d:-1}};
+let ED={},LBL={},YR={},ORD=[],CUR='',ACT='',D=[],PG=0,charts={},LAST='',LISTA=[],TOT=0,AG=[],EL=[],EL2=[],CL={};
+const SRT={lis:{k:'fi',d:1},ani:{k:'fi',d:1},ent:{k:'c',d:-1},loc:{k:'c',d:-1},ent2:{k:'c',d:-1},loc2:{k:'c',d:-1},res:{k:'y',d:-1},mat:{k:'cnt',d:-1}};
 const SK={fi:r=>r.fi?+r.fi:null,ff:r=>r.ff?+r.ff:null,vis:r=>r.vis,exp:r=>r.exp};
 function sortRows(a,st){const f=SK[st.k]||(r=>r[st.k]);return a.slice().sort((x,y)=>{const u=f(x),v=f(y);if(u==null&&v==null)return cmp(x.nom,y.nom);if(u==null)return 1;if(v==null)return -1;return((typeof u==='number'?u-v:cmp(u,v))*st.d)||cmp(x.nom,y.nom)})}
 
@@ -283,12 +285,12 @@ const OPT=(x={})=>({responsive:true,maintainAspectRatio:false,layout:{padding:{t
 const bar=(id,m,h)=>{const e=[...m];ch(id,{type:'bar',data:{labels:e.map(x=>x[0]),datasets:[{data:e.map(x=>x[1]),backgroundColor:PAL[0],borderRadius:8}]},options:OPT({indexAxis:h?'y':'x',scales:{x:{grid:{display:!h}},y:{grid:{display:!!h},beginAtZero:true,ticks:{precision:0}}}})})};
 const dough=(id,m)=>{const e=topN(m,8);ch(id,{type:'doughnut',data:{labels:e.map(x=>x[0]),datasets:[{data:e.map(x=>x[1]),backgroundColor:PAL,borderColor:css('--card'),borderWidth:2}]},options:OPT({cutout:'66%',plugins:{legend:{display:true,position:'right',labels:{generateLabels:GL}}}})})};
 const polar=(id,m)=>{const e=topN(m,8);ch(id,{type:'polarArea',data:{labels:e.map(x=>x[0]),datasets:[{data:e.map(x=>x[1]),backgroundColor:PAL.map(c=>c+'cc'),borderColor:css('--card'),borderWidth:2}]},options:OPT({plugins:{legend:{display:true,position:'right',labels:{generateLabels:GL}}},scales:{r:{grid:{color:css('--grid')},ticks:{display:false}}}})})};
-function tablas(d){const E=[...by(d,r=>String(r.r.entidad_organizadora||'Sin dato').trim())].map(x=>({n:x[0],c:x[1]})),
+function tablas(d,sf=''){const E=[...by(d,r=>String(r.r.entidad_organizadora||'Sin dato').trim())].map(x=>({n:x[0],c:x[1]})),
   L=[...by(d,r=>r.loc+'||'+r.prov)].map(x=>{const p=x[0].split('||');return{n:p[0],p:p[1],c:x[1]}});
-  const so=(a,st)=>a.sort((x,y)=>((st.k==='c'?x.c-y.c:cmp(x[st.k],y[st.k]))*st.d)||cmp(x.n,y.n));so(E,SRT.ent);so(L,SRT.loc);
-  $('hE').textContent='Entidades organizadoras ('+fmt(E.length)+')';$('hL').textContent='Localidades de celebración ('+fmt(L.length)+')';
-  EL=E;$('tE').innerHTML=E.map((x,i)=>`<tr data-i="${i}" title="Ver histórico de esta entidad"><td>${esc(x.n)}</td><td class="num"><b>${x.c}</b></td></tr>`).join('')||'<tr><td colspan="2">Sin resultados</td></tr>';
-  $('tL').innerHTML=L.map(x=>`<tr style="cursor:default"><td>${esc(x.n)}</td><td>${esc(x.p)}</td><td class="num"><b>${x.c}</b></td></tr>`).join('')||'<tr><td colspan="3">Sin resultados</td></tr>'}
+  const so=(a,st)=>a.sort((x,y)=>((st.k==='c'?x.c-y.c:cmp(x[st.k],y[st.k]))*st.d)||cmp(x.n,y.n));so(E,SRT['ent'+sf]);so(L,SRT['loc'+sf]);
+  const yy=sf&&LBL[SEL]?' · '+LBL[SEL]:'';$('hE'+sf).textContent='Entidades organizadoras'+yy+' ('+fmt(E.length)+')';$('hL'+sf).textContent='Localidades de celebración'+yy+' ('+fmt(L.length)+')';
+  if(sf)EL2=E;else EL=E;$('tE'+sf).innerHTML=E.map((x,i)=>`<tr data-i="${i}" title="Ver histórico de esta entidad"><td>${esc(x.n)}</td><td class="num"><b>${x.c}</b></td></tr>`).join('')||'<tr><td colspan="2">Sin resultados</td></tr>';
+  $('tL'+sf).innerHTML=L.map(x=>`<tr style="cursor:default"><td>${esc(x.n)}</td><td>${esc(x.p)}</td><td class="num"><b>${x.c}</b></td></tr>`).join('')||'<tr><td colspan="3">Sin resultados</td></tr>'}
 let CY=2027,CM=0,CD=null,CALU=false,CALL=[];
 const calSrc=()=>{const f=pred();return [].concat(...ORD.map(k=>ED[k].filter(f)))};
 function cal(){const first=new Date(CY,CM,1),dim=new Date(CY,CM+1,0).getDate(),end=new Date(CY,CM,dim),off=(first.getDay()+6)%7,dm=new Map(),hoy=new Date();
@@ -328,7 +330,7 @@ function agenda(){let h='',m=-2;AG.forEach((r,i)=>{if(r.mes!==m){m=r.mes;h+=`<di
 $('agenda').onclick=e=>{const t=e.target.closest('.ev');if(t)detail(AG[+t.dataset.i])};
 const url=u=>{u=String(u).trim();return /^[a-z][a-z0-9+.-]*:/i.test(u)?u:'https://'+u.replace(/^\/+/,'')};
 const kn=s=>nq(s).replace(/\s+/g,' ').trim();
-function entidad(i){const e=EL[i];if(!e)return;const k=kn(e.n);
+function entidad(i,L=EL){const e=L[i];if(!e)return;const k=kn(e.n);
   const per=ORD.slice().sort((a,b)=>YR[b]-YR[a]).map(y=>({y,l:LBL[y],rows:sortRows(ED[y].filter(r=>kn(r.r.entidad_organizadora||'Sin dato')===k),{k:'fi',d:1})})),
     act=per.filter(p=>p.y===ACT)[0].rows.length,prev=sum(per.filter(p=>p.y!==ACT),p=>p.rows.length),mx=Math.max(1,...per.map(p=>p.rows.length)),
     pill=(t,v)=>`<div class="kpi" style="padding:12px 16px"><div class="kl" style="max-width:none">${t}</div><div class="kv" style="font-size:28px">${v}</div></div>`;
@@ -352,6 +354,7 @@ function evol(i){const m=MV[i];if(!m)return;const rows=[];MK.forEach(k=>(m.o[k]|
   <div class="sc"><table><thead><tr><th>Año</th><th>Ed.</th><th>Fechas</th><th style="min-width:240px">Localidad</th><th class="num">Visitantes</th><th class="num">Var.</th><th class="num">Exp. españoles</th><th class="num">Exp. extranjeros</th><th class="num">Total exp.</th></tr></thead><tbody>${body}</tbody></table></div>
   <div style="margin-top:14px"><button class="btn" onclick="dg.close()">Cerrar</button></div>`;$('dg').className='big';$('dg').showModal()}
 $('ym').onclick=e=>{const t=e.target.closest('tr');if(t&&t.dataset.i)evol(+t.dataset.i)};
+$('tE2').onclick=e=>{const t=e.target.closest('tr');if(t&&t.dataset.i)entidad(+t.dataset.i,EL2)};
 $('tE').onclick=e=>{const t=e.target.closest('tr');if(t&&t.dataset.i)entidad(+t.dataset.i)};
 const mq=o=>[o.r.lugar_realizacion,o.loc,o.prov,'España'].map(x=>String(x||'').trim()).filter(x=>x&&x!=='Sin dato').join(', ');
 function detail(o){const r=o.r,L=[['Edición',(r.edicion?r.edicion+' · ':'')+'Edición '+LBL[o.k]],['Fechas',fd(o.fi)+(o.ff?' – '+fd(o.ff):'')],['Horario',r.horario],['Lugar',r.lugar_realizacion],['Localidad',o.loc+' ('+o.prov+')'],['Ámbito / periodicidad',o.amb+' · '+o.per],['Tipo',ico(o.tipo)+esc(o.tipo)],
@@ -362,13 +365,13 @@ function detail(o){const r=o.r,L=[['Edición',(r.edicion?r.edicion+' · ':'')+'E
 // ---- años anteriores ----
 let SEL='',YL=[];
 function chips(){const past=ORD.filter(k=>k!==ACT);if(!past.includes(SEL))SEL=past[0]||'';
-  $('chips').innerHTML=past.map(k=>`<button class="chip" data-k="${esc(k)}">${esc(LBL[k])}<small>${ED[k].length} ferias</small></button>`).join('')||'<span class="sub">Todavía no hay años anteriores.</span>';ylist()}
+  $('chips').innerHTML=past.map(k=>`<button class="chip" data-k="${esc(k)}">${esc(LBL[k])}<small>${ED[k].length} ferias</small></button>`).join('')||'<span class="sub">Todavía no hay años anteriores.</span>';ylist();tablas(ED[SEL]||[],'2')}
 function ylist(){document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c.dataset.k===SEL));
   const d=ED[SEL]||[],q=nq($('sQ').value),kp=(t,v)=>`<div class="kpi">${kic(t)}<div class="kl">${t}</div><div class="kv">${v}</div></div>`;
   YL=sortRows(d.filter(r=>!q||r.txt.includes(q)),SRT.ani);
   $('ykp').innerHTML=kp('Ferias',fmt(d.length))+kp('Visitantes',fmt(sum(d,r=>r.vis)))+kp('Expositores',fmt(sum(d,r=>r.exp)))+kp('Localidades',fmt(new Set(d.map(r=>r.loc)).size));
   $('sb').innerHTML=YL.map((r,i)=>`<tr data-i="${i}"><td>${fd(r.fi)}</td><td>${fd(r.ff)}</td><td><b>${esc(r.nom)}</b></td><td>${esc(r.loc)}</td><td>${esc(r.prov)}</td><td><span class="tag">${ico(r.tipo)}${esc(r.tipo)}</span></td><td class="num">${r.vis?fmt(r.vis):'–'}</td><td class="num">${r.exp?fmt(r.exp):'–'}</td></tr>`).join('')||'<tr><td colspan="8">Sin resultados</td></tr>'}
-$('chips').onclick=e=>{const c=e.target.closest('.chip');if(c){SEL=c.dataset.k;ylist()}};$('sQ').oninput=ylist;
+$('chips').onclick=e=>{const c=e.target.closest('.chip');if(c){SEL=c.dataset.k;ylist();tablas(ED[SEL]||[],'2')}};$('sQ').oninput=ylist;
 $('sb').onclick=e=>{const t=e.target.closest('tr');if(t&&t.dataset.i)detail(YL[+t.dataset.i])};
 let ST=[],MR=[],MK=[],MV=[];
 function years(){chips();const ks=ORD.slice().sort((a,b)=>YR[a]-YR[b]);MK=ks;
@@ -388,10 +391,10 @@ function ymat(){const q=nq($('yQ').value),st=SRT.mat,yk=st.k.startsWith('y:')?st
 $('yQ').oninput=ymat;
 
 // ---- ordenar tablas al pulsar los títulos ----
-const REF={lis:()=>{LISTA=sortRows(D,SRT.lis);PG=0;list()},ani:()=>ylist(),ent:()=>tablas(D),loc:()=>tablas(D),res:()=>ysum(),mat:()=>ymat()};
+const REF={lis:()=>{LISTA=sortRows(D,SRT.lis);PG=0;list()},ani:()=>ylist(),ent:()=>tablas(D),loc:()=>tablas(D),ent2:()=>tablas(ED[SEL]||[],'2'),loc2:()=>tablas(ED[SEL]||[],'2'),res:()=>ysum(),mat:()=>ymat()};
 function mark(id){const t=document.querySelector(`table[data-s="${id}"]`),st=SRT[id];if(t)t.querySelectorAll('th[data-k]').forEach(h=>h.dataset.o=h.dataset.k===st.k?(st.d>0?'asc':'desc'):'')}
 document.addEventListener('click',e=>{const th=e.target.closest('th[data-k]');if(!th)return;const id=th.closest('table').dataset.s,st=SRT[id],k=th.dataset.k;
-  if(st.k===k)st.d*=-1;else{st.k=k;st.d=(id==='lis'||id==='ani')?(['vis','exp'].includes(k)?-1:1):(id==='ent'||id==='loc')?(k==='c'?-1:1):id==='res'?-1:(k==='n'?1:-1)}
+  if(st.k===k)st.d*=-1;else{st.k=k;st.d=(id==='lis'||id==='ani')?(['vis','exp'].includes(k)?-1:1):/^(ent|loc)/.test(id)?(k==='c'?-1:1):id==='res'?-1:(k==='n'?1:-1)}
   REF[id]();mark(id)});
 Object.keys(SRT).forEach(mark);
 
